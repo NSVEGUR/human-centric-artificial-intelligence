@@ -15,7 +15,7 @@ def index(request):
     students = [
         {"name": "Nagasai Vegur", "matriculation": "672843"},
         {"name": "Sai Adarsh Varma Chittari", "matriculation": "670175"},
-        {"name": "Roshan", "matriculation": "672845"},
+        {"name": "Roshan Srinivasan", "matriculation": "672856"},
     ]
     
     projects = [
