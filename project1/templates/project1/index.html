@@ -1,38 +1,145 @@
-{% extends 'base.html' %} {% load static %} {% block extra_css %}
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
 <link rel="stylesheet" href="{% static 'project1/style.css' %}" />
-{% endblock %} {% block content %}
+{% endblock %}
 
-<div class="box">
-  <div class="title-container">
-    <div class="title">Project 1</div>
-  </div>
+{% block content %}
+<div class="p1-container">
 
-  <div class="main-text">
-    <div class="summary">
-      <h2 class="section-heading">Automated Machine Learning</h2>
-      <p class="section-description">{{ description }}</p>
-    </div>
+  <h2 class="section-heading">Automated Machine Learning</h2>
+  <p class="section-description">{{ description }}</p>
 
-    <div class="coming-soon">
-      <p>This interface will allow you to:</p>
-      <ul>
-        <li>Upload a CSV dataset</li>
-        <li>Visualize feature distributions and correlations</li>
-        <li>Train and compare multiple supervised learning models</li>
-        <li>Inspect prediction results and model performance metrics</li>
-      </ul>
-      <p class="status-note">
-        Work in progress — full implementation coming in the next tasks.
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div class="upload-section">
+      <p class="upload-label">Upload a CSV file</p>
+      <p class="upload-hint">
+        First row = feature names &middot; Last column = target variable
       </p>
+      <input type="file" name="csv_file" accept=".csv" />
+      <br/><br/>
+      <button type="submit" class="btn btn-primary">Load &amp; Visualize</button>
+    </div>
+  </form>
+
+  {% if error %}
+  <div class="error-box">Error: {{ error }}</div>
+  {% endif %}
+
+  {% if scatter_plot %}
+
+  <div class="dataset-info">
+    <span class="info-badge">File: <strong>{{ filename }}</strong></span>
+    <span class="info-badge">Rows: <strong>{{ n_rows }}</strong></span>
+    <span class="info-badge">Columns: <strong>{{ n_cols }}</strong></span>
+    <span class="info-badge">Target: <strong>{{ target_col }}</strong></span>
+    <span class="info-badge">Type: <strong>{{ problem_type }}</strong></span>
+  </div>
+
+  <form method="post">
+    {% csrf_token %}
+
+    {% if problem_type == 'classification' %}
+    <div class="plot-block">
+      <h3 class="plot-heading">Filter Categories</h3>
+      <p class="plot-desc">Select which categories to display. Uncheck all to clear plots.</p>
+      <div class="controls-row">
+        {% for cls in unique_classes %}
+        <div class="control-item">
+          <input type="checkbox" name="selected_classes" value="{{ cls }}" id="check_{{ cls }}" 
+                {% if cls in selected_classes %}checked{% endif %}>
+          <label for="check_{{ cls }}" style="color: #333; margin-left: 5px;">{{ cls }}</label>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="plots-grid">
+
+      <div class="plot-block">
+        <h3 class="plot-heading">Scatter Plot</h3>
+        <p class="plot-desc">Select two features to plot against each other.</p>
+        <div class="controls-row">
+          <div class="control-item">
+            <label for="scatter_x">X Axis:</label>
+            <select name="scatter_x" id="scatter_x">
+              {% for f in feature_cols %}
+              <option value="{{ f }}" {% if f == scatter_x %}selected{% endif %}>{{ f }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="control-item">
+            <label for="scatter_y">Y Axis:</label>
+            <select name="scatter_y" id="scatter_y">
+              {% for f in feature_cols %}
+              <option value="{{ f }}" {% if f == scatter_y %}selected{% endif %}>{{ f }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="plot-img-box">
+          <img src="data:image/png;base64,{{ scatter_plot }}" alt="Scatter plot" />
+        </div>
+      </div>
+
+      <div class="plot-block">
+        <h3 class="plot-heading">Histogram</h3>
+        <p class="plot-desc">View how a single feature is distributed.</p>
+        <div class="controls-row">
+          <div class="control-item">
+            <label for="hist_feature">Feature:</label>
+            <select name="hist_feature" id="hist_feature">
+              {% for f in feature_cols %}
+              <option value="{{ f }}" {% if f == hist_feature %}selected{% endif %}>{{ f }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="plot-img-box">
+          <img src="data:image/png;base64,{{ hist_plot }}" alt="Histogram" />
+        </div>
+      </div>
+
     </div>
 
-    <div class="back-link-container">
-      <form action="{% url 'home:index' %}" method="get">
-        {% csrf_token %}
-        <button type="submit">← Back to Home</button>
-      </form>
+    <div class="update-row">
+      <button type="submit" class="btn btn-primary">Update Plots</button>
+    </div>
+
+  </form>
+
+  <div class="plot-block">
+    <h3 class="plot-heading">Correlation Matrix</h3>
+    <p class="plot-desc">
+      Pearson correlation between all numeric features.
+    </p>
+    <div class="plot-img-box">
+      <img src="data:image/png;base64,{{ corr_plot }}" alt="Correlation heatmap" />
     </div>
   </div>
-</div>
 
-{% endblock %} {% block script %} {% endblock script %}
+  <div class="plot-block">
+    <h3 class="plot-heading">Data Preview</h3>
+    <p class="plot-desc">First 10 rows of the uploaded dataset.</p>
+    <div class="table-wrap">
+      {{ preview|safe }}
+    </div>
+  </div>
+
+  {% endif %}
+
+  <div class="back-link-container">
+    <form action="{% url 'home:index' %}" method="get">
+      {% csrf_token %}
+      <button type="submit" class="btn">&larr; Back to Home</button>
+    </form>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block script %}
+{% endblock script %}
