@@ -117,6 +117,7 @@
   padding: 15px;
   background: #f1f4f9;
   border-radius: 10px;
+  overflow: visible;      
 }
 
 .control-item {
@@ -269,6 +270,81 @@
 .update-row {
   text-align: center;
   margin: 20px 0 40px;
+}
+
+/* =============================================================
+   TRAINING SECTION
+   ============================================================= */
+ 
+.training-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px;
+  margin: 24px 0;
+}
+
+.summary-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 16px;
+  background: #f8fbff;
+  border: 1px solid #d1e3ff;
+  border-radius: 14px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(39, 92, 178, 0.07);
+}
+
+.summary-highlight {
+  background: linear-gradient(135deg, #e8f0fe, #d1e3ff);
+  border-color: #275cb2;
+  box-shadow: 0 4px 14px rgba(39, 92, 178, 0.15);
+}
+
+.summary-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #718096;
+  margin-bottom: 8px;
+}
+
+.summary-value {
+  font-size: 32px;
+  font-weight: 800;
+  color: #1a3a6d;
+  line-height: 1;
+}
+
+.summary-value-sm {
+  font-size: 14px;
+  font-weight: 700;
+  color: #275cb2;
+  line-height: 1.4;
+}
+
+.summary-sub {
+  font-size: 11px;
+  color: #718096;
+  margin-top: 6px;
+}
+
+.best-row td {
+  background: #e8f5e9 !important;
+  color: #1b5e20 !important;
+}
+
+.best-row strong {
+  color: #1b5e20;
+}
+
+.results-table-heading {
+  font-size: 15px;
+  font-weight: 700;
+  color: #275cb2;
+  margin: 24px 0 10px;
 }
 
 /* =============================================================

@@ -11,6 +11,7 @@ import matplotlib.cm as cm
 
 from django.shortcuts import render
 
+from .models import CLASSIFICATION_MODELS, REGRESSION_MODELS, run_training
  
 # Helper: convert a matplotlib figure to a base64 string
 def fig_to_base64(fig):
@@ -198,23 +199,41 @@ def index(request):
             # Table Preview
             preview_html = df.head(10).to_html(classes='data-table', border=0, index=False)
 
+            registry         = CLASSIFICATION_MODELS if problem_type == 'classification' else REGRESSION_MODELS
+            available_models = [(key, cfg['label']) for key, cfg in registry.items()]
+ 
+
             context.update({
-                'scatter_plot': scatter_plot,
-                'hist_plot': hist_plot,
-                'corr_plot': corr_plot,
-                'preview': preview_html,
-                'feature_cols': feature_cols,
-                'target_col': target_col,
-                'problem_type': problem_type,
-                'unique_classes': unique_classes,
+                'scatter_plot':     scatter_plot,
+                'hist_plot':        hist_plot,
+                'corr_plot':        corr_plot,
+                'preview':          preview_html,
+                'feature_cols':     feature_cols,
+                'target_col':       target_col,
+                'problem_type':     problem_type,
+                'unique_classes':   unique_classes,
                 'selected_classes': selected_classes,
-                'scatter_x': scatter_x,
-                'scatter_y': scatter_y,
-                'hist_feature': hist_feature,
-                'n_rows': len(df),
-                'n_cols': len(df.columns),
-                'filename': filename,
+                'scatter_x':        scatter_x,
+                'scatter_y':        scatter_y,
+                'hist_feature':     hist_feature,
+                'n_rows':           len(df),
+                'n_cols':           len(df.columns),
+                'filename':         filename,
+                'available_models': available_models,
             })
+
+            if request.POST.get('action') == 'train':
+                model_key = request.POST.get('model_key', list(registry.keys())[0])
+                test_size = float(request.POST.get('test_size', 0.2))
+                test_size = max(0.1, min(0.5, test_size))
+ 
+                if model_key not in registry:
+                    model_key = list(registry.keys())[0]
+ 
+                context['training'] = run_training(
+                    df, feature_cols, target_col, problem_type, model_key, test_size
+                )
+ 
 
         except Exception as e:
             context['error'] = str(e)

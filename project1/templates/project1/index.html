@@ -129,6 +129,117 @@
     </div>
   </div>
 
+<!-- Model training section-->
+
+ <div class="plot-block">
+    <h3 class="plot-heading">Model Training</h3>
+    <p class="plot-desc">
+      Choose a model and test-split size. The webpage will automatically sweep the
+      model's key hyperparameter and show train vs. test performance.
+    </p>
+ 
+    <form method="post">
+      {% csrf_token %}
+ 
+      <!-- carry visualisation state so the plots are preserved -->
+      {% for cls in selected_classes %}
+        <input type="hidden" name="selected_classes" value="{{ cls }}">
+      {% endfor %}
+      <input type="hidden" name="scatter_x"    value="{{ scatter_x }}">
+      <input type="hidden" name="scatter_y"    value="{{ scatter_y }}">
+      <input type="hidden" name="hist_feature" value="{{ hist_feature }}">
+ 
+      <!-- tells the view this is a training request -->
+      <input type="hidden" name="action" value="train">
+ 
+      <div class="controls-row">
+
+      <div class="control-item">
+        <label for="model_key">Algorithm:</label>
+        <select name="model_key" id="model_key">
+          {% for key, label in available_models %}
+            <option value="{{ key }}"
+              {% if training.model_key == key %}selected{% endif %}>
+              {{ label }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="control-item">
+        <label for="test_size">Test Split:</label>
+        <select name="test_size" id="test_size">
+          <option value="0.1"  {% if training.test_size == 0.1  %}selected{% endif %}>10%</option>
+          <option value="0.15" {% if training.test_size == 0.15 %}selected{% endif %}>15%</option>
+          <option value="0.2"  {% if not training or training.test_size == 0.2 %}selected{% endif %}>20% (default)</option>
+          <option value="0.25" {% if training.test_size == 0.25 %}selected{% endif %}>25%</option>
+          <option value="0.3"  {% if training.test_size == 0.3  %}selected{% endif %}>30%</option>
+          <option value="0.4"  {% if training.test_size == 0.4  %}selected{% endif %}>40%</option>
+          <option value="0.5"  {% if training.test_size == 0.5  %}selected{% endif %}>50%</option>
+        </select>
+      </div>
+
+    </div>
+
+        <div class="update-row">
+          <button type="submit" class="btn btn-primary">&#9654;&nbsp; Train Model</button>
+        </div>
+ 
+      </div>
+    </form>
+ 
+    <!-- Results section after training -->
+    {% if training %}
+ 
+      <div class="training-summary">
+        <div class="summary-card summary-highlight">
+          <span class="summary-label">Best {{ training.score_label }}</span>
+          <span class="summary-value">{{ training.best_test }}</span>
+          <span class="summary-sub">at {{ training.param_label }} = {{ training.best_param }}</span>
+        </div>
+        <div class="summary-card">
+          <span class="summary-label">Model</span>
+          <span class="summary-value-sm">{{ training.model_label }}</span>
+        </div>
+        <div class="summary-card">
+          <span class="summary-label">Train samples</span>
+          <span class="summary-value">{{ training.n_train }}</span>
+        </div>
+        <div class="summary-card">
+          <span class="summary-label">Test samples</span>
+          <span class="summary-value">{{ training.n_test }}</span>
+        </div>
+      </div>
+ 
+      <div class="plot-img-box" style="margin-top: 20px;">
+        <img src="data:image/png;base64,{{ training.training_plot }}" alt="Training curve" />
+      </div>
+ 
+      <h4 class="results-table-heading">Full Results</h4>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>{{ training.param_label }}</th>
+              <th>Train {{ training.score_label }}</th>
+              <th>Test {{ training.score_label }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in training.results_table %}
+            <tr {% if row.param == training.best_param %}class="best-row"{% endif %}>
+              <td>{{ row.param }}</td>
+              <td>{{ row.train }}</td>
+              <td><strong>{{ row.test }}</strong></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+ 
+    {% endif %}
+  </div>
+
   {% endif %}
 
   <div class="back-link-container">
