@@ -64,94 +64,11 @@
     <span class="info-badge">Type: <strong>{{ problem_type }}</strong></span>
   </div>
 
-  {# ── FORM 1: Plots ───────────────────────────────────────────────────────── #}
-  <form method="post" id="viz-form">
-    {% csrf_token %}
-    <input type="hidden" name="action" value="update_plots">
-
-    {% if problem_type == 'classification' %}
-    <div class="plot-block">
-      <h3 class="plot-heading">Filter Categories</h3>
-      <p class="plot-desc">Select which categories to display in the plots.</p>
-      <div class="controls-row">
-        {% for cls in unique_classes %}
-        <div class="control-item">
-          <input type="checkbox" name="selected_classes" value="{{ cls }}"
-                 id="check_{{ cls }}"
-                 {% if cls in selected_classes %}checked{% endif %}>
-          <label for="check_{{ cls }}">{{ cls }}</label>
-        </div>
-        {% endfor %}
-      </div>
-    </div>
-    {% endif %}
-
-    {# Swap zone — only images inside here get replaced #}
-    <div id="plots-inner">
-      <div class="plots-grid">
-        <div class="plot-block">
-          <h3 class="plot-heading">Scatter Plot</h3>
-          <p class="plot-desc">Select two features to compare.</p>
-          <div class="controls-row">
-            <div class="control-item">
-              <label for="scatter_x">X Axis:</label>
-              <select name="scatter_x" id="scatter_x">
-                {% for f in feature_cols %}
-                <option value="{{ f }}" {% if f == scatter_x %}selected{% endif %}>{{ f }}</option>
-                {% endfor %}
-              </select>
-            </div>
-            <div class="control-item">
-              <label for="scatter_y">Y Axis:</label>
-              <select name="scatter_y" id="scatter_y">
-                {% for f in feature_cols %}
-                <option value="{{ f }}" {% if f == scatter_y %}selected{% endif %}>{{ f }}</option>
-                {% endfor %}
-              </select>
-            </div>
-          </div>
-          <div class="plot-img-box">
-            <img id="scatter-img" src="data:image/png;base64,{{ scatter_plot }}" alt="Scatter plot" />
-          </div>
-        </div>
-
-        <div class="plot-block">
-          <h3 class="plot-heading">Histogram</h3>
-          <p class="plot-desc">Distribution of a single feature.</p>
-          <div class="controls-row">
-            <div class="control-item">
-              <label for="hist_feature">Feature:</label>
-              <select name="hist_feature" id="hist_feature">
-                {% for f in feature_cols %}
-                <option value="{{ f }}" {% if f == hist_feature %}selected{% endif %}>{{ f }}</option>
-                {% endfor %}
-              </select>
-            </div>
-          </div>
-          <div class="plot-img-box">
-            <img id="hist-img" src="data:image/png;base64,{{ hist_plot }}" alt="Histogram" />
-          </div>
-        </div>
-      </div>
-    </div>{# end #plots-inner #}
-
-    <div class="update-row">
-      <button type="submit" class="btn btn-primary" id="update-plots-btn">Update Plots</button>
-    </div>
-  </form>
-
-  <div class="plot-block">
-    <h3 class="plot-heading">Correlation Matrix</h3>
-    <p class="plot-desc">Pearson correlation between all numeric features.</p>
-    <div class="plot-img-box">
-      <img id="corr-img" src="data:image/png;base64,{{ corr_plot }}" alt="Correlation heatmap" />
-    </div>
-  </div>
-
-  {# ── FORM 2: Table ───────────────────────────────────────────────────────── #}
+  {# ── FORM 2: Table (MOVED BEFORE PLOTS) ──────────────────────────────────── #}
   <div class="plot-block" id="table-section">
     <h3 class="plot-heading">Data Preview</h3>
     <p class="plot-desc">
+      Browse your dataset with interactive search, sorting, and column filtering. 
       Showing rows <strong>{{ row_start }}–{{ row_end }}</strong> of
       <strong>{{ total_rows }}</strong>{% if search_query %} (filtered){% endif %}.
     </p>
@@ -247,6 +164,90 @@
       </div>
       {% endif %}
     </div>{# end #table-inner — only this gets swapped #}
+  </div>
+
+  {# ── FORM 1: Plots ───────────────────────────────────────────────────────── #}
+  <form method="post" id="viz-form">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="update_plots">
+
+    {% if problem_type == 'classification' %}
+    <div class="plot-block">
+      <h3 class="plot-heading">Filter Categories</h3>
+      <p class="plot-desc">Select which categories to display in the plots.</p>
+      <div class="controls-row">
+        {% for cls in unique_classes %}
+        <div class="control-item">
+          <input type="checkbox" name="selected_classes" value="{{ cls }}"
+                 id="check_{{ cls }}"
+                 {% if cls in selected_classes %}checked{% endif %}>
+          <label for="check_{{ cls }}">{{ cls }}</label>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    {# Swap zone — only images inside here get replaced #}
+    <div id="plots-inner">
+      <div class="plots-grid">
+        <div class="plot-block">
+          <h3 class="plot-heading">Scatter Plot</h3>
+          <p class="plot-desc">Visualize the relationship between two numeric features. Points are colored by the target variable to reveal patterns and correlations.</p>
+          <div class="controls-row">
+            <div class="control-item">
+              <label for="scatter_x">X Axis:</label>
+              <select name="scatter_x" id="scatter_x">
+                {% for f in feature_cols %}
+                <option value="{{ f }}" {% if f == scatter_x %}selected{% endif %}>{{ f }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="control-item">
+              <label for="scatter_y">Y Axis:</label>
+              <select name="scatter_y" id="scatter_y">
+                {% for f in feature_cols %}
+                <option value="{{ f }}" {% if f == scatter_y %}selected{% endif %}>{{ f }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="plot-img-box">
+            <img id="scatter-img" src="data:image/png;base64,{{ scatter_plot }}" alt="Scatter plot" />
+          </div>
+        </div>
+
+        <div class="plot-block">
+          <h3 class="plot-heading">Histogram</h3>
+          <p class="plot-desc">Explore the distribution of values for a single feature. Overlapping histograms show how different target categories are distributed across feature ranges.</p>
+          <div class="controls-row">
+            <div class="control-item">
+              <label for="hist_feature">Feature:</label>
+              <select name="hist_feature" id="hist_feature">
+                {% for f in feature_cols %}
+                <option value="{{ f }}" {% if f == hist_feature %}selected{% endif %}>{{ f }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="plot-img-box">
+            <img id="hist-img" src="data:image/png;base64,{{ hist_plot }}" alt="Histogram" />
+          </div>
+        </div>
+      </div>
+    </div>{# end #plots-inner #}
+
+    <div class="update-row">
+      <button type="submit" class="btn btn-primary" id="update-plots-btn">Update Plots</button>
+    </div>
+  </form>
+
+  <div class="plot-block">
+    <h3 class="plot-heading">Correlation Matrix</h3>
+    <p class="plot-desc">Understand feature relationships through Pearson correlation coefficients. Values range from -1 (strong negative) to +1 (strong positive), helping identify redundant or complementary features.</p>
+    <div class="plot-img-box">
+      <img id="corr-img" src="data:image/png;base64,{{ corr_plot }}" alt="Correlation heatmap" />
+    </div>
   </div>
 
   {# ── FORM 3: Training ────────────────────────────────────────────────────── #}
