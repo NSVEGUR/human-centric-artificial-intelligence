@@ -8,16 +8,42 @@
 {% block content %}
 <div class="p1-container">
 
+  {# ── Top action bar ──────────────────────────────────────────────────────── #}
+  <div class="top-action-bar">
+    <form action="{% url 'home:index' %}" method="get">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-nav">&#8592; Back to Home</button>
+    </form>
+    {% if scatter_plot %}
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="clear">
+      <button type="submit" class="btn btn-danger btn-nav"
+              onclick="return confirm('Clear dataset and all visualisations?')">
+        &#x2715; Clear Data
+      </button>
+    </form>
+    {% endif %}
+  </div>
+
   <h2 class="section-heading">Automated Machine Learning</h2>
   <p class="section-description">{{ description }}</p>
 
+  {# ── Session banner ──────────────────────────────────────────────────────── #}
+  {% if loaded_from_session %}
+  <div class="session-banner">
+    &#128204; Showing data from your previous session
+    (<strong>{{ filename }}</strong>).
+    Use <em>Clear Data</em> above to reset, or upload a new file below.
+  </div>
+  {% endif %}
+
+  {# ── Upload ──────────────────────────────────────────────────────────────── #}
   <form method="post" enctype="multipart/form-data">
     {% csrf_token %}
     <div class="upload-section">
       <p class="upload-label">Upload a CSV file</p>
-      <p class="upload-hint">
-        First row = feature names &middot; Last column = target variable
-      </p>
+      <p class="upload-hint">First row = feature names &middot; Last column = target variable</p>
       <input type="file" name="csv_file" accept=".csv" />
       <br/><br/>
       <button type="submit" class="btn btn-primary">Load &amp; Visualize</button>
@@ -38,219 +64,440 @@
     <span class="info-badge">Type: <strong>{{ problem_type }}</strong></span>
   </div>
 
-  <form method="post">
+  {# ── FORM 1: Plots ───────────────────────────────────────────────────────── #}
+  <form method="post" id="viz-form">
     {% csrf_token %}
+    <input type="hidden" name="action" value="update_plots">
 
     {% if problem_type == 'classification' %}
     <div class="plot-block">
       <h3 class="plot-heading">Filter Categories</h3>
-      <p class="plot-desc">Select which categories to display. Uncheck all to clear plots.</p>
+      <p class="plot-desc">Select which categories to display in the plots.</p>
       <div class="controls-row">
         {% for cls in unique_classes %}
         <div class="control-item">
-          <input type="checkbox" name="selected_classes" value="{{ cls }}" id="check_{{ cls }}" 
-                {% if cls in selected_classes %}checked{% endif %}>
-          <label for="check_{{ cls }}" style="color: #333; margin-left: 5px;">{{ cls }}</label>
+          <input type="checkbox" name="selected_classes" value="{{ cls }}"
+                 id="check_{{ cls }}"
+                 {% if cls in selected_classes %}checked{% endif %}>
+          <label for="check_{{ cls }}">{{ cls }}</label>
         </div>
         {% endfor %}
       </div>
     </div>
     {% endif %}
 
-    <div class="plots-grid">
-
-      <div class="plot-block">
-        <h3 class="plot-heading">Scatter Plot</h3>
-        <p class="plot-desc">Select two features to plot against each other.</p>
-        <div class="controls-row">
-          <div class="control-item">
-            <label for="scatter_x">X Axis:</label>
-            <select name="scatter_x" id="scatter_x">
-              {% for f in feature_cols %}
-              <option value="{{ f }}" {% if f == scatter_x %}selected{% endif %}>{{ f }}</option>
-              {% endfor %}
-            </select>
+    {# Swap zone — only images inside here get replaced #}
+    <div id="plots-inner">
+      <div class="plots-grid">
+        <div class="plot-block">
+          <h3 class="plot-heading">Scatter Plot</h3>
+          <p class="plot-desc">Select two features to compare.</p>
+          <div class="controls-row">
+            <div class="control-item">
+              <label for="scatter_x">X Axis:</label>
+              <select name="scatter_x" id="scatter_x">
+                {% for f in feature_cols %}
+                <option value="{{ f }}" {% if f == scatter_x %}selected{% endif %}>{{ f }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="control-item">
+              <label for="scatter_y">Y Axis:</label>
+              <select name="scatter_y" id="scatter_y">
+                {% for f in feature_cols %}
+                <option value="{{ f }}" {% if f == scatter_y %}selected{% endif %}>{{ f }}</option>
+                {% endfor %}
+              </select>
+            </div>
           </div>
-          <div class="control-item">
-            <label for="scatter_y">Y Axis:</label>
-            <select name="scatter_y" id="scatter_y">
-              {% for f in feature_cols %}
-              <option value="{{ f }}" {% if f == scatter_y %}selected{% endif %}>{{ f }}</option>
-              {% endfor %}
-            </select>
+          <div class="plot-img-box">
+            <img id="scatter-img" src="data:image/png;base64,{{ scatter_plot }}" alt="Scatter plot" />
           </div>
         </div>
-        <div class="plot-img-box">
-          <img src="data:image/png;base64,{{ scatter_plot }}" alt="Scatter plot" />
+
+        <div class="plot-block">
+          <h3 class="plot-heading">Histogram</h3>
+          <p class="plot-desc">Distribution of a single feature.</p>
+          <div class="controls-row">
+            <div class="control-item">
+              <label for="hist_feature">Feature:</label>
+              <select name="hist_feature" id="hist_feature">
+                {% for f in feature_cols %}
+                <option value="{{ f }}" {% if f == hist_feature %}selected{% endif %}>{{ f }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="plot-img-box">
+            <img id="hist-img" src="data:image/png;base64,{{ hist_plot }}" alt="Histogram" />
+          </div>
         </div>
       </div>
-
-      <div class="plot-block">
-        <h3 class="plot-heading">Histogram</h3>
-        <p class="plot-desc">View how a single feature is distributed.</p>
-        <div class="controls-row">
-          <div class="control-item">
-            <label for="hist_feature">Feature:</label>
-            <select name="hist_feature" id="hist_feature">
-              {% for f in feature_cols %}
-              <option value="{{ f }}" {% if f == hist_feature %}selected{% endif %}>{{ f }}</option>
-              {% endfor %}
-            </select>
-          </div>
-        </div>
-        <div class="plot-img-box">
-          <img src="data:image/png;base64,{{ hist_plot }}" alt="Histogram" />
-        </div>
-      </div>
-
-    </div>
+    </div>{# end #plots-inner #}
 
     <div class="update-row">
-      <button type="submit" class="btn btn-primary">Update Plots</button>
+      <button type="submit" class="btn btn-primary" id="update-plots-btn">Update Plots</button>
     </div>
-
   </form>
 
   <div class="plot-block">
     <h3 class="plot-heading">Correlation Matrix</h3>
-    <p class="plot-desc">
-      Pearson correlation between all numeric features.
-    </p>
+    <p class="plot-desc">Pearson correlation between all numeric features.</p>
     <div class="plot-img-box">
-      <img src="data:image/png;base64,{{ corr_plot }}" alt="Correlation heatmap" />
+      <img id="corr-img" src="data:image/png;base64,{{ corr_plot }}" alt="Correlation heatmap" />
     </div>
   </div>
 
-  <div class="plot-block">
+  {# ── FORM 2: Table ───────────────────────────────────────────────────────── #}
+  <div class="plot-block" id="table-section">
     <h3 class="plot-heading">Data Preview</h3>
-    <p class="plot-desc">First 10 rows of the uploaded dataset.</p>
-    <div class="table-wrap">
-      {{ preview|safe }}
+    <p class="plot-desc">
+      Showing rows <strong>{{ row_start }}–{{ row_end }}</strong> of
+      <strong>{{ total_rows }}</strong>{% if search_query %} (filtered){% endif %}.
+    </p>
+
+    {# Hidden state form — never inside the swap zone #}
+    <form id="table-form" method="post" style="display:none">
+      {% csrf_token %}
+      <input type="hidden" name="action"       value="table">
+      <input type="hidden" name="sort_col"     id="sort_col_input" value="{{ sort_col }}">
+      <input type="hidden" name="sort_dir"     id="sort_dir_input" value="{{ sort_dir }}">
+      <input type="hidden" name="table_page"   id="page_input"     value="{{ current_page }}">
+      <input type="hidden" name="page_size"    id="psize_input"    value="{{ page_size }}">
+      <input type="hidden" name="table_search" id="search_hidden"  value="{{ search_query }}">
+      {% for c in hidden_cols %}
+      <input type="hidden" name="hidden_cols" class="hidden-col-inp" value="{{ c }}">
+      {% endfor %}
+    </form>
+
+    {# Toolbar lives OUTSIDE swap zone — search input is never destroyed #}
+    <div class="table-toolbar">
+      <input type="text" id="table-search"
+             class="table-search-input"
+             placeholder="Search all visible columns…"
+             value="{{ search_query }}"
+             autocomplete="off">
+      <div class="table-toolbar-right">
+        <span class="toolbar-label">Rows:</span>
+        {% for opt in page_size_opts %}
+        <button type="button" class="psize-btn {% if opt == page_size %}psize-active{% endif %}"
+                data-size="{{ opt }}">{{ opt }}</button>
+        {% endfor %}
+      </div>
     </div>
+
+    {# Only this div is replaced on every fetch #}
+    <div id="table-inner">
+      <div class="col-toggle-bar">
+        <span class="toolbar-label">Columns:</span>
+        {% for col in all_columns %}
+        <button type="button"
+                class="col-toggle-btn {% if col not in hidden_cols %}col-visible{% endif %}"
+                data-col="{{ col }}">{{ col }}</button>
+        {% endfor %}
+      </div>
+
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              {% for col in table_headers %}
+              <th>
+                <button type="button" class="sort-btn"
+                        data-col="{{ col }}"
+                        data-dir="{% if sort_col == col %}{{ next_sort_dir }}{% else %}asc{% endif %}">
+                  {{ col }}
+                  {% if sort_col == col %}
+                    {% if sort_dir == 'asc' %}&#x25B2;{% else %}&#x25BC;{% endif %}
+                  {% else %}
+                    <span class="sort-idle">&#x25B2;&#x25BC;</span>
+                  {% endif %}
+                </button>
+              </th>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in table_rows %}
+            <tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>
+            {% empty %}
+            <tr><td colspan="{{ table_headers|length }}" class="no-results">
+              No rows match your search.
+            </td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {% if total_pages > 1 %}
+      <div class="pagination-bar">
+        <button type="button" class="page-btn" data-page="{{ current_page|add:'-1' }}"
+                {% if current_page == 1 %}disabled{% endif %}>&#8592; Prev</button>
+        {% for p in page_range %}
+          {% if p is None %}
+            <span class="page-ellipsis">&hellip;</span>
+          {% else %}
+            <button type="button"
+                    class="page-btn {% if p == current_page %}page-active{% endif %}"
+                    data-page="{{ p }}">{{ p }}</button>
+          {% endif %}
+        {% endfor %}
+        <button type="button" class="page-btn" data-page="{{ current_page|add:'1' }}"
+                {% if current_page == total_pages %}disabled{% endif %}>Next &#8594;</button>
+      </div>
+      {% endif %}
+    </div>{# end #table-inner — only this gets swapped #}
   </div>
 
-<!-- Model training section-->
-
- <div class="plot-block">
+  {# ── FORM 3: Training ────────────────────────────────────────────────────── #}
+  <div class="plot-block">
     <h3 class="plot-heading">Model Training</h3>
     <p class="plot-desc">
-      Choose a model and test-split size. The webpage will automatically sweep the
-      model's key hyperparameter and show train vs. test performance.
+      Choose a model and test-split size. The app sweeps the model's key
+      hyperparameter and shows train vs. test performance.
     </p>
- 
     <form method="post">
       {% csrf_token %}
- 
-      <!-- carry visualisation state so the plots are preserved -->
+      <input type="hidden" name="action" value="train">
       {% for cls in selected_classes %}
         <input type="hidden" name="selected_classes" value="{{ cls }}">
       {% endfor %}
       <input type="hidden" name="scatter_x"    value="{{ scatter_x }}">
       <input type="hidden" name="scatter_y"    value="{{ scatter_y }}">
       <input type="hidden" name="hist_feature" value="{{ hist_feature }}">
- 
-      <!-- tells the view this is a training request -->
-      <input type="hidden" name="action" value="train">
- 
+
       <div class="controls-row">
-
-      <div class="control-item">
-        <label for="model_key">Algorithm:</label>
-        <select name="model_key" id="model_key">
-          {% for key, label in available_models %}
-            <option value="{{ key }}"
-              {% if training.model_key == key %}selected{% endif %}>
-              {{ label }}
-            </option>
-          {% endfor %}
-        </select>
-      </div>
-
-      <div class="control-item">
-        <label for="test_size">Test Split:</label>
-        <select name="test_size" id="test_size">
-          <option value="0.1"  {% if training.test_size == 0.1  %}selected{% endif %}>10%</option>
-          <option value="0.15" {% if training.test_size == 0.15 %}selected{% endif %}>15%</option>
-          <option value="0.2"  {% if not training or training.test_size == 0.2 %}selected{% endif %}>20% (default)</option>
-          <option value="0.25" {% if training.test_size == 0.25 %}selected{% endif %}>25%</option>
-          <option value="0.3"  {% if training.test_size == 0.3  %}selected{% endif %}>30%</option>
-          <option value="0.4"  {% if training.test_size == 0.4  %}selected{% endif %}>40%</option>
-          <option value="0.5"  {% if training.test_size == 0.5  %}selected{% endif %}>50%</option>
-        </select>
-      </div>
-
-    </div>
-
-        <div class="update-row">
-          <button type="submit" class="btn btn-primary">&#9654;&nbsp; Train Model</button>
+        <div class="control-item">
+          <label for="model_key">Algorithm:</label>
+          <select name="model_key" id="model_key">
+            {% for key, label in available_models %}
+            <option value="{{ key }}" {% if training.model_key == key %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
         </div>
- 
+        <div class="control-item">
+          <label for="test_size">Test Split:</label>
+          <select name="test_size" id="test_size">
+            <option value="0.1"  {% if training.test_size == 0.1  %}selected{% endif %}>10%</option>
+            <option value="0.15" {% if training.test_size == 0.15 %}selected{% endif %}>15%</option>
+            <option value="0.2"  {% if not training or training.test_size == 0.2 %}selected{% endif %}>20% (default)</option>
+            <option value="0.25" {% if training.test_size == 0.25 %}selected{% endif %}>25%</option>
+            <option value="0.3"  {% if training.test_size == 0.3  %}selected{% endif %}>30%</option>
+            <option value="0.4"  {% if training.test_size == 0.4  %}selected{% endif %}>40%</option>
+            <option value="0.5"  {% if training.test_size == 0.5  %}selected{% endif %}>50%</option>
+          </select>
+        </div>
+      </div>
+      <div class="update-row">
+        <button type="submit" class="btn btn-primary">&#9654; Train Model</button>
       </div>
     </form>
- 
-    <!-- Results section after training -->
+
     {% if training %}
- 
-      <div class="training-summary">
-        <div class="summary-card summary-highlight">
-          <span class="summary-label">Best {{ training.score_label }}</span>
-          <span class="summary-value">{{ training.best_test }}</span>
-          <span class="summary-sub">at {{ training.param_label }} = {{ training.best_param }}</span>
-        </div>
-        <div class="summary-card">
-          <span class="summary-label">Model</span>
-          <span class="summary-value-sm">{{ training.model_label }}</span>
-        </div>
-        <div class="summary-card">
-          <span class="summary-label">Train samples</span>
-          <span class="summary-value">{{ training.n_train }}</span>
-        </div>
-        <div class="summary-card">
-          <span class="summary-label">Test samples</span>
-          <span class="summary-value">{{ training.n_test }}</span>
-        </div>
+    <div class="training-summary">
+      <div class="summary-card summary-highlight">
+        <span class="summary-label">Best {{ training.score_label }}</span>
+        <span class="summary-value">{{ training.best_test }}</span>
+        <span class="summary-sub">at {{ training.param_label }} = {{ training.best_param }}</span>
       </div>
- 
-      <div class="plot-img-box" style="margin-top: 20px;">
-        <img src="data:image/png;base64,{{ training.training_plot }}" alt="Training curve" />
+      <div class="summary-card">
+        <span class="summary-label">Model</span>
+        <span class="summary-value-sm">{{ training.model_label }}</span>
       </div>
- 
-      <h4 class="results-table-heading">Full Results</h4>
-      <div class="table-wrap">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>{{ training.param_label }}</th>
-              <th>Train {{ training.score_label }}</th>
-              <th>Test {{ training.score_label }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for row in training.results_table %}
-            <tr {% if row.param == training.best_param %}class="best-row"{% endif %}>
-              <td>{{ row.param }}</td>
-              <td>{{ row.train }}</td>
-              <td><strong>{{ row.test }}</strong></td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+      <div class="summary-card">
+        <span class="summary-label">Train samples</span>
+        <span class="summary-value">{{ training.n_train }}</span>
       </div>
- 
+      <div class="summary-card">
+        <span class="summary-label">Test samples</span>
+        <span class="summary-value">{{ training.n_test }}</span>
+      </div>
+    </div>
+    <div class="plot-img-box" style="margin-top:20px;">
+      <img src="data:image/png;base64,{{ training.training_plot }}" alt="Training curve" />
+    </div>
+    <h4 class="results-table-heading">Full Results</h4>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>{{ training.param_label }}</th>
+            <th>Train {{ training.score_label }}</th>
+            <th>Test {{ training.score_label }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in training.results_table %}
+          <tr {% if row.param == training.best_param %}class="best-row"{% endif %}>
+            <td>{{ row.param }}</td>
+            <td>{{ row.train }}</td>
+            <td><strong>{{ row.test }}</strong></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
     {% endif %}
   </div>
 
   {% endif %}
-
-  <div class="back-link-container">
-    <form action="{% url 'home:index' %}" method="get">
-      {% csrf_token %}
-      <button type="submit" class="btn">&larr; Back to Home</button>
-    </form>
-  </div>
-
 </div>
 {% endblock %}
 
 {% block script %}
+<script>
+(function () {
+  'use strict';
+
+  // ── Core: fetch table-inner swap ─────────────────────────────────────────
+  // The search input lives OUTSIDE #table-inner so it is never destroyed.
+  // Only the results div is replaced — focus/cursor are fully preserved.
+
+  function submitTable() {
+    const form  = document.getElementById('table-form');
+    const inner = document.getElementById('table-inner');
+    const desc  = document.querySelector('#table-section .plot-desc');
+    if (!form || !inner) return;
+
+    // Sync the visible search input into the hidden form field before posting
+    const visibleSearch = document.getElementById('table-search');
+    if (visibleSearch) {
+      document.getElementById('search_hidden').value = visibleSearch.value;
+    }
+
+    inner.style.opacity      = '0.45';
+    inner.style.pointerEvents = 'none';
+
+    fetch(window.location.href, { method: 'POST', body: new FormData(form) })
+      .then(r => r.text())
+      .then(html => {
+        const doc      = new DOMParser().parseFromString(html, 'text/html');
+        const newInner = doc.getElementById('table-inner');
+        const newDesc  = doc.querySelector('#table-section .plot-desc');
+        if (newInner) {
+          inner.outerHTML = newInner.outerHTML;   // swap only results
+          if (desc && newDesc) desc.innerHTML = newDesc.innerHTML;
+          // Sync psize-active highlight to match the current page_size
+          const activeSize = document.getElementById('psize_input').value;
+          document.querySelectorAll('.psize-btn').forEach(b => {
+            b.classList.toggle('psize-active', b.dataset.size === activeSize);
+          });
+          bindInner();   // re-attach listeners inside the new #table-inner
+        }
+      })
+      .catch(() => { form.submit(); });
+  }
+
+  // ── Listeners on stable elements (search, toolbar) — bound once ──────────
+  function bindStable() {
+    // Search — debounced 400 ms; input stays alive across swaps
+    const searchEl = document.getElementById('table-search');
+    if (searchEl) {
+      let timer;
+      searchEl.addEventListener('input', function () {
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+          document.getElementById('page_input').value = '1';
+          submitTable();
+        }, 400);
+      });
+    }
+
+    // Rows-per-page buttons (outside swap zone)
+    document.querySelectorAll('.psize-btn').forEach(btn => {
+      btn.addEventListener('click', function () {
+        document.getElementById('psize_input').value = this.dataset.size;
+        document.getElementById('page_input').value  = '1';
+        submitTable();
+      });
+    });
+  }
+
+  // ── Listeners inside #table-inner — re-bound after every swap ────────────
+  function bindInner() {
+    const inner = document.getElementById('table-inner');
+    const form  = document.getElementById('table-form');
+    if (!inner || !form) return;
+
+    // Column toggles
+    inner.querySelectorAll('.col-toggle-btn').forEach(btn => {
+      btn.addEventListener('click', function () {
+        const col = this.dataset.col;
+        form.querySelectorAll('.hidden-col-inp').forEach(inp => {
+          if (inp.value === col) inp.remove();
+        });
+        if (this.classList.contains('col-visible')) {
+          const inp = document.createElement('input');
+          inp.type = 'hidden'; inp.name = 'hidden_cols';
+          inp.value = col; inp.className = 'hidden-col-inp';
+          form.appendChild(inp);
+        }
+        document.getElementById('page_input').value = '1';
+        submitTable();
+      });
+    });
+
+    // Sort headers
+    inner.querySelectorAll('.sort-btn').forEach(btn => {
+      btn.addEventListener('click', function () {
+        document.getElementById('sort_col_input').value = this.dataset.col;
+        document.getElementById('sort_dir_input').value = this.dataset.dir;
+        document.getElementById('page_input').value     = '1';
+        submitTable();
+      });
+    });
+
+    // Pagination
+    inner.querySelectorAll('.page-btn:not([disabled])').forEach(btn => {
+      btn.addEventListener('click', function () {
+        document.getElementById('page_input').value = this.dataset.page;
+        submitTable();
+      });
+    });
+  }
+
+  // ── Viz form: fetch-based plot update, no scroll jump ───────────────────
+  function bindViz() {
+    const form = document.getElementById('viz-form');
+    if (!form) return;
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+
+      const btn = document.getElementById('update-plots-btn');
+      if (btn) { btn.disabled = true; btn.textContent = 'Updating…'; }
+
+      // Dim the images while loading
+      ['scatter-img','hist-img','corr-img'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.opacity = '0.4';
+      });
+
+      fetch(window.location.href, { method: 'POST', body: new FormData(form) })
+        .then(r => r.text())
+        .then(html => {
+          const doc = new DOMParser().parseFromString(html, 'text/html');
+
+          // Swap only the three plot images — nothing else moves
+          ['scatter-img','hist-img','corr-img'].forEach(id => {
+            const newEl = doc.getElementById(id);
+            const curEl = document.getElementById(id);
+            if (newEl && curEl) {
+              curEl.src     = newEl.src;
+              curEl.style.opacity = '1';
+            }
+          });
+
+          if (btn) { btn.disabled = false; btn.textContent = 'Update Plots'; }
+        })
+        .catch(() => { form.submit(); });   // fallback
+    });
+  }
+
+  // Boot
+  bindStable();
+  bindInner();
+  bindViz();
+})();
+</script>
 {% endblock script %}
