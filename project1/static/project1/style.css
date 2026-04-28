@@ -331,6 +331,120 @@
 .best-row strong   { color: #1b5e20; }
 .results-table-heading { font-size: 15px; font-weight: 700; color: #275cb2; margin: 24px 0 10px; }
 
+.control-item input[type="number"] {
+  padding: 8px 12px;
+  border: 1px solid #ccd1d9;
+  border-radius: 6px;
+  font-size: 13px;
+  background: #fff;
+  color: #333;
+  width: 90px;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px;
+  margin: 16px 0 24px;
+}
+
+.metric-card {
+  padding: 16px;
+  background: #f8fbff;
+  border: 1px solid #d1e3ff;
+  border-radius: 12px;
+  text-align: center;
+}
+.explanation-box {
+  margin: 20px 0 30px;
+  padding: 18px 22px;
+  background: #f8fbff;
+  border: 1px solid #d1e3ff;
+  border-left: 5px solid #275cb2;
+  border-radius: 12px;
+}
+
+.explanation-box h3 {
+  margin: 0 0 8px;
+  color: #1a3a6d;
+  font-size: 18px;
+}
+
+.explanation-box p {
+  margin: 6px 0;
+  color: #4a5568;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.description {
+  margin: 10px 0 15px;
+  padding: 10px 14px;
+  background: #fffaf0;
+  border-left: 4px solid #ed8936;
+  border-radius: 8px;
+  color: #744210;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.model-catalog {
+  margin: 18px 0 24px;
+  padding: 16px;
+  background: #f8f9fa;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+
+.model-catalog h4 {
+  margin: 0 0 14px;
+  color: #275cb2;
+  font-size: 16px;
+}
+
+.catalog-card {
+  margin-bottom: 12px;
+  padding: 14px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+}
+
+.catalog-card h5 {
+  margin: 0 0 8px;
+  color: #1a3a6d;
+  font-size: 14px;
+}
+
+.catalog-card p {
+  margin: 5px 0;
+  color: #4a5568;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.tuning-hints {
+  margin: 18px 0 24px;
+  padding: 16px 18px;
+  background: #f8fbff;
+  border: 1px solid #d1e3ff;
+  border-left: 5px solid #275cb2;
+  border-radius: 12px;
+}
+
+.tuning-hints h4 {
+  margin: 0 0 10px;
+  color: #1a3a6d;
+  font-size: 16px;
+}
+
+.tuning-hints p {
+  margin: 6px 0;
+  color: #4a5568;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 /* =============================================================
    ERROR
    ============================================================= */

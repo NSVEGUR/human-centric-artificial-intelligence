@@ -1,6 +1,7 @@
 import io
 import base64
 import math
+from urllib import request
 import numpy as np
 import pandas as pd
 
@@ -11,7 +12,14 @@ import matplotlib.cm as cm
 
 from django.shortcuts import render, redirect
 
-from .models import CLASSIFICATION_MODELS, REGRESSION_MODELS, run_training
+from .models import (
+    CLASSIFICATION_MODELS,
+    REGRESSION_MODELS,
+    run_training,
+    get_default_params,
+    PROBLEM_EXPLANATIONS,
+    MODEL_EXPLANATIONS,
+)
 
 
 # Helper function to convert matplotlib figure to base64 string
@@ -27,15 +35,16 @@ def fig_to_base64(fig):
 
 
 def detect_problem_type(target_series):
-    # Check if it's classification or regression based on unique values
+    if not pd.api.types.is_numeric_dtype(target_series):
+        return 'classification'
+
     num_unique = target_series.nunique()
     num_total = len(target_series)
-    
-    # If fewer than 20 unique values or less than 5% unique, treat as classification
-    if num_unique <= 20 or (num_unique / num_total) < 0.05:
+
+    if num_unique <= 10 and (num_unique / num_total) < 0.1:
         return 'classification'
-    else:
-        return 'regression'
+
+    return 'regression'
 
 
 def create_scatter_plot(df, x_feature, y_feature, target_col, problem_type, selected_classes):
@@ -333,7 +342,13 @@ def index(request):
                 feature_cols = numeric_cols
             
             # Detect if classification or regression
-            problem_type = detect_problem_type(df[target_col])
+            detected_problem_type = detect_problem_type(df[target_col])
+            posted_problem_type = request.POST.get('problem_type', detected_problem_type)
+
+            if posted_problem_type in ['classification', 'regression']:
+                problem_type = posted_problem_type
+            else:
+                problem_type = detected_problem_type
 
             # Handle class selection for classification problems
             unique_classes = []
@@ -446,6 +461,8 @@ def index(request):
                 'filename': filename,
                 'available_models': available_models,
                 'loaded_from_session': loaded_from_session,
+                'problem_explanation': PROBLEM_EXPLANATIONS.get(problem_type),
+                'model_explanations': MODEL_EXPLANATIONS.get(problem_type),
             })
             
             # Merge table context
@@ -456,20 +473,50 @@ def index(request):
             if train_action:
                 model_key = request.POST.get('model_key', list(registry.keys())[0])
                 test_size = float(request.POST.get('test_size', 0.2))
-                
+
                 # Validate test size
                 if test_size < 0.1:
                     test_size = 0.1
                 elif test_size > 0.5:
                     test_size = 0.5
-                
+
                 # Validate model key
                 if model_key not in registry:
                     model_key = list(registry.keys())[0]
-                
-                # Run training
+
+                # Get model hyperparameters
+                model_params = get_default_params(model_key, problem_type)
+
+                if model_key == 'KNN':
+                    model_params['k'] = int(request.POST.get('k', 5))
+                    model_params['metric'] = request.POST.get('metric', 'euclidean')
+
+                elif model_key == 'DecisionTree':
+                    model_params['max_depth'] = int(request.POST.get('max_depth', 5))
+                    model_params['min_samples_leaf'] = int(request.POST.get('min_samples_leaf', 1))
+
+                    if problem_type == 'classification':
+                        model_params['criterion'] = request.POST.get('criterion', 'gini')
+                    else:
+                        model_params['criterion'] = request.POST.get('criterion', 'squared_error')
+
+                elif model_key == 'LogisticRegression':
+                    model_params['C'] = float(request.POST.get('C', 1))
+                    model_params['penalty'] = request.POST.get('penalty', 'l2')
+
+                elif model_key == 'Ridge':
+                    model_params['alpha'] = float(request.POST.get('alpha', 1))
+
                 training_results = run_training(
-                    df, feature_cols, target_col, problem_type, model_key, test_size)
+                    df,
+                    feature_cols,
+                    target_col,
+                    problem_type,
+                    model_key,
+                    test_size,
+                    model_params
+                )
+
                 context['training'] = training_results
 
         except Exception as e:

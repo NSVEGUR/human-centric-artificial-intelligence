@@ -64,6 +64,14 @@
     <span class="info-badge">Type: <strong>{{ problem_type }}</strong></span>
   </div>
 
+  {% if problem_explanation %}
+    <div class="explanation-box">
+    <h3>{{ problem_explanation.title }}</h3>
+    <p>{{ problem_explanation.description }}</p>
+    <p><strong>Metrics:</strong> {{ problem_explanation.metrics }}</p>
+  </div>
+  {% endif %}
+
   {# ── FORM 2: Table (MOVED BEFORE PLOTS) ──────────────────────────────────── #}
   <div class="plot-block" id="table-section">
     <h3 class="plot-heading">Data Preview</h3>
@@ -82,6 +90,7 @@
       <input type="hidden" name="table_page"   id="page_input"     value="{{ current_page }}">
       <input type="hidden" name="page_size"    id="psize_input"    value="{{ page_size }}">
       <input type="hidden" name="table_search" id="search_hidden"  value="{{ search_query }}">
+      <input type="hidden" name="problem_type" value="{{ problem_type }}">
       {% for c in hidden_cols %}
       <input type="hidden" name="hidden_cols" class="hidden-col-inp" value="{{ c }}">
       {% endfor %}
@@ -170,6 +179,7 @@
   <form method="post" id="viz-form">
     {% csrf_token %}
     <input type="hidden" name="action" value="update_plots">
+    <input type="hidden" name="problem_type" value="{{ problem_type }}">
 
     {% if problem_type == 'classification' %}
     <div class="plot-block">
@@ -251,97 +261,216 @@
   </div>
 
   {# ── FORM 3: Training ────────────────────────────────────────────────────── #}
-  <div class="plot-block">
-    <h3 class="plot-heading">Model Training</h3>
-    <p class="plot-desc">
-      Choose a model and test-split size. The app sweeps the model's key
-      hyperparameter and shows train vs. test performance.
-    </p>
-    <form method="post">
-      {% csrf_token %}
-      <input type="hidden" name="action" value="train">
-      {% for cls in selected_classes %}
-        <input type="hidden" name="selected_classes" value="{{ cls }}">
-      {% endfor %}
-      <input type="hidden" name="scatter_x"    value="{{ scatter_x }}">
-      <input type="hidden" name="scatter_y"    value="{{ scatter_y }}">
-      <input type="hidden" name="hist_feature" value="{{ hist_feature }}">
+<div class="plot-block">
+  <h3 class="plot-heading">Model Training</h3>
+  <p class="plot-desc">
+    Choose algorithms, test-split size, and model hyperparameters.
+    The app evaluates the dataset using suitable metrics for classification or regression.
+  </p>
+  {% if model_explanations %}
+<div class="model-catalog">
+  <h4>Model Description </h4>
 
-      <div class="controls-row">
-        <div class="control-item">
-          <label for="model_key">Algorithm:</label>
-          <select name="model_key" id="model_key">
-            {% for key, label in available_models %}
-            <option value="{{ key }}" {% if training.model_key == key %}selected{% endif %}>{{ label }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="control-item">
-          <label for="test_size">Test Split:</label>
-          <select name="test_size" id="test_size">
-            <option value="0.1"  {% if training.test_size == 0.1  %}selected{% endif %}>10%</option>
-            <option value="0.15" {% if training.test_size == 0.15 %}selected{% endif %}>15%</option>
-            <option value="0.2"  {% if not training or training.test_size == 0.2 %}selected{% endif %}>20% (default)</option>
-            <option value="0.25" {% if training.test_size == 0.25 %}selected{% endif %}>25%</option>
-            <option value="0.3"  {% if training.test_size == 0.3  %}selected{% endif %}>30%</option>
-            <option value="0.4"  {% if training.test_size == 0.4  %}selected{% endif %}>40%</option>
-            <option value="0.5"  {% if training.test_size == 0.5  %}selected{% endif %}>50%</option>
-          </select>
-        </div>
-      </div>
-      <div class="update-row">
-        <button type="submit" class="btn btn-primary">&#9654; Train Model</button>
-      </div>
-    </form>
+  {% for key, info in model_explanations.items %}
+  <div class="catalog-card">
+    <h5>{{ key }}</h5>
+    <p>{{ info.description }}</p>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
 
-    {% if training %}
-    <div class="training-summary">
-      <div class="summary-card summary-highlight">
-        <span class="summary-label">Best {{ training.score_label }}</span>
-        <span class="summary-value">{{ training.best_test }}</span>
-        <span class="summary-sub">at {{ training.param_label }} = {{ training.best_param }}</span>
-      </div>
-      <div class="summary-card">
-        <span class="summary-label">Model</span>
-        <span class="summary-value-sm">{{ training.model_label }}</span>
-      </div>
-      <div class="summary-card">
-        <span class="summary-label">Train samples</span>
-        <span class="summary-value">{{ training.n_train }}</span>
-      </div>
-      <div class="summary-card">
-        <span class="summary-label">Test samples</span>
-        <span class="summary-value">{{ training.n_test }}</span>
-      </div>
-    </div>
-    <div class="plot-img-box" style="margin-top:20px;">
-      <img src="data:image/png;base64,{{ training.training_plot }}" alt="Training curve" />
-    </div>
-    <h4 class="results-table-heading">Full Results</h4>
-    <div class="table-wrap">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>{{ training.param_label }}</th>
-            <th>Train {{ training.score_label }}</th>
-            <th>Test {{ training.score_label }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for row in training.results_table %}
-          <tr {% if row.param == training.best_param %}class="best-row"{% endif %}>
-            <td>{{ row.param }}</td>
-            <td>{{ row.train }}</td>
-            <td><strong>{{ row.test }}</strong></td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    {% endif %}
+  <div class="tuning-hints">
+    <h4>Tuning hints</h4>
+    <p><strong>KNN:</strong> Smaller K can fit local patterns but may overfit. Larger K gives smoother predictions.</p>
+    <p><strong>Decision Tree:</strong> A deeper tree can learn more details, but too much depth can overfit.</p>
+    <p><strong>Logistic/Ridge:</strong> Regularisation controls model complexity. Stronger regularisation usually gives a simpler model.</p>
   </div>
 
+  <form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="train">
+
+    {% for cls in selected_classes %}
+      <input type="hidden" name="selected_classes" value="{{ cls }}">
+    {% endfor %}
+
+    <input type="hidden" name="scatter_x" value="{{ scatter_x }}">
+    <input type="hidden" name="scatter_y" value="{{ scatter_y }}">
+    <input type="hidden" name="hist_feature" value="{{ hist_feature }}">
+
+    <div class="controls-row">
+
+      <div class="control-item">
+        <label for="problem_type">Problem Type:</label>
+        <select name="problem_type" id="problem_type">
+          <option value="classification" {% if problem_type == 'classification' %}selected{% endif %}>
+            Classification
+          </option>
+          <option value="regression" {% if problem_type == 'regression' %}selected{% endif %}>
+            Regression
+          </option>
+        </select>
+      </div>
+
+      <div class="control-item">
+        <label for="model_key">Algorithm:</label>
+        <select name="model_key" id="model_key">
+          {% for key, label in available_models %}
+          <option value="{{ key }}" {% if training.model_key == key %}selected{% endif %}>
+            {{ label }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="control-item">
+        <label for="test_size">Test Split:</label>
+        <select name="test_size" id="test_size">
+          <option value="0.1"  {% if training.test_size == 0.1 %}selected{% endif %}>10%</option>
+          <option value="0.15" {% if training.test_size == 0.15 %}selected{% endif %}>15%</option>
+          <option value="0.2"  {% if not training or training.test_size == 0.2 %}selected{% endif %}>20% (default)</option>
+          <option value="0.25" {% if training.test_size == 0.25 %}selected{% endif %}>25%</option>
+          <option value="0.3"  {% if training.test_size == 0.3 %}selected{% endif %}>30%</option>
+          <option value="0.4"  {% if training.test_size == 0.4 %}selected{% endif %}>40%</option>
+          <option value="0.5"  {% if training.test_size == 0.5 %}selected{% endif %}>50%</option>
+        </select>
+      </div>
+
+      <div class="control-item hyper-param hp-knn">
+        <label for="k">K:</label>
+        <input type="number" name="k" id="k" min="1" max="50"
+               value="{{ training.model_params.k|default:5 }}">
+      </div>
+
+      <div class="control-item hyper-param hp-knn">
+        <label for="metric">Distance:</label>
+        <select name="metric" id="metric">
+          <option value="euclidean" {% if training.model_params.metric == 'euclidean' %}selected{% endif %}>Euclidean</option>
+          <option value="manhattan" {% if training.model_params.metric == 'manhattan' %}selected{% endif %}>Manhattan</option>
+        </select>
+      </div>
+
+      <div class="control-item hyper-param hp-tree">
+        <label for="max_depth">Tree Depth:</label>
+        <input type="number" name="max_depth" id="max_depth" min="1" max="50"
+               value="{{ training.model_params.max_depth|default:5 }}">
+      </div>
+
+      <div class="control-item hyper-param hp-tree">
+        <label for="min_samples_leaf">Leaf Nodes:</label>
+        <input type="number" name="min_samples_leaf" id="min_samples_leaf" min="1" max="50"
+               value="{{ training.model_params.min_samples_leaf|default:1 }}">
+      </div>
+
+      <div class="control-item hyper-param hp-tree">
+        <label for="criterion">Criterion:</label>
+        <select name="criterion" id="criterion">
+          {% if problem_type == 'classification' %}
+            <option value="gini" {% if training.model_params.criterion == 'gini' %}selected{% endif %}>Gini</option>
+            <option value="entropy" {% if training.model_params.criterion == 'entropy' %}selected{% endif %}>Entropy</option>
+          {% else %}
+            <option value="squared_error" {% if training.model_params.criterion == 'squared_error' %}selected{% endif %}>Squared Error</option>
+            <option value="absolute_error" {% if training.model_params.criterion == 'absolute_error' %}selected{% endif %}>Absolute Error</option>
+          {% endif %}
+        </select>
+      </div>
+
+      <div class="control-item hyper-param hp-logistic">
+        <label for="C">C:</label>
+        <input type="number" step="0.001" name="C" id="C"
+               value="{{ training.model_params.C|default:1 }}">
+      </div>
+      <div class="control-item hyper-param hp-logistic">
+        <label for="penalty">Penalty:</label>
+        <select name="penalty" id="penalty">
+          <option value="l2" {% if training.model_params.penalty == 'l2' %}selected{% endif %}>L2</option>
+          <option value="l1" {% if training.model_params.penalty == 'l1' %}selected{% endif %}>L1</option>
+        </select>
+      </div>
+
+      <div class="control-item hyper-param hp-ridge">
+        <label for="alpha">Alpha:</label>
+        <input type="number" step="0.001" name="alpha" id="alpha"
+               value="{{ training.model_params.alpha|default:1 }}">
+      </div>
+
+    </div>
+
+    <div class="update-row">
+      <button type="submit" class="btn btn-primary">&#9654; Train Model</button>
+    </div>
+  </form>
+
+  {% if training %}
+  <div class="training-summary">
+    <div class="summary-card summary-highlight">
+      <span class="summary-label">Best {{ training.score_label }}</span>
+      <span class="summary-value">{{ training.best_test }}</span>
+      <span class="summary-sub">at {{ training.param_label }} = {{ training.best_param }}</span>
+    </div>
+
+    <div class="summary-card">
+      <span class="summary-label">Model</span>
+      <span class="summary-value-sm">{{ training.model_label }}</span>
+    </div>
+
+    <div class="summary-card">
+      <span class="summary-label">Train samples</span>
+      <span class="summary-value">{{ training.n_train }}</span>
+    </div>
+
+    <div class="summary-card">
+      <span class="summary-label">Test samples</span>
+      <span class="summary-value">{{ training.n_test }}</span>
+    </div>
+  </div>
+
+  <h4 class="results-table-heading">Evaluation Metrics</h4>
+  <div class="metrics-grid">
+    {% for name, value in training.metrics.items %}
+    <div class="metric-card">
+      <span class="summary-label">{{ name }}</span>
+      <span class="summary-value-sm">{{ value }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  <div class="description" style="margin-top: 12px;">
+    <strong>Model interpretation:</strong> {{ training.overfit_message }}
+    <br>
+    <span style="font-size: 12px; color:#718096;">
+      Train-test gap: {{ training.overfit_gap }}
+    </span>
+  </div>
+
+  <div class="plot-img-box" style="margin-top:20px;">
+    <img src="data:image/png;base64,{{ training.training_plot }}" alt="Training curve" />
+  </div>
+
+  <h4 class="results-table-heading">Full Results</h4>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>{{ training.param_label }}</th>
+          <th>Train {{ training.score_label }}</th>
+          <th>Test {{ training.score_label }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in training.results_table %}
+        <tr {% if row.param == training.best_param %}class="best-row"{% endif %}>
+          <td>{{ row.param }}</td>
+          <td>{{ row.train }}</td>
+          <td><strong>{{ row.test }}</strong></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
   {% endif %}
+</div>
+{% endif %}
 </div>
 {% endblock %}
 
@@ -495,10 +624,43 @@
     });
   }
 
+  function bindModelControls() {
+  const modelSelect = document.getElementById('model_key');
+  if (!modelSelect) return;
+
+  function updateHyperParams() {
+    const selectedModel = modelSelect.value;
+
+    document.querySelectorAll('.hyper-param').forEach(el => {
+      el.style.display = 'none';
+    });
+
+    if (selectedModel === 'KNN') {
+      document.querySelectorAll('.hp-knn').forEach(el => el.style.display = 'flex');
+    }
+
+    if (selectedModel === 'DecisionTree') {
+      document.querySelectorAll('.hp-tree').forEach(el => el.style.display = 'flex');
+    }
+
+    if (selectedModel === 'LogisticRegression') {
+      document.querySelectorAll('.hp-logistic').forEach(el => el.style.display = 'flex');
+    }
+
+    if (selectedModel === 'Ridge') {
+      document.querySelectorAll('.hp-ridge').forEach(el => el.style.display = 'flex');
+    }
+  }
+
+  modelSelect.addEventListener('change', updateHyperParams);
+  updateHyperParams();
+}
+
   // Boot
   bindStable();
   bindInner();
   bindViz();
+  bindModelControls();
 })();
 </script>
 {% endblock script %}
