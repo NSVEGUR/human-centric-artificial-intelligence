@@ -1,0 +1,476 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project 2 - Explainability</title>
+    <link rel="stylesheet" href="{% static 'project2/style.css' %}">
+</head>
+<body>
+
+<div class="page-wrapper">
+
+    <!--   HEADER   -->
+    <div class="header">
+        <a href="{% url 'home:index' %}" class="back-btn">Back to Home</a>
+        <h1>Project 2 — Explainability</h1>
+        <p class="subtitle">Human-Centric Artificial Intelligence · Palmer Penguins Dataset</p>
+    </div>
+
+    <!--   INTRO   -->
+    <div class="intro-box">
+        <p>
+            This tool helps you understand how <strong>machine learning models</strong> make decisions
+            about penguin species. Use the controls on the left to switch between models and adjust
+            how complex the model is allowed to be. The chart on the right updates automatically.
+        </p>
+    </div>
+
+    <!--   MAIN LAYOUT   -->
+    <div class="main-container">
+
+        <!--   LEFT PANEL   -->
+        <div class="controls-panel">
+
+            <!-- STEP 1: MODEL TYPE -->
+            <div class="control-group">
+                <div class="step-badge">Step 1</div>
+                <label class="control-label">Choose a Model</label>
+
+                <div class="model-card" id="card-tree" onclick="selectModel('tree')">
+                    <div class="model-card-header">
+                        <input type="radio" name="model_type" value="tree" id="radio-tree" checked>
+                        <span class="model-name">Decision Tree</span>
+                    </div>
+                    <p class="model-desc">
+                        Works like a flowchart of yes/no questions.
+                        Easy to understand — just follow the branches.
+                        Great for seeing exactly how a decision is made.
+                    </p>
+                </div>
+
+                <div class="model-card" id="card-lr" onclick="selectModel('lr')">
+                    <div class="model-card-header">
+                        <input type="radio" name="model_type" value="lr" id="radio-lr">
+                        <span class="model-name">Logistic Regression</span>
+                    </div>
+                    <p class="model-desc">
+                        Weighs each feature and adds them up to make a decision.
+                        The bar chart shows which features matter most
+                        and whether they push towards or away from each species.
+                    </p>
+                </div>
+            </div>
+
+            <!-- STEP 2: LAMBDA SLIDER -->
+            <div class="control-group">
+                <div class="step-badge">Step 2</div>
+                <label class="control-label">Adjust Complexity (&lambda;)</label>
+                <p class="control-desc">
+                    Move the slider or type a value to balance
+                    <strong>accuracy</strong> vs <strong>simplicity</strong>.
+                </p>
+
+                <div class="lambda-input-row">
+                    <div class="lambda-top-row">
+                        <div class="lambda-hint-block">
+                            <span class="lambda-hint">Accurate</span>
+                            <span class="lambda-hint-desc">low &lambda; = keep accuracy</span>
+                        </div>
+                        <input
+                            type="number"
+                            id="lambda-input"
+                            min="0"
+                            max="1"
+                            step="0.01"
+                            value="0.00"
+                            class="lambda-number-input"
+                        >
+                        <div class="lambda-hint-block">
+                            <span class="lambda-hint">Simple</span>
+                            <span class="lambda-hint-desc">high &lambda; = prefer simplicity</span>
+                        </div>
+                    </div>
+                    <input
+                        type="range"
+                        id="lambda-slider"
+                        min="0"
+                        max="1"
+                        step="0.01"
+                        value="0"
+                        class="slider"
+                    >
+                </div>
+            </div>
+
+            <!-- STEP 3: MODEL STATS -->
+            <div class="control-group">
+                <div class="step-badge">Step 3</div>
+                <label class="control-label">Current Model Performance</label>
+                <p class="control-desc">These numbers describe the currently selected model.</p>
+                <div class="stats-box">
+                    <div class="stat-row">
+                        <div>
+                            <span class="stat-label">Test Accuracy</span>
+                            <span class="stat-hint">How often it predicts correctly on unseen data</span>
+                        </div>
+                        <span class="stat-value" id="stat-accuracy">{{ initial_accuracy }}%</span>
+                    </div>
+                    <div class="stat-row">
+                        <div>
+                            <span class="stat-label">Complexity (&Omega;)</span>
+                            <span class="stat-hint" id="stat-omega-hint">Number of leaf nodes in the tree</span>
+                        </div>
+                        <span class="stat-value" id="stat-complexity">{{ initial_complexity }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LR ONLY CONTROLS -->
+            <div class="control-group" id="lr-controls" style="display:none;">
+                <div class="step-badge">Step 4</div>
+                <label class="control-label">Chart Options</label>
+                <p class="control-desc">Customize how the logistic regression chart looks.</p>
+
+                <label class="mini-label">Sort bars by</label>
+                <select id="sort-by" class="dropdown">
+                    <option value="magnitude">Most important first</option>
+                    <option value="alphabetical">A to Z (feature name)</option>
+                </select>
+
+                <label class="mini-label" style="margin-top:12px;">Filter by species</label>
+                <div class="class-buttons">
+                    <button class="class-btn active" data-class="">All Species</button>
+                    <button class="class-btn" data-class="Adelie">Adelie</button>
+                    <button class="class-btn" data-class="Chinstrap">Chinstrap</button>
+                    <button class="class-btn" data-class="Gentoo">Gentoo</button>
+                </div>
+                <input type="hidden" id="class-filter" value="">
+
+                <label class="mini-label" style="margin-top:12px;">Filter by feature</label>
+                <select id="feature-filter" class="dropdown">
+                    <option value="">All Features</option>
+                    <option value="bill_length_mm">Bill Length</option>
+                    <option value="bill_depth_mm">Bill Depth</option>
+                    <option value="flipper_length_mm">Flipper Length</option>
+                    <option value="body_mass_g">Body Mass</option>
+                    <option value="island">Island (all categories)</option>
+                    <option value="sex">Sex (all categories)</option>
+                </select>
+            </div>
+
+        </div>
+
+        <!--   RIGHT PANEL   -->
+        <div class="chart-panel">
+
+            <!-- formula card -->
+            <div class="formula-card">
+                <p class="formula-card-title">Optimization Objective</p>
+
+                <div class="formula-original">
+                    <p class="formula-original-label">From the lecture:</p>
+                    <p class="formula-card-math">
+                        arg min &nbsp; <sup>1</sup>&frasl;<sub>n</sub> &nbsp;
+                        &sum;<sub>i=1</sub><sup>n</sup> &nbsp;
+                        &ell;(f(x<sub>i</sub>), y<sub>i</sub>) + &lambda;&Omega;(f)
+                    </p>
+                </div>
+
+                <div class="formula-used">
+                    <p class="formula-original-label">How we use it in this tool:</p>
+                    <p class="formula-card-math">
+                        min (1 &minus; acc<sub>test</sub>) + &lambda; &middot; &Omega;(f)
+                    </p>
+                </div>
+
+                <div class="formula-card-right">
+                    <div class="formula-card-row">
+                        <span class="formula-term">(1 &minus; acc<sub>test</sub>)</span>
+                        <span class="formula-term-desc">
+                            Replaces the average 0-1 loss — it equals 0 when the model
+                            is perfect and 1 when it gets everything wrong.
+                            We evaluate this on the <strong>test set</strong> as specified in Task 2.
+                        </span>
+                    </div>
+                    <div class="formula-card-row">
+                        <span class="formula-term">&lambda;</span>
+                        <span class="formula-term-desc">
+                            The regularization parameter you control with the slider.
+                            Higher &lambda; means we care more about keeping the model simple.
+                        </span>
+                    </div>
+                    <div class="formula-card-row">
+                        <span class="formula-term">&Omega;(f)</span>
+                        <span class="formula-term-desc" id="omega-desc">
+                            For Decision Trees: number of leaves (more leaves = more complex).
+                            We normalize this to [0,1] so it stays on the same scale as the error.
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- chart header -->
+            <div class="chart-header">
+                <div>
+                    <span class="chart-title" id="chart-title">Decision Tree</span>
+                    <span class="chart-subtitle" id="chart-subtitle">
+                        Showing the best tree for the current &lambda; value
+                    </span>
+                </div>
+                <div class="loading-badge" id="loading-badge" style="display:none;">
+                    Updating...
+                </div>
+            </div>
+
+            <!-- how to read the chart -->
+            <div class="chart-desc-box">
+                <p id="chart-desc-text">
+                    Each <strong>square node</strong> asks a yes/no question about the penguin.
+                    Follow the branches left or right until you reach a
+                    <strong>circle (leaf)</strong> — that is the predicted species.
+                    Hover over any node for more details.
+                </p>
+            </div>
+
+            <!-- main chart -->
+            <div class="chart-box">
+                <div id="plotly-chart" style="width:100%; min-height:600px;"></div>
+            </div>
+
+            <!-- second row: tradeoff + confusion side by side -->
+            <div class="charts-row">
+
+                <div class="chart-box half">
+                    <p class="chart-box-title">Accuracy vs Complexity Tradeoff</p>
+                    <p class="chart-box-desc">
+                        All trained models plotted by complexity (x) and accuracy (y).
+                        The red star shows the currently selected model.
+                        Move the &lambda; slider to see the selection change.
+                    </p>
+                    <div id="tradeoff-chart" style="width:100%; min-height:300px;"></div>
+                </div>
+
+                <div class="chart-box half">
+                    <p class="chart-box-title">Confusion Matrix</p>
+                    <p class="chart-box-desc">
+                        Shows which species the model confuses with which.
+                        A perfect model has all predictions on the diagonal.
+                        Darker = more predictions in that cell.
+                    </p>
+                    <div id="confusion-chart" style="width:100%; min-height:300px;"></div>
+                </div>
+
+            </div>
+
+            <!-- third row: train vs test gap -->
+            <div class="chart-box">
+                <p class="chart-box-title">Train vs Test Accuracy Gap</p>
+                <p class="chart-box-desc">
+                    A large gap between train and test accuracy indicates <strong>overfitting</strong>
+                    — the model memorized the training data but struggles on new data.
+                    Try increasing &lambda; to reduce overfitting by choosing a simpler model.
+                </p>
+                <div id="gap-chart" style="width:100%; min-height:300px;"></div>
+            </div>
+
+        </div>
+
+    </div>
+</div>
+
+<!-- load plotly -->
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+
+<script type="text/javascript">
+
+    // initial data from django - all passed as json strings
+    var initialPlotData     = JSON.parse("{{ initial_plot|escapejs }}");
+    var initialTradeoffData = JSON.parse("{{ initial_tradeoff|escapejs }}");
+    var initialConfusionData = JSON.parse("{{ initial_confusion|escapejs }}");
+    var initialGapData      = JSON.parse("{{ initial_gap|escapejs }}");
+
+    // grab ui elements
+    var lambdaSlider          = document.getElementById("lambda-slider");
+    var lambdaInput           = document.getElementById("lambda-input");
+    var statAccuracy          = document.getElementById("stat-accuracy");
+    var statComplexity        = document.getElementById("stat-complexity");
+    var statOmegaHint         = document.getElementById("stat-omega-hint");
+    var omegaDesc             = document.getElementById("omega-desc");
+    var loadingBadge          = document.getElementById("loading-badge");
+    var chartTitle            = document.getElementById("chart-title");
+    var chartSubtitle         = document.getElementById("chart-subtitle");
+    var chartDescText         = document.getElementById("chart-desc-text");
+    var lrControls            = document.getElementById("lr-controls");
+    var sortByDropdown        = document.getElementById("sort-by");
+    var classFilterInput      = document.getElementById("class-filter");
+    var featureFilterDropdown = document.getElementById("feature-filter");
+    var cardTree              = document.getElementById("card-tree");
+    var cardLr                = document.getElementById("card-lr");
+    var radioTree             = document.getElementById("radio-tree");
+    var radioLr               = document.getElementById("radio-lr");
+
+    var config = { responsive: true, displayModeBar: false, displaylogo: false };
+
+    // render all four charts on initial load
+    Plotly.newPlot("plotly-chart",   initialPlotData.data,      initialPlotData.layout,      config);
+    Plotly.newPlot("tradeoff-chart", initialTradeoffData.data,  initialTradeoffData.layout,  config);
+    Plotly.newPlot("confusion-chart",initialConfusionData.data, initialConfusionData.layout, config);
+    Plotly.newPlot("gap-chart",      initialGapData.data,       initialGapData.layout,       config);
+
+    // called when user clicks a model card
+    function selectModel(type) {
+        if (type === "tree") {
+            radioTree.checked = true;
+            cardTree.classList.add("active");
+            cardLr.classList.remove("active");
+            lrControls.style.display = "none";
+            chartTitle.textContent = "Decision Tree";
+            chartSubtitle.textContent = "Showing the best tree for the current lambda value";
+            chartDescText.innerHTML = "Each <strong>square node</strong> asks a yes/no question about the penguin. Follow the branches left or right until you reach a <strong>circle (leaf)</strong> — that is the predicted species. Hover over any node for more details.";
+            statOmegaHint.textContent = "Number of leaf nodes in the tree";
+            omegaDesc.textContent = "For Decision Trees: number of leaves (more leaves = more complex). We normalize this to [0,1] so it is on the same scale as the error.";
+        } else {
+            radioLr.checked = true;
+            cardLr.classList.add("active");
+            cardTree.classList.remove("active");
+            lrControls.style.display = "block";
+            chartTitle.textContent = "Logistic Regression";
+            chartSubtitle.textContent = "Bar height shows how strongly each feature influences the prediction";
+            chartDescText.innerHTML = "Each <strong>bar</strong> shows how much a feature pushes the model towards predicting a species. <strong>Tall bars</strong> mean a very important feature. <strong>Positive</strong> values push towards this species. <strong>Negative</strong> values push away. Use the filters on the left to explore.";
+            statOmegaHint.textContent = "Sum of absolute values of all coefficients";
+            omegaDesc.textContent = "For Logistic Regression: the L1 norm of the coefficients (sum of absolute values). Larger coefficients = more complex model. We normalize this to [0,1] so it is on the same scale as the error.";
+        }
+        fetchAndUpdate();
+    }
+
+    // keep slider and number input in sync
+    lambdaSlider.addEventListener("input", function() {
+        lambdaInput.value = parseFloat(this.value).toFixed(2);
+        debouncedFetch();
+    });
+
+    lambdaInput.addEventListener("input", function() {
+        var val = parseFloat(this.value);
+        if (isNaN(val)) return;
+        if (val < 0) val = 0;
+        if (val > 1) val = 1;
+        lambdaSlider.value = val;
+        debouncedFetch();
+    });
+
+    lambdaInput.addEventListener("keydown", function(e) {
+        if (e.key === "Enter") {
+            var val = parseFloat(this.value);
+            if (isNaN(val)) return;
+            if (val < 0) val = 0;
+            if (val > 1) val = 1;
+            this.value = val.toFixed(2);
+            lambdaSlider.value = val;
+            fetchAndUpdate();
+        }
+    });
+
+    // class filter pill buttons
+    var classBtns = document.querySelectorAll(".class-btn");
+    classBtns.forEach(function(btn) {
+        btn.addEventListener("click", function() {
+            classBtns.forEach(function(b) { b.classList.remove("active"); });
+            btn.classList.add("active");
+            classFilterInput.value = btn.getAttribute("data-class");
+            fetchAndUpdate();
+        });
+    });
+
+    function debounce(fn, delay) {
+        var timer;
+        return function() {
+            clearTimeout(timer);
+            var args = arguments;
+            var ctx = this;
+            timer = setTimeout(function() { fn.apply(ctx, args); }, delay);
+        };
+    }
+
+    function getCookie(name) {
+        var cookieValue = null;
+        if (document.cookie && document.cookie !== "") {
+            var cookies = document.cookie.split(";");
+            for (var i = 0; i < cookies.length; i++) {
+                var cookie = cookies[i].trim();
+                if (cookie.startsWith(name + "=")) {
+                    cookieValue = decodeURIComponent(cookie.slice(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // main fetch - updates all four charts at once
+    function fetchAndUpdate() {
+        var modelType       = radioTree.checked ? "tree" : "lr";
+        var lambdaVal       = parseFloat(lambdaSlider.value);
+        var sortBy          = sortByDropdown.value;
+        var selectedClass   = classFilterInput.value || null;
+        var selectedFeature = featureFilterDropdown.value || null;
+
+        loadingBadge.style.display = "inline-block";
+
+        fetch("/project2/update-model/", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": getCookie("csrftoken"),
+            },
+            body: JSON.stringify({
+                model_type: modelType,
+                lambda_val: lambdaVal,
+                sort_by: sortBy,
+                selected_class: selectedClass,
+                selected_feature: selectedFeature,
+            }),
+        })
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+            if (data.error) {
+                console.error("Server error:", data.error);
+                return;
+            }
+
+            // update stats
+            statAccuracy.textContent   = data.accuracy + "%";
+            statComplexity.textContent = data.complexity;
+
+            // update all four charts
+            var mainPlot     = JSON.parse(data.plotly_json);
+            var tradeoffPlot = JSON.parse(data.tradeoff_json);
+            var confusionPlot = JSON.parse(data.confusion_json);
+            var gapPlot      = JSON.parse(data.gap_json);
+
+            Plotly.react("plotly-chart",    mainPlot.data,      mainPlot.layout,      config);
+            Plotly.react("tradeoff-chart",  tradeoffPlot.data,  tradeoffPlot.layout,  config);
+            Plotly.react("confusion-chart", confusionPlot.data, confusionPlot.layout, config);
+            Plotly.react("gap-chart",       gapPlot.data,       gapPlot.layout,       config);
+        })
+        .catch(function(err) {
+            console.error("Fetch error:", err);
+        })
+        .finally(function() {
+            loadingBadge.style.display = "none";
+        });
+    }
+
+    var debouncedFetch = debounce(fetchAndUpdate, 300);
+
+    sortByDropdown.addEventListener("change", fetchAndUpdate);
+    featureFilterDropdown.addEventListener("change", fetchAndUpdate);
+
+    // mark decision tree as active on load
+    cardTree.classList.add("active");
+
+</script>
+
+</body>
+</html>

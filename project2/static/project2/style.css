@@ -1,0 +1,507 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #f0f4f8;
+    color: #2c3e50;
+    min-height: 100vh;
+}
+
+/* ---- page wrapper ---- */
+.page-wrapper {
+    max-width: 1500px;
+    margin: 0 auto;
+    padding: 24px;
+}
+
+/* ---- header ---- */
+.header { margin-bottom: 16px; }
+
+.back-btn {
+    display: inline-block;
+    padding: 8px 18px;
+    background: #3498db;
+    color: white;
+    text-decoration: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    transition: background 0.2s ease;
+}
+
+.back-btn:hover { background: #2980b9; }
+
+.header h1 {
+    font-size: 26px;
+    font-weight: 700;
+    color: #1a252f;
+}
+
+.subtitle {
+    font-size: 13px;
+    color: #7f8c8d;
+    margin-top: 3px;
+}
+
+/* ---- intro box ---- */
+.intro-box {
+    background: #eaf4fb;
+    border-left: 4px solid #3498db;
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin-bottom: 20px;
+    font-size: 14px;
+    color: #2c3e50;
+    line-height: 1.6;
+}
+
+/* ---- main layout ---- */
+.main-container {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+}
+
+/* ---- left controls panel ---- */
+.controls-panel {
+    width: 320px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.control-group {
+    background: white;
+    border-radius: 12px;
+    padding: 18px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+}
+
+/* ---- step badge ---- */
+.step-badge {
+    display: inline-block;
+    background: #3498db;
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.control-label {
+    display: block;
+    font-size: 14px;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 6px;
+}
+
+.control-desc {
+    font-size: 12px;
+    color: #555;
+    margin-bottom: 12px;
+    line-height: 1.5;
+}
+
+/* ---- model cards ---- */
+.model-card {
+    border: 2px solid #e8ecef;
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: #fafbfc;
+}
+
+.model-card:last-child { margin-bottom: 0; }
+
+.model-card:hover {
+    border-color: #3498db;
+    background: #f0f8ff;
+}
+
+.model-card.active {
+    border-color: #3498db;
+    background: #ebf5fb;
+}
+
+.model-card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.model-card-header input[type="radio"] {
+    accent-color: #3498db;
+    width: 16px;
+    height: 16px;
+}
+
+.model-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: #2c3e50;
+}
+
+.model-desc {
+    font-size: 12px;
+    color: #444;
+    line-height: 1.5;
+    padding-left: 24px;
+}
+
+/* ---- lambda slider + number input ---- */
+.lambda-input-row {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.lambda-top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+
+.lambda-hint-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    text-align: center;
+}
+
+.lambda-hint {
+    font-size: 12px;
+    font-weight: 700;
+    color: #2c3e50;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.lambda-hint-desc {
+    font-size: 11px;
+    color: #7f8c8d;
+    font-style: italic;
+}
+
+.lambda-number-input {
+    width: 80px;
+    padding: 8px;
+    border: 2px solid #3498db;
+    border-radius: 6px;
+    font-size: 18px;
+    font-weight: 700;
+    color: #3498db;
+    text-align: center;
+    outline: none;
+    flex-shrink: 0;
+}
+
+.lambda-number-input:focus {
+    border-color: #2980b9;
+    background: #ebf5fb;
+}
+
+.lambda-number-input::-webkit-inner-spin-button,
+.lambda-number-input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.slider {
+    width: 100%;
+    accent-color: #3498db;
+    cursor: pointer;
+    height: 6px;
+}
+
+/* ---- stats box ---- */
+.stats-box {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 4px 0;
+}
+
+.stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    border-bottom: 1px solid #eee;
+}
+
+.stat-row:last-child { border-bottom: none; }
+
+.stat-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.stat-hint {
+    display: block;
+    font-size: 11px;
+    color: #666;
+    margin-top: 2px;
+}
+
+.stat-value {
+    font-size: 16px;
+    font-weight: 700;
+    color: #2980b9;
+    white-space: nowrap;
+    margin-left: 12px;
+}
+
+/* ---- lr extra controls ---- */
+.mini-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: #555;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.dropdown {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 13px;
+    background: white;
+    cursor: pointer;
+    outline: none;
+}
+
+.dropdown:focus { border-color: #3498db; }
+
+/* ---- class filter pill buttons ---- */
+.class-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+
+.class-btn {
+    padding: 6px 14px;
+    border: 2px solid #e0e0e0;
+    border-radius: 20px;
+    background: white;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #555;
+    font-weight: 500;
+}
+
+.class-btn:hover {
+    border-color: #3498db;
+    color: #3498db;
+}
+
+.class-btn.active {
+    background: #3498db;
+    border-color: #3498db;
+    color: white;
+    font-weight: 600;
+}
+
+/* ---- right chart panel ---- */
+.chart-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-width: 0;
+}
+
+/* ---- formula card ---- */
+.formula-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+    border-left: 4px solid #f39c12;
+}
+
+.formula-card-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #7f8c8d;
+    margin-bottom: 12px;
+}
+
+.formula-original,
+.formula-used {
+    margin-bottom: 14px;
+}
+
+.formula-original-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #7f8c8d;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-bottom: 6px;
+}
+
+.formula-used {
+    border-top: 1px dashed #f9e79f;
+    padding-top: 14px;
+}
+
+.formula-card-math {
+    font-size: 16px;
+    font-style: italic;
+    color: #935116;
+    background: #fef9e7;
+    border: 1px solid #f9e79f;
+    border-radius: 8px;
+    padding: 10px 16px;
+    display: block;
+    text-align: center;
+}
+
+.formula-card-right {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    border-top: 1px dashed #f9e79f;
+    padding-top: 14px;
+}
+
+.formula-card-row {
+    display: grid;
+    grid-template-columns: 130px 1fr;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 10px 12px;
+    background: #fafbfc;
+    border-radius: 8px;
+    border: 1px solid #f0f0f0;
+}
+
+.formula-term {
+    font-size: 14px;
+    font-style: italic;
+    color: #935116;
+    font-weight: 700;
+    padding-top: 1px;
+}
+
+.formula-term-desc {
+    font-size: 12px;
+    color: #555;
+    line-height: 1.6;
+}
+
+/* ---- chart header ---- */
+.chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    background: white;
+    border-radius: 12px;
+    padding: 16px 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+}
+
+.chart-title {
+    display: block;
+    font-size: 18px;
+    font-weight: 700;
+    color: #2c3e50;
+}
+
+.chart-subtitle {
+    display: block;
+    font-size: 12px;
+    color: #555;
+    margin-top: 2px;
+}
+
+/* ---- chart description ---- */
+.chart-desc-box {
+    background: white;
+    border-radius: 12px;
+    padding: 14px 20px;
+    font-size: 13px;
+    color: #555;
+    line-height: 1.6;
+    border-left: 3px solid #3498db;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+}
+
+/* ---- generic chart box ---- */
+.chart-box {
+    background: white;
+    border-radius: 12px;
+    padding: 16px 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+}
+
+.chart-box-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 4px;
+}
+
+.chart-box-desc {
+    font-size: 12px;
+    color: #666;
+    line-height: 1.5;
+    margin-bottom: 10px;
+}
+
+/* ---- two charts side by side ---- */
+.charts-row {
+    display: flex;
+    gap: 14px;
+}
+
+.chart-box.half {
+    flex: 1;
+    min-width: 0;
+}
+
+/* ---- loading badge ---- */
+.loading-badge {
+    font-size: 12px;
+    background: #f39c12;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 12px;
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* ---- responsive ---- */
+@media (max-width: 1000px) {
+    .main-container { flex-direction: column; }
+    .controls-panel { width: 100%; }
+    .charts-row { flex-direction: column; }
+}
