@@ -7,6 +7,11 @@
 <link rel="stylesheet" href="{% static 'project2/style.css' %}" />
 {% endblock %}
 
+{% block extra_scripts %}
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<script src="{% static 'plotly-theme.js' %}"></script>
+{% endblock %}
+
 {% block content %}
 
 <header class="page-header">

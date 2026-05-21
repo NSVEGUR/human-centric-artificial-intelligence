@@ -72,7 +72,7 @@ def compute_pdp(model, feature_name, model_type, n_grid=50, use_train=True):
         if model_type == 'lr':
             X_pred = scaler.transform(X_modified)
         else:
-            X_pred = X_modified.values
+            X_pred = X_modified
 
         # Get prediction probabilities
         proba = model.predict_proba(X_pred)  # shape (n_samples, n_classes)
@@ -242,28 +242,21 @@ def compute_lr_local_effect_exact(model, scaler, samples, feature_idx, left_val,
     if n_samples == 0:
         return np.zeros(n_classes)
 
-    X_array = samples.values.copy()
+    feature_col = samples.columns[feature_idx]
     effects = np.zeros(n_classes)
 
-    for sample_idx in range(n_samples):
-        x = X_array[sample_idx].copy()
+    for i in range(n_samples):
+        row = samples.iloc[[i]].copy()
 
-        # Evaluate at left edge
-        x[feature_idx] = left_val
-        x_left_scaled = scaler.transform(x.reshape(1, -1))
-        proba_left = model.predict_proba(x_left_scaled)[0]
+        row[feature_col] = left_val
+        proba_left = model.predict_proba(scaler.transform(row))[0]
 
-        # Evaluate at right edge
-        x[feature_idx] = right_val
-        x_right_scaled = scaler.transform(x.reshape(1, -1))
-        proba_right = model.predict_proba(x_right_scaled)[0]
+        row[feature_col] = right_val
+        proba_right = model.predict_proba(scaler.transform(row))[0]
 
-        # Local effect is the difference
         effects += (proba_right - proba_left)
 
-    # Average over samples
     effects /= n_samples
-
     return effects
 
 
@@ -283,21 +276,18 @@ def compute_tree_local_effect(model, samples, feature_idx, left_val, right_val):
     if n_samples == 0:
         return np.zeros(n_classes)
 
-    X_array = samples.values.copy()
+    feature_col = samples.columns[feature_idx]
     effects = np.zeros(n_classes)
 
-    for sample_idx in range(n_samples):
-        x = X_array[sample_idx].copy()
+    for i in range(n_samples):
+        row = samples.iloc[[i]].copy()
 
-        # Evaluate at left edge
-        x[feature_idx] = left_val
-        proba_left = model.predict_proba(x.reshape(1, -1))[0]
+        row[feature_col] = left_val
+        proba_left = model.predict_proba(row)[0]
 
-        # Evaluate at right edge
-        x[feature_idx] = right_val
-        proba_right = model.predict_proba(x.reshape(1, -1))[0]
+        row[feature_col] = right_val
+        proba_right = model.predict_proba(row)[0]
 
-        # Local effect
         effects += (proba_right - proba_left)
 
     effects /= n_samples
@@ -564,7 +554,7 @@ def build_combined_feature_effects_plot(model, feature_name, model_type, show_ic
         )
 
     # Add zero line to ALE
-    fig.add_hline(y=0, line_dash='dash', line_color='#999', opacity=0.7, row='1', col='2')
+    fig.add_hline(y=0, line_dash='dash', line_color='#999', opacity=0.7, row=1, col=2) # type: ignore
 
     # Add rug plots
     feature_values = train_X[feature_name].values
