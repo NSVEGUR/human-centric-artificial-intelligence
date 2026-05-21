@@ -1,322 +1,354 @@
+{% extends 'base.html' %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Project 2 - Explainability</title>
-    <link rel="stylesheet" href="{% static 'project2/style.css' %}">
-</head>
-<body>
 
-<div class="page-wrapper">
+{% block title %}Project 2 · Explainability{% endblock %}
 
-    <!--   HEADER   -->
-    <div class="header">
-        <a href="{% url 'home:index' %}" class="back-btn">Back to Home</a>
-        <h1>Project 2 — Explainability</h1>
-        <p class="subtitle">Human-Centric Artificial Intelligence · Palmer Penguins Dataset</p>
-    </div>
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'project2/style.css' %}" />
+{% endblock %}
 
-    <!--   INTRO   -->
-    <div class="intro-box">
-        <p>
-            This tool helps you understand how <strong>machine learning models</strong> make decisions
-            about penguin species. Use the controls on the left to switch between models and adjust
-            how complex the model is allowed to be. The chart on the right updates automatically.
-        </p>
-    </div>
+{% block content %}
 
-    <!--   MAIN LAYOUT   -->
-    <div class="main-container">
+<header class="page-header">
+    <a href="{% url 'home:index' %}" class="back-link">← Back to Home</a>
+    <h1>Project 2 — Explainability</h1>
+    <p class="page-subtitle">Human-Centric Artificial Intelligence · Palmer Penguins Dataset</p>
+</header>
 
-        <!--   LEFT PANEL   -->
-        <div class="controls-panel">
+<div class="alert alert-info" style="margin-bottom: var(--space-6);">
+    <p>
+        This tool helps you understand how <strong>machine learning models</strong> make decisions
+        about penguin species. Use the controls on the left to switch between models and adjust
+        how complex the model is allowed to be. The chart on the right updates automatically.
+    </p>
+</div>
 
-            <!-- STEP 1: MODEL TYPE -->
-            <div class="control-group">
-                <div class="step-badge">Step 1</div>
-                <label class="control-label">Choose a Model</label>
+<div class="main-container">
 
-                <div class="model-card" id="card-tree" onclick="selectModel('tree')">
-                    <div class="model-card-header">
-                        <input type="radio" name="model_type" value="tree" id="radio-tree" checked>
-                        <span class="model-name">Decision Tree</span>
+    <!-- LEFT PANEL -->
+    <aside class="controls-panel">
+
+        <!-- STEP 1: MODEL TYPE -->
+        <section class="card">
+            <div class="card-header">
+                <span class="badge badge-uppercase">Step 1</span>
+                <p class="card-title">Choose a Model</p>
+            </div>
+            <div class="card-content stack-sm">
+                <div class="card card-selectable active" id="card-tree" onclick="selectModel('tree')">
+                    <div class="card-content-tight">
+                        <div class="row" style="gap: var(--space-2); margin-bottom: var(--space-2);">
+                            <input type="radio" name="model_type" value="tree" id="radio-tree" checked>
+                            <span class="model-name">Decision Tree</span>
+                        </div>
+                        <p class="model-desc muted">
+                            Works like a flowchart of yes/no questions.
+                            Easy to understand — just follow the branches.
+                            Great for seeing exactly how a decision is made.
+                        </p>
                     </div>
-                    <p class="model-desc">
-                        Works like a flowchart of yes/no questions.
-                        Easy to understand — just follow the branches.
-                        Great for seeing exactly how a decision is made.
-                    </p>
                 </div>
 
-                <div class="model-card" id="card-lr" onclick="selectModel('lr')">
-                    <div class="model-card-header">
-                        <input type="radio" name="model_type" value="lr" id="radio-lr">
-                        <span class="model-name">Logistic Regression</span>
+                <div class="card card-selectable" id="card-lr" onclick="selectModel('lr')">
+                    <div class="card-content-tight">
+                        <div class="row" style="gap: var(--space-2); margin-bottom: var(--space-2);">
+                            <input type="radio" name="model_type" value="lr" id="radio-lr">
+                            <span class="model-name">Logistic Regression</span>
+                        </div>
+                        <p class="model-desc muted">
+                            Weighs each feature and adds them up to make a decision.
+                            The bar chart shows which features matter most
+                            and whether they push towards or away from each species.
+                        </p>
                     </div>
-                    <p class="model-desc">
-                        Weighs each feature and adds them up to make a decision.
-                        The bar chart shows which features matter most
-                        and whether they push towards or away from each species.
-                    </p>
                 </div>
             </div>
+        </section>
 
-            <!-- STEP 2: LAMBDA SLIDER -->
-            <div class="control-group">
-                <div class="step-badge">Step 2</div>
-                <label class="control-label">Adjust Complexity (&lambda;)</label>
-                <p class="control-desc">
+        <!-- STEP 2: LAMBDA SLIDER -->
+        <section class="card">
+            <div class="card-header">
+                <span class="badge badge-uppercase">Step 2</span>
+                <p class="card-title">Adjust Complexity (λ)</p>
+                <p class="card-description">
                     Move the slider or type a value to balance
                     <strong>accuracy</strong> vs <strong>simplicity</strong>.
                 </p>
-
-                <div class="lambda-input-row">
-                    <div class="lambda-top-row">
-                        <div class="lambda-hint-block">
-                            <span class="lambda-hint">Accurate</span>
-                            <span class="lambda-hint-desc">low &lambda; = keep accuracy</span>
-                        </div>
-                        <input
-                            type="number"
-                            id="lambda-input"
-                            min="0"
-                            max="1"
-                            step="0.01"
-                            value="0.00"
-                            class="lambda-number-input"
-                        >
-                        <div class="lambda-hint-block">
-                            <span class="lambda-hint">Simple</span>
-                            <span class="lambda-hint-desc">high &lambda; = prefer simplicity</span>
-                        </div>
+            </div>
+            <div class="card-content stack">
+                <div class="lambda-top-row">
+                    <div class="lambda-hint-block">
+                        <span class="lambda-hint">Accurate</span>
+                        <span class="lambda-hint-desc muted">low λ</span>
                     </div>
                     <input
-                        type="range"
-                        id="lambda-slider"
+                        type="number"
+                        id="lambda-input"
                         min="0"
                         max="1"
                         step="0.01"
-                        value="0"
-                        class="slider"
+                        value="0.00"
+                        class="input lambda-number-input"
                     >
-                </div>
-            </div>
-
-            <!-- STEP 3: MODEL STATS -->
-            <div class="control-group">
-                <div class="step-badge">Step 3</div>
-                <label class="control-label">Current Model Performance</label>
-                <p class="control-desc">These numbers describe the currently selected model.</p>
-                <div class="stats-box">
-                    <div class="stat-row">
-                        <div>
-                            <span class="stat-label">Test Accuracy</span>
-                            <span class="stat-hint">How often it predicts correctly on unseen data</span>
-                        </div>
-                        <span class="stat-value" id="stat-accuracy">{{ initial_accuracy }}%</span>
-                    </div>
-                    <div class="stat-row">
-                        <div>
-                            <span class="stat-label">Complexity (&Omega;)</span>
-                            <span class="stat-hint" id="stat-omega-hint">Number of leaf nodes in the tree</span>
-                        </div>
-                        <span class="stat-value" id="stat-complexity">{{ initial_complexity }}</span>
+                    <div class="lambda-hint-block">
+                        <span class="lambda-hint">Simple</span>
+                        <span class="lambda-hint-desc muted">high λ</span>
                     </div>
                 </div>
+                <input
+                    type="range"
+                    id="lambda-slider"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    value="0"
+                    class="slider"
+                >
             </div>
+        </section>
 
-            <!-- LR ONLY CONTROLS -->
-            <div class="control-group" id="lr-controls" style="display:none;">
-                <div class="step-badge">Step 4</div>
-                <label class="control-label">Chart Options</label>
-                <p class="control-desc">Customize how the logistic regression chart looks.</p>
-
-                <label class="mini-label">Sort bars by</label>
-                <select id="sort-by" class="dropdown">
-                    <option value="magnitude">Most important first</option>
-                    <option value="alphabetical">A to Z (feature name)</option>
-                </select>
-
-                <label class="mini-label" style="margin-top:12px;">Filter by species</label>
-                <div class="class-buttons">
-                    <button class="class-btn active" data-class="">All Species</button>
-                    <button class="class-btn" data-class="Adelie">Adelie</button>
-                    <button class="class-btn" data-class="Chinstrap">Chinstrap</button>
-                    <button class="class-btn" data-class="Gentoo">Gentoo</button>
+        <!-- STEP 3: MODEL STATS -->
+        <section class="card">
+            <div class="card-header">
+                <span class="badge badge-uppercase">Step 3</span>
+                <p class="card-title">Current Model Performance</p>
+                <p class="card-description">These numbers describe the currently selected model.</p>
+            </div>
+            <div class="card-content stats-list">
+                <div class="stat-row">
+                    <div>
+                        <span class="stat-label">Test Accuracy</span>
+                        <span class="stat-hint muted">How often it predicts correctly on unseen data</span>
+                    </div>
+                    <span class="stat-value" id="stat-accuracy">{{ initial_accuracy }}%</span>
                 </div>
-                <input type="hidden" id="class-filter" value="">
-
-                <label class="mini-label" style="margin-top:12px;">Filter by feature</label>
-                <select id="feature-filter" class="dropdown">
-                    <option value="">All Features</option>
-                    <option value="bill_length_mm">Bill Length</option>
-                    <option value="bill_depth_mm">Bill Depth</option>
-                    <option value="flipper_length_mm">Flipper Length</option>
-                    <option value="body_mass_g">Body Mass</option>
-                    <option value="island">Island (all categories)</option>
-                    <option value="sex">Sex (all categories)</option>
-                </select>
+                <div class="stat-row">
+                    <div>
+                        <span class="stat-label">Complexity (Ω)</span>
+                        <span class="stat-hint muted" id="stat-omega-hint">Number of leaf nodes in the tree</span>
+                    </div>
+                    <span class="stat-value" id="stat-complexity">{{ initial_complexity }}</span>
+                </div>
             </div>
+        </section>
 
-        </div>
+        <!-- LR ONLY CONTROLS -->
+        <section class="card" id="lr-controls" style="display:none;">
+            <div class="card-header">
+                <span class="badge badge-uppercase">Step 4</span>
+                <p class="card-title">Chart Options</p>
+                <p class="card-description">Customize how the logistic regression chart looks.</p>
+            </div>
+            <div class="card-content stack">
+                <div>
+                    <label class="label-muted">Sort bars by</label>
+                    <select id="sort-by" class="select">
+                        <option value="magnitude">Most important first</option>
+                        <option value="alphabetical">A to Z (feature name)</option>
+                    </select>
+                </div>
 
-        <!--   RIGHT PANEL   -->
-        <div class="chart-panel">
+                <div>
+                    <label class="label-muted">Filter by species</label>
+                    <div class="pill-group">
+                        <button class="btn btn-sm btn-outline class-btn active" data-class="">All</button>
+                        <button class="btn btn-sm btn-outline class-btn" data-class="Adelie">Adelie</button>
+                        <button class="btn btn-sm btn-outline class-btn" data-class="Chinstrap">Chinstrap</button>
+                        <button class="btn btn-sm btn-outline class-btn" data-class="Gentoo">Gentoo</button>
+                    </div>
+                    <input type="hidden" id="class-filter" value="">
+                </div>
 
-            <!-- formula card -->
-            <div class="formula-card">
-                <p class="formula-card-title">Optimization Objective</p>
+                <div>
+                    <label class="label-muted">Filter by feature</label>
+                    <select id="feature-filter" class="select">
+                        <option value="">All Features</option>
+                        <option value="bill_length_mm">Bill Length</option>
+                        <option value="bill_depth_mm">Bill Depth</option>
+                        <option value="flipper_length_mm">Flipper Length</option>
+                        <option value="body_mass_g">Body Mass</option>
+                        <option value="island">Island (all categories)</option>
+                        <option value="sex">Sex (all categories)</option>
+                    </select>
+                </div>
+            </div>
+        </section>
 
-                <div class="formula-original">
-                    <p class="formula-original-label">From the lecture:</p>
-                    <p class="formula-card-math">
+    </aside>
+
+    <!-- RIGHT PANEL -->
+    <main class="chart-panel">
+
+        <!-- formula card -->
+        <section class="card">
+            <div class="card-header">
+                <span class="badge badge-outline badge-uppercase">Optimization Objective</span>
+            </div>
+            <div class="card-content stack">
+                <div>
+                    <p class="label-muted">From the lecture</p>
+                    <p class="code-block">
                         arg min &nbsp; <sup>1</sup>&frasl;<sub>n</sub> &nbsp;
                         &sum;<sub>i=1</sub><sup>n</sup> &nbsp;
-                        &ell;(f(x<sub>i</sub>), y<sub>i</sub>) + &lambda;&Omega;(f)
+                        ℓ(f(x<sub>i</sub>), y<sub>i</sub>) + λΩ(f)
                     </p>
                 </div>
 
-                <div class="formula-used">
-                    <p class="formula-original-label">How we use it in this tool:</p>
-                    <p class="formula-card-math">
-                        min (1 &minus; acc<sub>test</sub>) + &lambda; &middot; &Omega;(f)
+                <div>
+                    <p class="label-muted">How we use it in this tool</p>
+                    <p class="code-block">
+                        min (1 − acc<sub>test</sub>) + λ · Ω(f)
                     </p>
                 </div>
 
-                <div class="formula-card-right">
-                    <div class="formula-card-row">
-                        <span class="formula-term">(1 &minus; acc<sub>test</sub>)</span>
-                        <span class="formula-term-desc">
+                <div class="formula-terms">
+                    <div class="formula-term-row">
+                        <span class="formula-term">(1 − acc<sub>test</sub>)</span>
+                        <span class="formula-term-desc muted">
                             Replaces the average 0-1 loss — it equals 0 when the model
                             is perfect and 1 when it gets everything wrong.
                             We evaluate this on the <strong>test set</strong> as specified in Task 2.
                         </span>
                     </div>
-                    <div class="formula-card-row">
-                        <span class="formula-term">&lambda;</span>
-                        <span class="formula-term-desc">
+                    <div class="formula-term-row">
+                        <span class="formula-term">λ</span>
+                        <span class="formula-term-desc muted">
                             The regularization parameter you control with the slider.
-                            Higher &lambda; means we care more about keeping the model simple.
+                            Higher λ means we care more about keeping the model simple.
                         </span>
                     </div>
-                    <div class="formula-card-row">
-                        <span class="formula-term">&Omega;(f)</span>
-                        <span class="formula-term-desc" id="omega-desc">
+                    <div class="formula-term-row">
+                        <span class="formula-term">Ω(f)</span>
+                        <span class="formula-term-desc muted" id="omega-desc">
                             For Decision Trees: number of leaves (more leaves = more complex).
                             We normalize this to [0,1] so it stays on the same scale as the error.
                         </span>
                     </div>
                 </div>
             </div>
+        </section>
 
-            <!-- chart header -->
-            <div class="chart-header">
-                <div>
-                    <span class="chart-title" id="chart-title">Decision Tree</span>
-                    <span class="chart-subtitle" id="chart-subtitle">
-                        Showing the best tree for the current &lambda; value
+        <!-- chart header -->
+        <section class="card">
+            <div class="card-header-row">
+                <div class="stack-sm">
+                    <span class="card-title" id="chart-title">Decision Tree</span>
+                    <span class="card-description" id="chart-subtitle">
+                        Showing the best tree for the current λ value
                     </span>
                 </div>
-                <div class="loading-badge" id="loading-badge" style="display:none;">
-                    Updating...
-                </div>
+                <span class="badge badge-warning badge-pulse" id="loading-badge" style="display:none;">
+                    Updating…
+                </span>
             </div>
+        </section>
 
-            <!-- how to read the chart -->
-            <div class="chart-desc-box">
-                <p id="chart-desc-text">
-                    Each <strong>square node</strong> asks a yes/no question about the penguin.
-                    Follow the branches left or right until you reach a
-                    <strong>circle (leaf)</strong> — that is the predicted species.
-                    Hover over any node for more details.
-                </p>
-            </div>
+        <!-- how to read the chart -->
+        <div class="alert alert-info">
+            <p id="chart-desc-text">
+                Each <strong>square node</strong> asks a yes/no question about the penguin.
+                Follow the branches left or right until you reach a
+                <strong>circle (leaf)</strong> — that is the predicted species.
+                Hover over any node for more details.
+            </p>
+        </div>
 
-            <!-- main chart -->
-            <div class="chart-box">
+        <!-- main chart -->
+        <section class="card">
+            <div class="card-content">
                 <div id="plotly-chart" style="width:100%; min-height:600px;"></div>
             </div>
+        </section>
 
-            <!-- second row: tradeoff + confusion side by side -->
-            <div class="charts-row">
-
-                <div class="chart-box half">
-                    <p class="chart-box-title">Accuracy vs Complexity Tradeoff</p>
-                    <p class="chart-box-desc">
+        <!-- second row: tradeoff + confusion side by side -->
+        <div class="charts-row">
+            <section class="card">
+                <div class="card-header">
+                    <p class="card-title">Accuracy vs Complexity Tradeoff</p>
+                    <p class="card-description">
                         All trained models plotted by complexity (x) and accuracy (y).
                         The red star shows the currently selected model.
-                        Move the &lambda; slider to see the selection change.
+                        Move the λ slider to see the selection change.
                     </p>
+                </div>
+                <div class="card-content">
                     <div id="tradeoff-chart" style="width:100%; min-height:300px;"></div>
                 </div>
+            </section>
 
-                <div class="chart-box half">
-                    <p class="chart-box-title">Confusion Matrix</p>
-                    <p class="chart-box-desc">
+            <section class="card">
+                <div class="card-header">
+                    <p class="card-title">Confusion Matrix</p>
+                    <p class="card-description">
                         Shows which species the model confuses with which.
                         A perfect model has all predictions on the diagonal.
                         Darker = more predictions in that cell.
                     </p>
+                </div>
+                <div class="card-content">
                     <div id="confusion-chart" style="width:100%; min-height:300px;"></div>
                 </div>
+            </section>
+        </div>
 
-            </div>
-
-            <!-- third row: train vs test gap -->
-            <div class="chart-box">
-                <p class="chart-box-title">Train vs Test Accuracy Gap</p>
-                <p class="chart-box-desc">
+        <!-- third row: train vs test gap -->
+        <section class="card">
+            <div class="card-header">
+                <p class="card-title">Train vs Test Accuracy Gap</p>
+                <p class="card-description">
                     A large gap between train and test accuracy indicates <strong>overfitting</strong>
                     — the model memorized the training data but struggles on new data.
-                    Try increasing &lambda; to reduce overfitting by choosing a simpler model.
+                    Try increasing λ to reduce overfitting by choosing a simpler model.
                 </p>
+            </div>
+            <div class="card-content">
                 <div id="gap-chart" style="width:100%; min-height:300px;"></div>
             </div>
+        </section>
 
-            <!-- ======================================== -->
-            <!--   TASK 4: COUNTERFACTUAL EXPLANATIONS   -->
-            <!-- ======================================== -->
-            <div class="section-divider">
-                <span class="section-divider-text">Task 4: Counterfactual Explanations</span>
+        <!-- ========================================
+             TASK 4: COUNTERFACTUAL EXPLANATIONS
+             ======================================== -->
+        <div class="separator">
+            <span class="separator-text">Task 4 · Counterfactual Explanations</span>
+        </div>
+
+        <section class="card cf-section">
+            <div class="card-header">
+                <p class="card-title">What are Counterfactual Explanations?</p>
+                <p class="card-description">
+                    Counterfactuals answer the question: <em>"What would need to change for the model to predict a different class?"</em>
+                    They help you understand <strong>what minimal changes</strong> to a penguin's measurements would result in it being classified as a different species.
+                </p>
             </div>
-
-            <div class="cf-section">
-                <div class="cf-intro-box">
-                    <h3>What are Counterfactual Explanations?</h3>
-                    <p>
-                        Counterfactuals answer the question: <em>"What would need to change for the model to predict a different class?"</em>
-                        They help you understand <strong>what minimal changes</strong> to a penguin's measurements would result in it being classified as a different species.
-                    </p>
-                    <p class="cf-method">
-                        <strong>Method:</strong> We sample many points near the original, find those predicted as the target class,
-                        and rank them by <strong>MAD-weighted L1 distance</strong> (smaller = more similar to original).
-                    </p>
+            <div class="card-content">
+                <div class="alert alert-info" style="margin-bottom: var(--space-5);">
+                    <p><strong>Method:</strong> We sample many points near the original, find those predicted as the target class,
+                    and rank them by <strong>MAD-weighted L1 distance</strong> (smaller = more similar to original).</p>
                 </div>
 
                 <div class="cf-controls">
                     <div class="cf-control-row">
                         <div class="cf-control-item">
-                            <label class="mini-label">Select a Sample from Test Set</label>
-                            <select id="cf-sample-select" class="dropdown cf-dropdown">
-                                <option value="">Loading samples...</option>
+                            <label class="label-muted">Select a Sample from Test Set</label>
+                            <select id="cf-sample-select" class="select">
+                                <option value="">Loading samples…</option>
                             </select>
                         </div>
 
                         <div class="cf-control-item">
-                            <label class="mini-label">Target Species (what should it become?)</label>
-                            <div class="target-species-buttons">
-                                <button class="species-btn" data-species="Adelie">Adelie</button>
-                                <button class="species-btn" data-species="Chinstrap">Chinstrap</button>
-                                <button class="species-btn" data-species="Gentoo">Gentoo</button>
+                            <label class="label-muted">Target Species</label>
+                            <div class="pill-group">
+                                <button class="btn btn-sm btn-outline species-btn" data-species="Adelie">Adelie</button>
+                                <button class="btn btn-sm btn-outline species-btn" data-species="Chinstrap">Chinstrap</button>
+                                <button class="btn btn-sm btn-outline species-btn" data-species="Gentoo">Gentoo</button>
                             </div>
                             <input type="hidden" id="cf-target-class" value="Adelie">
                         </div>
 
                         <div class="cf-control-item">
-                            <label class="mini-label">Number of Counterfactuals</label>
-                            <select id="cf-k-select" class="dropdown cf-dropdown-small">
+                            <label class="label-muted">Number of Counterfactuals</label>
+                            <select id="cf-k-select" class="select" style="max-width: 120px;">
                                 <option value="3">3</option>
                                 <option value="5" selected>5</option>
                                 <option value="10">10</option>
@@ -324,95 +356,107 @@
                         </div>
                     </div>
 
-                    <button id="cf-generate-btn" class="generate-btn">
-                        <span class="btn-icon">&#x2728;</span> Generate Counterfactuals
+                    <button id="cf-generate-btn" class="btn btn-primary">
+                        Generate Counterfactuals
                     </button>
                 </div>
 
                 <!-- Original sample info -->
-                <div id="cf-original-info" class="cf-original-box" style="display:none;">
-                    <h4>Original Sample</h4>
+                <div id="cf-original-info" class="alert alert-info" style="display:none; margin-top: var(--space-5);">
+                    <p class="alert-title">Original Sample</p>
                     <div class="cf-original-grid" id="cf-original-grid"></div>
                 </div>
 
                 <!-- Loading indicator -->
-                <div id="cf-loading" class="cf-loading" style="display:none;">
-                    <div class="cf-spinner"></div>
-                    <span>Generating counterfactuals...</span>
+                <div id="cf-loading" class="loading-row" style="display:none;">
+                    <div class="spinner"></div>
+                    <span>Generating counterfactuals…</span>
                 </div>
 
                 <!-- Results -->
-                <div id="cf-results" style="display:none;">
-                    <div class="cf-results-header">
+                <div id="cf-results" style="display:none; margin-top: var(--space-6);">
+                    <div class="row-between" style="margin-bottom: var(--space-4);">
                         <h4>Counterfactual Results</h4>
-                        <span id="cf-results-summary" class="cf-results-summary"></span>
+                        <span id="cf-results-summary" class="badge badge-success"></span>
                     </div>
 
                     <!-- Main visualization -->
-                    <div class="chart-box">
-                        <div id="cf-main-chart" style="width:100%; min-height:600px;"></div>
-                    </div>
+                    <section class="card" style="margin-bottom: var(--space-4);">
+                        <div class="card-content">
+                            <div id="cf-main-chart" style="width:100%; min-height:600px;"></div>
+                        </div>
+                    </section>
 
                     <!-- Table visualization -->
-                    <div class="chart-box">
-                        <p class="chart-box-title">Feature Changes Heatmap</p>
-                        <p class="chart-box-desc">
-                            Each row is a counterfactual. Colors show the magnitude and direction of change required.
-                            <strong>Blue = decrease</strong>, <strong>Red = increase</strong>.
-                        </p>
-                        <div id="cf-table-chart" style="width:100%; min-height:250px;"></div>
-                    </div>
+                    <section class="card" style="margin-bottom: var(--space-4);">
+                        <div class="card-header">
+                            <p class="card-title">Feature Changes Heatmap</p>
+                            <p class="card-description">
+                                Each row is a counterfactual. Colors show the magnitude and direction of change required.
+                                <strong>Blue = decrease</strong>, <strong>Red = increase</strong>.
+                            </p>
+                        </div>
+                        <div class="card-content">
+                            <div id="cf-table-chart" style="width:100%; min-height:250px;"></div>
+                        </div>
+                    </section>
 
                     <!-- Detailed counterfactual cards -->
                     <div id="cf-cards-container" class="cf-cards-container"></div>
                 </div>
 
                 <!-- No results message -->
-                <div id="cf-no-results" class="cf-no-results" style="display:none;">
-                    <span class="cf-no-results-icon">&#x1F50D;</span>
-                    <p>No counterfactuals found. This might happen if:</p>
-                    <ul>
+                <div id="cf-no-results" class="alert alert-warning" style="display:none; margin-top: var(--space-4);">
+                    <p class="alert-title">No counterfactuals found</p>
+                    <p>This might happen if:</p>
+                    <ul style="list-style: disc; padding-left: var(--space-5); color: hsl(var(--muted-foreground));">
                         <li>The target class is the same as the current prediction</li>
                         <li>The decision boundary is too far from this sample</li>
                     </ul>
                     <p>Try selecting a different sample or target species.</p>
                 </div>
             </div>
+        </section>
 
-            <!-- ======================================== -->
-            <!--   TASK 5: FEATURE EFFECT PLOTS          -->
-            <!-- ======================================== -->
-            <div class="section-divider">
-                <span class="section-divider-text">Task 5: Global Feature Effects (PDP &amp; ALE)</span>
+        <!-- ========================================
+             TASK 5: FEATURE EFFECT PLOTS
+             ======================================== -->
+        <div class="separator">
+            <span class="separator-text">Task 5 · Global Feature Effects (PDP & ALE)</span>
+        </div>
+
+        <section class="card fe-section">
+            <div class="card-header">
+                <p class="card-title">Understanding Feature Effects</p>
+                <p class="card-description">
+                    These plots show how each feature globally affects the model's predictions across all samples.
+                </p>
             </div>
-
-            <div class="fe-section">
-                <div class="fe-intro-box">
-                    <h3>Understanding Feature Effects</h3>
-                    <p>
-                        These plots show how each feature globally affects the model's predictions across all samples.
-                    </p>
-                    <div class="fe-methods-grid">
-                        <div class="fe-method-card">
-                            <h4>PDP (Partial Dependence Plot)</h4>
-                            <p>Shows the <strong>average effect</strong> of a feature on the prediction. For each feature value, we average the predictions over all samples.</p>
-                            <p class="fe-formula">PDP(x<sub>s</sub>) = <sup>1</sup>/<sub>n</sub> &sum;<sub>i</sub> f(x<sub>s</sub>, x<sub>c</sub><sup>(i)</sup>)</p>
+            <div class="card-content">
+                <div class="fe-methods-grid">
+                    <div class="card">
+                        <div class="card-content">
+                            <h4 style="margin-bottom: var(--space-2);">PDP (Partial Dependence Plot)</h4>
+                            <p class="muted text-sm" style="margin-bottom: var(--space-3);">Shows the <strong>average effect</strong> of a feature on the prediction. For each feature value, we average the predictions over all samples.</p>
+                            <p class="code-block text-sm">PDP(x<sub>s</sub>) = <sup>1</sup>/<sub>n</sub> &sum;<sub>i</sub> f(x<sub>s</sub>, x<sub>c</sub><sup>(i)</sup>)</p>
                         </div>
-                        <div class="fe-method-card">
-                            <h4>ALE (Accumulated Local Effects)</h4>
-                            <p>More robust when features are correlated. Computes <strong>local effects</strong> by looking at how predictions change within small intervals.</p>
-                            <p class="fe-derivative-note" id="fe-derivative-note">
+                    </div>
+                    <div class="card">
+                        <div class="card-content">
+                            <h4 style="margin-bottom: var(--space-2);">ALE (Accumulated Local Effects)</h4>
+                            <p class="muted text-sm" style="margin-bottom: var(--space-3);">More robust when features are correlated. Computes <strong>local effects</strong> by looking at how predictions change within small intervals.</p>
+                            <p class="code-block text-sm" id="fe-derivative-note">
                                 <strong>Derivatives:</strong> <span id="fe-derivative-type">Select a feature to see derivative method</span>
                             </p>
                         </div>
                     </div>
                 </div>
 
-                <div class="fe-controls">
-                    <div class="fe-control-row">
-                        <div class="fe-control-item">
-                            <label class="mini-label">Select Numerical Feature</label>
-                            <select id="fe-feature-select" class="dropdown fe-dropdown">
+                <div class="fe-controls" style="margin-top: var(--space-5);">
+                    <div class="cf-control-row">
+                        <div class="cf-control-item">
+                            <label class="label-muted">Select Numerical Feature</label>
+                            <select id="fe-feature-select" class="select">
                                 <option value="bill_length_mm">Bill Length (mm)</option>
                                 <option value="bill_depth_mm">Bill Depth (mm)</option>
                                 <option value="flipper_length_mm">Flipper Length (mm)</option>
@@ -420,84 +464,97 @@
                             </select>
                         </div>
 
-                        <div class="fe-control-item">
-                            <label class="mini-label">Show ICE Curves</label>
-                            <div class="toggle-container">
-                                <label class="toggle-switch">
+                        <div class="cf-control-item">
+                            <label class="label-muted">Show ICE Curves</label>
+                            <div class="row" style="gap: var(--space-3);">
+                                <label class="switch">
                                     <input type="checkbox" id="fe-show-ice">
-                                    <span class="toggle-slider"></span>
+                                    <span class="switch-track"></span>
                                 </label>
-                                <span class="toggle-label">Individual Conditional Expectation</span>
+                                <span class="text-sm muted">Individual Conditional Expectation</span>
                             </div>
                         </div>
                     </div>
 
-                    <button id="fe-compute-btn" class="generate-btn">
-                        <span class="btn-icon">&#x1F4CA;</span> Compute Feature Effects
+                    <button id="fe-compute-btn" class="btn btn-primary">
+                        Compute Feature Effects
                     </button>
                 </div>
 
                 <!-- Loading indicator -->
-                <div id="fe-loading" class="cf-loading" style="display:none;">
-                    <div class="cf-spinner"></div>
-                    <span>Computing feature effects...</span>
+                <div id="fe-loading" class="loading-row" style="display:none;">
+                    <div class="spinner"></div>
+                    <span>Computing feature effects…</span>
                 </div>
 
                 <!-- Results -->
-                <div id="fe-results" style="display:none;">
-                    <!-- Combined PDP + ALE plot -->
-                    <div class="chart-box">
-                        <p class="chart-box-title">PDP &amp; ALE Comparison</p>
-                        <p class="chart-box-desc">
-                            <strong>Left (PDP):</strong> Average predicted probability as the feature varies.
-                            <strong>Right (ALE):</strong> Accumulated local effect (centered at 0).
-                            The rug plot at the bottom shows the actual data distribution.
-                        </p>
-                        <div id="fe-combined-chart" style="width:100%; min-height:450px;"></div>
-                    </div>
+                <div id="fe-results" style="display:none; margin-top: var(--space-5);">
+                    <section class="card" style="margin-bottom: var(--space-4);">
+                        <div class="card-header">
+                            <p class="card-title">PDP & ALE Comparison</p>
+                            <p class="card-description">
+                                <strong>Left (PDP):</strong> Average predicted probability as the feature varies.
+                                <strong>Right (ALE):</strong> Accumulated local effect (centered at 0).
+                                The rug plot at the bottom shows the actual data distribution.
+                            </p>
+                        </div>
+                        <div class="card-content">
+                            <div id="fe-combined-chart" style="width:100%; min-height:450px;"></div>
+                        </div>
+                    </section>
 
-                    <!-- Individual plots side by side -->
                     <div class="charts-row">
-                        <div class="chart-box half">
-                            <p class="chart-box-title">Partial Dependence Plot (PDP)</p>
-                            <p class="chart-box-desc">
-                                Each curve shows how the probability for that species changes
-                                as we vary the feature value. The thin lines (if enabled) are ICE curves
-                                showing individual sample behavior.
-                            </p>
-                            <div id="fe-pdp-chart" style="width:100%; min-height:400px;"></div>
-                        </div>
+                        <section class="card">
+                            <div class="card-header">
+                                <p class="card-title">Partial Dependence Plot (PDP)</p>
+                                <p class="card-description">
+                                    Each curve shows how the probability for that species changes
+                                    as we vary the feature value. The thin lines (if enabled) are ICE curves
+                                    showing individual sample behavior.
+                                </p>
+                            </div>
+                            <div class="card-content">
+                                <div id="fe-pdp-chart" style="width:100%; min-height:400px;"></div>
+                            </div>
+                        </section>
 
-                        <div class="chart-box half">
-                            <p class="chart-box-title">Accumulated Local Effects (ALE)</p>
-                            <p class="chart-box-desc">
-                                ALE plots show the <em>local</em> effect of the feature. Unlike PDP,
-                                they correctly handle correlated features. The effect is centered at 0.
-                            </p>
-                            <div id="fe-ale-chart" style="width:100%; min-height:400px;"></div>
-                        </div>
+                        <section class="card">
+                            <div class="card-header">
+                                <p class="card-title">Accumulated Local Effects (ALE)</p>
+                                <p class="card-description">
+                                    ALE plots show the <em>local</em> effect of the feature. Unlike PDP,
+                                    they correctly handle correlated features. The effect is centered at 0.
+                                </p>
+                            </div>
+                            <div class="card-content">
+                                <div id="fe-ale-chart" style="width:100%; min-height:400px;"></div>
+                            </div>
+                        </section>
                     </div>
 
-                    <!-- Feature importance -->
-                    <div class="chart-box">
-                        <p class="chart-box-title">Permutation Feature Importance</p>
-                        <p class="chart-box-desc">
-                            Shows how much the model's accuracy decreases when each feature is randomly shuffled.
-                            Higher bars indicate more important features.
-                        </p>
-                        <div id="fe-importance-chart" style="width:100%; min-height:300px;"></div>
-                    </div>
+                    <section class="card" style="margin-top: var(--space-4);">
+                        <div class="card-header">
+                            <p class="card-title">Permutation Feature Importance</p>
+                            <p class="card-description">
+                                Shows how much the model's accuracy decreases when each feature is randomly shuffled.
+                                Higher bars indicate more important features.
+                            </p>
+                        </div>
+                        <div class="card-content">
+                            <div id="fe-importance-chart" style="width:100%; min-height:300px;"></div>
+                        </div>
+                    </section>
                 </div>
             </div>
+        </section>
 
-        </div>
+    </main>
 
-    </div>
 </div>
 
-<!-- load plotly -->
-<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+{% endblock %}
 
+{% block script %}
 <script type="text/javascript">
 
     // initial data from django - all passed as json strings
@@ -631,7 +688,7 @@
         var selectedClass   = classFilterInput.value || null;
         var selectedFeature = featureFilterDropdown.value || null;
 
-        loadingBadge.style.display = "inline-block";
+        loadingBadge.style.display = "inline-flex";
 
         fetch("/project2/update-model/", {
             method: "POST",
@@ -701,6 +758,11 @@
     var cfResultsSummary = document.getElementById("cf-results-summary");
     var cfCardsContainer = document.getElementById("cf-cards-container");
     var speciesBtns = document.querySelectorAll(".species-btn");
+
+    // Default-select Adelie button on load
+    if (speciesBtns.length) {
+        speciesBtns[0].classList.add("active");
+    }
 
     // Load test samples on page load
     function loadTestSamples() {
@@ -777,7 +839,7 @@
             if (data.counterfactuals && data.counterfactuals.length > 0) {
                 // Show results
                 cfResults.style.display = "block";
-                cfResultsSummary.textContent = "Found " + data.found_count + " counterfactuals, showing top " + data.counterfactuals.length;
+                cfResultsSummary.textContent = "Found " + data.found_count + ", showing top " + data.counterfactuals.length;
 
                 // Render main visualization
                 var mainViz = JSON.parse(data.visualization);
@@ -801,10 +863,10 @@
     });
 
     function displayOriginalSample(original) {
-        cfOriginalInfo.style.display = "block";
+        cfOriginalInfo.style.display = "flex";
 
-        var html = '<div class="cf-original-item"><span class="cf-label">Sample Index:</span><span class="cf-value">#' + original.index + '</span></div>';
-        html += '<div class="cf-original-item"><span class="cf-label">Actual Species:</span><span class="cf-value cf-species-' + original.actual_species.toLowerCase() + '">' + original.actual_species + '</span></div>';
+        var html = '<div class="cf-original-item"><span class="cf-label">Sample:</span><span class="cf-value">#' + original.index + '</span></div>';
+        html += '<div class="cf-original-item"><span class="cf-label">Actual:</span><span class="cf-value cf-species-' + original.actual_species.toLowerCase() + '">' + original.actual_species + '</span></div>';
         html += '<div class="cf-original-item"><span class="cf-label">Predicted:</span><span class="cf-value">' + original.predicted_species + '</span></div>';
 
         // Probabilities
@@ -818,25 +880,23 @@
     }
 
     function displayCounterfactualCards(counterfactuals, original, targetClass) {
-        var html = '<h4>Detailed Counterfactuals</h4>';
+        var html = '<h4 style="margin-bottom: var(--space-3);">Detailed Counterfactuals</h4>';
 
         counterfactuals.forEach(function(cf) {
-            html += '<div class="cf-card">';
-            html += '<div class="cf-card-header">';
-            html += '<span class="cf-rank">#' + cf.rank + '</span>';
-            html += '<span class="cf-distance">Distance: ' + cf.distance + '</span>';
-            html += '<span class="cf-target-prob">' + targetClass + ' probability: ' + cf.target_probability + '%</span>';
+            html += '<div class="card cf-card">';
+            html += '<div class="card-header-row cf-card-header">';
+            html += '<span class="badge">#' + cf.rank + '</span>';
+            html += '<span class="muted text-sm">Distance: ' + cf.distance + '</span>';
+            html += '<span class="text-sm" style="margin-left: auto;"><strong>' + targetClass + '</strong> probability: ' + cf.target_probability + '%</span>';
             html += '</div>';
 
-            html += '<div class="cf-card-changes">';
-            html += '<p class="cf-changes-title">Changes required:</p>';
+            html += '<div class="card-content">';
+            html += '<p class="label-muted" style="margin-bottom: var(--space-2);">Changes required</p>';
 
             if (cf.changes.length === 0) {
-                html += '<p class="cf-no-changes">No significant changes needed</p>';
+                html += '<p class="text-sm" style="color: hsl(var(--success));">No significant changes needed</p>';
             } else {
-                html += '<table class="cf-changes-table">';
-                html += '<thead><tr><th>Feature</th><th>Original</th><th>New Value</th><th>Change</th></tr></thead>';
-                html += '<tbody>';
+                html += '<table class="table"><thead><tr><th>Feature</th><th>Original</th><th>New Value</th><th>Change</th></tr></thead><tbody>';
 
                 cf.changes.forEach(function(change) {
                     var changeClass = '';
@@ -854,8 +914,7 @@
                 html += '</tbody></table>';
             }
 
-            html += '</div>';
-            html += '</div>';
+            html += '</div></div>';
         });
 
         cfCardsContainer.innerHTML = html;
@@ -933,6 +992,4 @@
     });
 
 </script>
-
-</body>
-</html>
+{% endblock script %}

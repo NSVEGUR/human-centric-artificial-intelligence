@@ -1,30 +1,88 @@
-.student-id {
-    font-family: monospace;
-    color: #555;
+/* Home page — layout only. Components and tokens live in /static/style.css */
+
+.hero {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: var(--space-8) 0 var(--space-6);
+    max-width: 720px;
+}
+
+.hero h1 {
+    font-size: var(--text-4xl);
+}
+
+.hero-lede {
+    font-size: var(--text-lg);
+    line-height: 1.55;
+}
+
+.home-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-6);
+    margin-top: var(--space-4);
+}
+
+@media (max-width: 900px) {
+    .home-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 .student-list {
-    list-style: none;
-    padding: 0;
-    max-width: 500px;
-    margin: 0 auto;
-    background: #f9f9f9;
-    border-radius: 10px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    display: flex;
+    flex-direction: column;
 }
 
 .student-item {
-    padding: 10px 20px;
-    border-bottom: 1px solid #ddd;
-    font-size: 16px;
     display: flex;
     justify-content: space-between;
+    align-items: center;
+    gap: var(--space-4);
+    padding: var(--space-3) var(--space-5);
+    border-top: 1px solid hsl(var(--border));
+    font-size: var(--text-md);
 }
 
-.student-item:last-child {
-    border-bottom: none;
+.student-name {
+    color: hsl(var(--foreground));
 }
 
-.centered-text {
-    text-align: center;
+.project-grid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-4) var(--space-5) var(--space-5);
+}
+
+.project-card {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: var(--space-4);
+    padding: var(--space-4) var(--space-5);
+}
+
+.project-index {
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    color: hsl(var(--muted-foreground));
+}
+
+.project-title {
+    font-size: var(--text-md);
+    font-weight: 500;
+    color: hsl(var(--foreground));
+}
+
+.project-arrow {
+    font-size: var(--text-sm);
+    transition: transform var(--transition);
+}
+
+.project-card:hover .project-arrow {
+    transform: translateX(3px);
+    color: hsl(var(--foreground));
 }
