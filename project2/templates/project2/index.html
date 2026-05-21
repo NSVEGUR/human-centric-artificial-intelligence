@@ -275,6 +275,221 @@
                 <div id="gap-chart" style="width:100%; min-height:300px;"></div>
             </div>
 
+            <!-- ======================================== -->
+            <!--   TASK 4: COUNTERFACTUAL EXPLANATIONS   -->
+            <!-- ======================================== -->
+            <div class="section-divider">
+                <span class="section-divider-text">Task 4: Counterfactual Explanations</span>
+            </div>
+
+            <div class="cf-section">
+                <div class="cf-intro-box">
+                    <h3>What are Counterfactual Explanations?</h3>
+                    <p>
+                        Counterfactuals answer the question: <em>"What would need to change for the model to predict a different class?"</em>
+                        They help you understand <strong>what minimal changes</strong> to a penguin's measurements would result in it being classified as a different species.
+                    </p>
+                    <p class="cf-method">
+                        <strong>Method:</strong> We sample many points near the original, find those predicted as the target class,
+                        and rank them by <strong>MAD-weighted L1 distance</strong> (smaller = more similar to original).
+                    </p>
+                </div>
+
+                <div class="cf-controls">
+                    <div class="cf-control-row">
+                        <div class="cf-control-item">
+                            <label class="mini-label">Select a Sample from Test Set</label>
+                            <select id="cf-sample-select" class="dropdown cf-dropdown">
+                                <option value="">Loading samples...</option>
+                            </select>
+                        </div>
+
+                        <div class="cf-control-item">
+                            <label class="mini-label">Target Species (what should it become?)</label>
+                            <div class="target-species-buttons">
+                                <button class="species-btn" data-species="Adelie">Adelie</button>
+                                <button class="species-btn" data-species="Chinstrap">Chinstrap</button>
+                                <button class="species-btn" data-species="Gentoo">Gentoo</button>
+                            </div>
+                            <input type="hidden" id="cf-target-class" value="Adelie">
+                        </div>
+
+                        <div class="cf-control-item">
+                            <label class="mini-label">Number of Counterfactuals</label>
+                            <select id="cf-k-select" class="dropdown cf-dropdown-small">
+                                <option value="3">3</option>
+                                <option value="5" selected>5</option>
+                                <option value="10">10</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button id="cf-generate-btn" class="generate-btn">
+                        <span class="btn-icon">&#x2728;</span> Generate Counterfactuals
+                    </button>
+                </div>
+
+                <!-- Original sample info -->
+                <div id="cf-original-info" class="cf-original-box" style="display:none;">
+                    <h4>Original Sample</h4>
+                    <div class="cf-original-grid" id="cf-original-grid"></div>
+                </div>
+
+                <!-- Loading indicator -->
+                <div id="cf-loading" class="cf-loading" style="display:none;">
+                    <div class="cf-spinner"></div>
+                    <span>Generating counterfactuals...</span>
+                </div>
+
+                <!-- Results -->
+                <div id="cf-results" style="display:none;">
+                    <div class="cf-results-header">
+                        <h4>Counterfactual Results</h4>
+                        <span id="cf-results-summary" class="cf-results-summary"></span>
+                    </div>
+
+                    <!-- Main visualization -->
+                    <div class="chart-box">
+                        <div id="cf-main-chart" style="width:100%; min-height:600px;"></div>
+                    </div>
+
+                    <!-- Table visualization -->
+                    <div class="chart-box">
+                        <p class="chart-box-title">Feature Changes Heatmap</p>
+                        <p class="chart-box-desc">
+                            Each row is a counterfactual. Colors show the magnitude and direction of change required.
+                            <strong>Blue = decrease</strong>, <strong>Red = increase</strong>.
+                        </p>
+                        <div id="cf-table-chart" style="width:100%; min-height:250px;"></div>
+                    </div>
+
+                    <!-- Detailed counterfactual cards -->
+                    <div id="cf-cards-container" class="cf-cards-container"></div>
+                </div>
+
+                <!-- No results message -->
+                <div id="cf-no-results" class="cf-no-results" style="display:none;">
+                    <span class="cf-no-results-icon">&#x1F50D;</span>
+                    <p>No counterfactuals found. This might happen if:</p>
+                    <ul>
+                        <li>The target class is the same as the current prediction</li>
+                        <li>The decision boundary is too far from this sample</li>
+                    </ul>
+                    <p>Try selecting a different sample or target species.</p>
+                </div>
+            </div>
+
+            <!-- ======================================== -->
+            <!--   TASK 5: FEATURE EFFECT PLOTS          -->
+            <!-- ======================================== -->
+            <div class="section-divider">
+                <span class="section-divider-text">Task 5: Global Feature Effects (PDP &amp; ALE)</span>
+            </div>
+
+            <div class="fe-section">
+                <div class="fe-intro-box">
+                    <h3>Understanding Feature Effects</h3>
+                    <p>
+                        These plots show how each feature globally affects the model's predictions across all samples.
+                    </p>
+                    <div class="fe-methods-grid">
+                        <div class="fe-method-card">
+                            <h4>PDP (Partial Dependence Plot)</h4>
+                            <p>Shows the <strong>average effect</strong> of a feature on the prediction. For each feature value, we average the predictions over all samples.</p>
+                            <p class="fe-formula">PDP(x<sub>s</sub>) = <sup>1</sup>/<sub>n</sub> &sum;<sub>i</sub> f(x<sub>s</sub>, x<sub>c</sub><sup>(i)</sup>)</p>
+                        </div>
+                        <div class="fe-method-card">
+                            <h4>ALE (Accumulated Local Effects)</h4>
+                            <p>More robust when features are correlated. Computes <strong>local effects</strong> by looking at how predictions change within small intervals.</p>
+                            <p class="fe-derivative-note" id="fe-derivative-note">
+                                <strong>Derivatives:</strong> <span id="fe-derivative-type">Select a feature to see derivative method</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="fe-controls">
+                    <div class="fe-control-row">
+                        <div class="fe-control-item">
+                            <label class="mini-label">Select Numerical Feature</label>
+                            <select id="fe-feature-select" class="dropdown fe-dropdown">
+                                <option value="bill_length_mm">Bill Length (mm)</option>
+                                <option value="bill_depth_mm">Bill Depth (mm)</option>
+                                <option value="flipper_length_mm">Flipper Length (mm)</option>
+                                <option value="body_mass_g">Body Mass (g)</option>
+                            </select>
+                        </div>
+
+                        <div class="fe-control-item">
+                            <label class="mini-label">Show ICE Curves</label>
+                            <div class="toggle-container">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="fe-show-ice">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                                <span class="toggle-label">Individual Conditional Expectation</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button id="fe-compute-btn" class="generate-btn">
+                        <span class="btn-icon">&#x1F4CA;</span> Compute Feature Effects
+                    </button>
+                </div>
+
+                <!-- Loading indicator -->
+                <div id="fe-loading" class="cf-loading" style="display:none;">
+                    <div class="cf-spinner"></div>
+                    <span>Computing feature effects...</span>
+                </div>
+
+                <!-- Results -->
+                <div id="fe-results" style="display:none;">
+                    <!-- Combined PDP + ALE plot -->
+                    <div class="chart-box">
+                        <p class="chart-box-title">PDP &amp; ALE Comparison</p>
+                        <p class="chart-box-desc">
+                            <strong>Left (PDP):</strong> Average predicted probability as the feature varies.
+                            <strong>Right (ALE):</strong> Accumulated local effect (centered at 0).
+                            The rug plot at the bottom shows the actual data distribution.
+                        </p>
+                        <div id="fe-combined-chart" style="width:100%; min-height:450px;"></div>
+                    </div>
+
+                    <!-- Individual plots side by side -->
+                    <div class="charts-row">
+                        <div class="chart-box half">
+                            <p class="chart-box-title">Partial Dependence Plot (PDP)</p>
+                            <p class="chart-box-desc">
+                                Each curve shows how the probability for that species changes
+                                as we vary the feature value. The thin lines (if enabled) are ICE curves
+                                showing individual sample behavior.
+                            </p>
+                            <div id="fe-pdp-chart" style="width:100%; min-height:400px;"></div>
+                        </div>
+
+                        <div class="chart-box half">
+                            <p class="chart-box-title">Accumulated Local Effects (ALE)</p>
+                            <p class="chart-box-desc">
+                                ALE plots show the <em>local</em> effect of the feature. Unlike PDP,
+                                they correctly handle correlated features. The effect is centered at 0.
+                            </p>
+                            <div id="fe-ale-chart" style="width:100%; min-height:400px;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Feature importance -->
+                    <div class="chart-box">
+                        <p class="chart-box-title">Permutation Feature Importance</p>
+                        <p class="chart-box-desc">
+                            Shows how much the model's accuracy decreases when each feature is randomly shuffled.
+                            Higher bars indicate more important features.
+                        </p>
+                        <div id="fe-importance-chart" style="width:100%; min-height:300px;"></div>
+                    </div>
+                </div>
+            </div>
+
         </div>
 
     </div>
@@ -469,6 +684,253 @@
 
     // mark decision tree as active on load
     cardTree.classList.add("active");
+
+    // ==========================================
+    // TASK 4: COUNTERFACTUAL EXPLANATIONS
+    // ==========================================
+
+    var cfSampleSelect = document.getElementById("cf-sample-select");
+    var cfTargetClass = document.getElementById("cf-target-class");
+    var cfKSelect = document.getElementById("cf-k-select");
+    var cfGenerateBtn = document.getElementById("cf-generate-btn");
+    var cfOriginalInfo = document.getElementById("cf-original-info");
+    var cfOriginalGrid = document.getElementById("cf-original-grid");
+    var cfLoading = document.getElementById("cf-loading");
+    var cfResults = document.getElementById("cf-results");
+    var cfNoResults = document.getElementById("cf-no-results");
+    var cfResultsSummary = document.getElementById("cf-results-summary");
+    var cfCardsContainer = document.getElementById("cf-cards-container");
+    var speciesBtns = document.querySelectorAll(".species-btn");
+
+    // Load test samples on page load
+    function loadTestSamples() {
+        fetch("/project2/get-samples/")
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                cfSampleSelect.innerHTML = "";
+                data.samples.forEach(function(sample) {
+                    var opt = document.createElement("option");
+                    opt.value = sample.index;
+                    opt.textContent = sample.summary;
+                    opt.dataset.species = sample.species;
+                    cfSampleSelect.appendChild(opt);
+                });
+            })
+            .catch(function(err) {
+                console.error("Error loading samples:", err);
+                cfSampleSelect.innerHTML = '<option value="">Error loading samples</option>';
+            });
+    }
+
+    loadTestSamples();
+
+    // Species button handlers
+    speciesBtns.forEach(function(btn) {
+        btn.addEventListener("click", function() {
+            speciesBtns.forEach(function(b) { b.classList.remove("active"); });
+            btn.classList.add("active");
+            cfTargetClass.value = btn.dataset.species;
+        });
+    });
+
+    // Generate counterfactuals
+    cfGenerateBtn.addEventListener("click", function() {
+        var sampleIdx = parseInt(cfSampleSelect.value);
+        var targetClass = cfTargetClass.value;
+        var k = parseInt(cfKSelect.value);
+        var modelType = radioTree.checked ? "tree" : "lr";
+        var lambdaVal = parseFloat(lambdaSlider.value);
+
+        // Show loading
+        cfLoading.style.display = "flex";
+        cfResults.style.display = "none";
+        cfNoResults.style.display = "none";
+        cfOriginalInfo.style.display = "none";
+
+        fetch("/project2/counterfactuals/", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": getCookie("csrftoken"),
+            },
+            body: JSON.stringify({
+                sample_idx: sampleIdx,
+                target_class: targetClass,
+                model_type: modelType,
+                lambda_val: lambdaVal,
+                k: k,
+            }),
+        })
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+            cfLoading.style.display = "none";
+
+            if (data.error) {
+                console.error("Server error:", data.error);
+                cfNoResults.style.display = "block";
+                return;
+            }
+
+            // Show original sample info
+            displayOriginalSample(data.original);
+
+            if (data.counterfactuals && data.counterfactuals.length > 0) {
+                // Show results
+                cfResults.style.display = "block";
+                cfResultsSummary.textContent = "Found " + data.found_count + " counterfactuals, showing top " + data.counterfactuals.length;
+
+                // Render main visualization
+                var mainViz = JSON.parse(data.visualization);
+                Plotly.newPlot("cf-main-chart", mainViz.data, mainViz.layout, config);
+
+                // Render table visualization
+                var tableViz = JSON.parse(data.table_visualization);
+                Plotly.newPlot("cf-table-chart", tableViz.data, tableViz.layout, config);
+
+                // Render counterfactual cards
+                displayCounterfactualCards(data.counterfactuals, data.original, targetClass);
+            } else {
+                cfNoResults.style.display = "block";
+            }
+        })
+        .catch(function(err) {
+            console.error("Fetch error:", err);
+            cfLoading.style.display = "none";
+            cfNoResults.style.display = "block";
+        });
+    });
+
+    function displayOriginalSample(original) {
+        cfOriginalInfo.style.display = "block";
+
+        var html = '<div class="cf-original-item"><span class="cf-label">Sample Index:</span><span class="cf-value">#' + original.index + '</span></div>';
+        html += '<div class="cf-original-item"><span class="cf-label">Actual Species:</span><span class="cf-value cf-species-' + original.actual_species.toLowerCase() + '">' + original.actual_species + '</span></div>';
+        html += '<div class="cf-original-item"><span class="cf-label">Predicted:</span><span class="cf-value">' + original.predicted_species + '</span></div>';
+
+        // Probabilities
+        html += '<div class="cf-original-item cf-proba-row">';
+        for (var sp in original.probabilities) {
+            html += '<span class="cf-proba"><span class="cf-proba-label">' + sp + ':</span> ' + original.probabilities[sp] + '%</span>';
+        }
+        html += '</div>';
+
+        cfOriginalGrid.innerHTML = html;
+    }
+
+    function displayCounterfactualCards(counterfactuals, original, targetClass) {
+        var html = '<h4>Detailed Counterfactuals</h4>';
+
+        counterfactuals.forEach(function(cf) {
+            html += '<div class="cf-card">';
+            html += '<div class="cf-card-header">';
+            html += '<span class="cf-rank">#' + cf.rank + '</span>';
+            html += '<span class="cf-distance">Distance: ' + cf.distance + '</span>';
+            html += '<span class="cf-target-prob">' + targetClass + ' probability: ' + cf.target_probability + '%</span>';
+            html += '</div>';
+
+            html += '<div class="cf-card-changes">';
+            html += '<p class="cf-changes-title">Changes required:</p>';
+
+            if (cf.changes.length === 0) {
+                html += '<p class="cf-no-changes">No significant changes needed</p>';
+            } else {
+                html += '<table class="cf-changes-table">';
+                html += '<thead><tr><th>Feature</th><th>Original</th><th>New Value</th><th>Change</th></tr></thead>';
+                html += '<tbody>';
+
+                cf.changes.forEach(function(change) {
+                    var changeClass = '';
+                    if (change.is_numerical) {
+                        changeClass = change.change > 0 ? 'cf-change-up' : 'cf-change-down';
+                    }
+                    html += '<tr>';
+                    html += '<td>' + change.feature + '</td>';
+                    html += '<td>' + change.original + '</td>';
+                    html += '<td>' + change.counterfactual + '</td>';
+                    html += '<td class="' + changeClass + '">' + (change.is_numerical ? (change.change > 0 ? '+' : '') + change.change : change.change) + '</td>';
+                    html += '</tr>';
+                });
+
+                html += '</tbody></table>';
+            }
+
+            html += '</div>';
+            html += '</div>';
+        });
+
+        cfCardsContainer.innerHTML = html;
+    }
+
+    // ==========================================
+    // TASK 5: FEATURE EFFECT PLOTS
+    // ==========================================
+
+    var feFeatureSelect = document.getElementById("fe-feature-select");
+    var feShowIce = document.getElementById("fe-show-ice");
+    var feComputeBtn = document.getElementById("fe-compute-btn");
+    var feLoading = document.getElementById("fe-loading");
+    var feResults = document.getElementById("fe-results");
+    var feDerivativeType = document.getElementById("fe-derivative-type");
+
+    feComputeBtn.addEventListener("click", function() {
+        var feature = feFeatureSelect.value;
+        var showIce = feShowIce.checked;
+        var modelType = radioTree.checked ? "tree" : "lr";
+        var lambdaVal = parseFloat(lambdaSlider.value);
+
+        // Show loading
+        feLoading.style.display = "flex";
+        feResults.style.display = "none";
+
+        fetch("/project2/feature-effects/", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": getCookie("csrftoken"),
+            },
+            body: JSON.stringify({
+                feature: feature,
+                model_type: modelType,
+                lambda_val: lambdaVal,
+                show_ice: showIce,
+            }),
+        })
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+            feLoading.style.display = "none";
+
+            if (data.error) {
+                console.error("Server error:", data.error);
+                return;
+            }
+
+            // Show results
+            feResults.style.display = "block";
+
+            // Update derivative type note
+            feDerivativeType.textContent = data.derivative_type;
+
+            // Render combined plot
+            var combinedPlot = JSON.parse(data.combined_plot);
+            Plotly.newPlot("fe-combined-chart", combinedPlot.data, combinedPlot.layout, config);
+
+            // Render individual PDP plot
+            var pdpPlot = JSON.parse(data.pdp_plot);
+            Plotly.newPlot("fe-pdp-chart", pdpPlot.data, pdpPlot.layout, config);
+
+            // Render individual ALE plot
+            var alePlot = JSON.parse(data.ale_plot);
+            Plotly.newPlot("fe-ale-chart", alePlot.data, alePlot.layout, config);
+
+            // Render importance plot
+            var importancePlot = JSON.parse(data.importance_plot);
+            Plotly.newPlot("fe-importance-chart", importancePlot.data, importancePlot.layout, config);
+        })
+        .catch(function(err) {
+            console.error("Fetch error:", err);
+            feLoading.style.display = "none";
+        });
+    });
 
 </script>
 

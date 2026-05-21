@@ -505,3 +505,630 @@ body {
     .controls-panel { width: 100%; }
     .charts-row { flex-direction: column; }
 }
+
+/* ================================================
+   TASK 4 & 5: SECTION DIVIDER
+   ================================================ */
+
+.section-divider {
+    display: flex;
+    align-items: center;
+    margin: 30px 0 20px 0;
+    gap: 16px;
+}
+
+.section-divider::before,
+.section-divider::after {
+    content: "";
+    flex: 1;
+    height: 2px;
+    background: linear-gradient(to right, transparent, #3498db, transparent);
+}
+
+.section-divider-text {
+    font-size: 18px;
+    font-weight: 700;
+    color: #2c3e50;
+    white-space: nowrap;
+    padding: 8px 20px;
+    background: #ebf5fb;
+    border-radius: 30px;
+    border: 2px solid #3498db;
+}
+
+/* ================================================
+   TASK 4: COUNTERFACTUAL EXPLANATIONS
+   ================================================ */
+
+.cf-section {
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.cf-intro-box {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    color: white;
+}
+
+.cf-intro-box h3 {
+    font-size: 18px;
+    margin-bottom: 10px;
+}
+
+.cf-intro-box p {
+    font-size: 14px;
+    line-height: 1.6;
+    margin-bottom: 10px;
+    opacity: 0.95;
+}
+
+.cf-intro-box p:last-child {
+    margin-bottom: 0;
+}
+
+.cf-intro-box em {
+    font-style: italic;
+    color: #ffeaa7;
+}
+
+.cf-method {
+    background: rgba(255,255,255,0.15);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 13px !important;
+}
+
+.cf-controls {
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.cf-control-row {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+.cf-control-item {
+    flex: 1;
+    min-width: 200px;
+}
+
+.cf-dropdown {
+    max-width: 100%;
+}
+
+.cf-dropdown-small {
+    width: 100px;
+}
+
+/* Target species buttons */
+.target-species-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.species-btn {
+    padding: 10px 20px;
+    border: 2px solid #e0e0e0;
+    border-radius: 25px;
+    background: white;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #555;
+}
+
+.species-btn:hover {
+    border-color: #667eea;
+    color: #667eea;
+    transform: translateY(-2px);
+}
+
+.species-btn.active {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-color: transparent;
+    color: white;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+/* Generate button */
+.generate-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 28px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 30px;
+    color: white;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.generate-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+}
+
+.generate-btn:active {
+    transform: translateY(0);
+}
+
+.btn-icon {
+    font-size: 18px;
+}
+
+/* Loading spinner */
+.cf-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 40px;
+    color: #667eea;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.cf-spinner {
+    width: 24px;
+    height: 24px;
+    border: 3px solid #e0e0e0;
+    border-top-color: #667eea;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Original sample info */
+.cf-original-box {
+    background: #f0f4f8;
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    border-left: 4px solid #3498db;
+}
+
+.cf-original-box h4 {
+    font-size: 14px;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.cf-original-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 24px;
+}
+
+.cf-original-item {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.cf-label {
+    font-size: 12px;
+    color: #7f8c8d;
+    font-weight: 600;
+}
+
+.cf-value {
+    font-size: 14px;
+    font-weight: 700;
+    color: #2c3e50;
+}
+
+.cf-species-adelie { color: #4C72B0; }
+.cf-species-chinstrap { color: #55A868; }
+.cf-species-gentoo { color: #C44E52; }
+
+.cf-proba-row {
+    width: 100%;
+    padding-top: 8px;
+    border-top: 1px solid #ddd;
+    margin-top: 4px;
+}
+
+.cf-proba {
+    font-size: 13px;
+    color: #555;
+    margin-right: 16px;
+}
+
+.cf-proba-label {
+    font-weight: 600;
+    color: #7f8c8d;
+}
+
+/* Results */
+.cf-results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.cf-results-header h4 {
+    font-size: 16px;
+    font-weight: 700;
+    color: #2c3e50;
+}
+
+.cf-results-summary {
+    font-size: 13px;
+    color: #27ae60;
+    font-weight: 600;
+    background: #e8f8f0;
+    padding: 6px 14px;
+    border-radius: 20px;
+}
+
+/* Counterfactual cards */
+.cf-cards-container {
+    margin-top: 20px;
+}
+
+.cf-cards-container h4 {
+    font-size: 15px;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 14px;
+}
+
+.cf-card {
+    background: #fafbfc;
+    border: 1px solid #e8ecef;
+    border-radius: 12px;
+    margin-bottom: 14px;
+    overflow: hidden;
+    transition: box-shadow 0.2s ease;
+}
+
+.cf-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.cf-card-header {
+    display: flex;
+    gap: 16px;
+    padding: 14px 18px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    align-items: center;
+}
+
+.cf-rank {
+    font-size: 18px;
+    font-weight: 800;
+    background: rgba(255,255,255,0.2);
+    padding: 4px 12px;
+    border-radius: 20px;
+}
+
+.cf-distance {
+    font-size: 13px;
+    opacity: 0.9;
+}
+
+.cf-target-prob {
+    margin-left: auto;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.cf-card-changes {
+    padding: 16px 18px;
+}
+
+.cf-changes-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #7f8c8d;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-bottom: 10px;
+}
+
+.cf-no-changes {
+    font-size: 13px;
+    color: #27ae60;
+    font-style: italic;
+}
+
+.cf-changes-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.cf-changes-table th {
+    text-align: left;
+    padding: 8px 12px;
+    background: #f0f4f8;
+    color: #7f8c8d;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.4px;
+}
+
+.cf-changes-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #eee;
+    color: #2c3e50;
+}
+
+.cf-changes-table tr:last-child td {
+    border-bottom: none;
+}
+
+.cf-change-up {
+    color: #27ae60;
+    font-weight: 700;
+}
+
+.cf-change-down {
+    color: #e74c3c;
+    font-weight: 700;
+}
+
+/* No results */
+.cf-no-results {
+    text-align: center;
+    padding: 40px 20px;
+    color: #7f8c8d;
+}
+
+.cf-no-results-icon {
+    font-size: 48px;
+    display: block;
+    margin-bottom: 16px;
+}
+
+.cf-no-results p {
+    font-size: 14px;
+    margin-bottom: 10px;
+}
+
+.cf-no-results ul {
+    text-align: left;
+    max-width: 400px;
+    margin: 0 auto 16px auto;
+    font-size: 13px;
+}
+
+.cf-no-results li {
+    margin-bottom: 6px;
+}
+
+/* ================================================
+   TASK 5: FEATURE EFFECT PLOTS
+   ================================================ */
+
+.fe-section {
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.fe-intro-box {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    color: white;
+}
+
+.fe-intro-box h3 {
+    font-size: 18px;
+    margin-bottom: 14px;
+}
+
+.fe-intro-box > p {
+    font-size: 14px;
+    line-height: 1.6;
+    margin-bottom: 16px;
+    opacity: 0.95;
+}
+
+.fe-methods-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+}
+
+.fe-method-card {
+    background: rgba(255,255,255,0.15);
+    border-radius: 10px;
+    padding: 16px;
+}
+
+.fe-method-card h4 {
+    font-size: 15px;
+    margin-bottom: 8px;
+}
+
+.fe-method-card p {
+    font-size: 13px;
+    line-height: 1.5;
+    opacity: 0.9;
+    margin-bottom: 8px;
+}
+
+.fe-method-card p:last-child {
+    margin-bottom: 0;
+}
+
+.fe-formula {
+    font-style: italic;
+    background: rgba(0,0,0,0.1);
+    padding: 6px 10px;
+    border-radius: 6px;
+    display: inline-block;
+}
+
+.fe-derivative-note {
+    font-size: 12px !important;
+    background: rgba(0,0,0,0.15);
+    padding: 8px 12px;
+    border-radius: 6px;
+}
+
+.fe-controls {
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.fe-control-row {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+    align-items: flex-end;
+}
+
+.fe-control-item {
+    flex: 1;
+    min-width: 200px;
+}
+
+.fe-dropdown {
+    max-width: 300px;
+}
+
+/* Toggle switch */
+.toggle-container {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.toggle-switch {
+    position: relative;
+    width: 50px;
+    height: 26px;
+    cursor: pointer;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    inset: 0;
+    background: #ccc;
+    border-radius: 26px;
+    transition: 0.3s;
+}
+
+.toggle-slider::before {
+    content: "";
+    position: absolute;
+    height: 20px;
+    width: 20px;
+    left: 3px;
+    bottom: 3px;
+    background: white;
+    border-radius: 50%;
+    transition: 0.3s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.toggle-switch input:checked + .toggle-slider {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+}
+
+.toggle-switch input:checked + .toggle-slider::before {
+    transform: translateX(24px);
+}
+
+.toggle-label {
+    font-size: 13px;
+    color: #555;
+}
+
+/* Feature effects generate button - green theme */
+.fe-section .generate-btn {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    box-shadow: 0 4px 15px rgba(17, 153, 142, 0.4);
+}
+
+.fe-section .generate-btn:hover {
+    box-shadow: 0 6px 20px rgba(17, 153, 142, 0.5);
+}
+
+/* Derivative type indicator */
+#fe-derivative-type {
+    font-weight: 600;
+    color: #ffeaa7;
+}
+
+/* ================================================
+   RESPONSIVE ADJUSTMENTS FOR TASK 4 & 5
+   ================================================ */
+
+@media (max-width: 768px) {
+    .cf-control-row,
+    .fe-control-row {
+        flex-direction: column;
+    }
+
+    .cf-control-item,
+    .fe-control-item {
+        min-width: 100%;
+    }
+
+    .target-species-buttons {
+        flex-direction: column;
+    }
+
+    .species-btn {
+        width: 100%;
+    }
+
+    .cf-card-header {
+        flex-wrap: wrap;
+    }
+
+    .cf-target-prob {
+        margin-left: 0;
+        width: 100%;
+        margin-top: 8px;
+    }
+
+    .fe-methods-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .section-divider-text {
+        font-size: 14px;
+        padding: 6px 14px;
+    }
+}
