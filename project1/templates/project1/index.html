@@ -1,85 +1,89 @@
 {% extends 'base.html' %}
 {% load static %}
 
+{% block title %}Project 1 · Automated ML{% endblock %}
+
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'project1/style.css' %}" />
 {% endblock %}
 
 {% block content %}
-<div class="p1-container">
 
-  {# ── Top action bar ──────────────────────────────────────────────────────── #}
-  <div class="top-action-bar">
-    <form action="{% url 'home:index' %}" method="get">
-      {% csrf_token %}
-      <button type="submit" class="btn btn-nav">&#8592; Back to Home</button>
-    </form>
+<header class="page-header">
+  <a href="{% url 'home:index' %}" class="back-link">← Back to Home</a>
+  <div class="page-header-row">
+    <div>
+      <h1>Automated Machine Learning</h1>
+      <p class="page-subtitle">{{ description }}</p>
+    </div>
     {% if scatter_plot %}
     <form method="post">
       {% csrf_token %}
       <input type="hidden" name="action" value="clear">
-      <button type="submit" class="btn btn-danger btn-nav"
+      <button type="submit" class="btn btn-destructive btn-sm"
               onclick="return confirm('Clear dataset and all visualisations?')">
-        &#x2715; Clear Data
+        Clear Data
       </button>
     </form>
     {% endif %}
   </div>
+</header>
 
-  <h2 class="section-heading">Automated Machine Learning</h2>
-  <p class="section-description">{{ description }}</p>
-
-  {# ── Session banner ──────────────────────────────────────────────────────── #}
-  {% if loaded_from_session %}
-  <div class="session-banner">
-    &#128204; Showing data from your previous session
+{# Session banner #}
+{% if loaded_from_session %}
+<div class="alert alert-warning" style="margin-bottom: var(--space-5);">
+  <p>📌 Showing data from your previous session
     (<strong>{{ filename }}</strong>).
-    Use <em>Clear Data</em> above to reset, or upload a new file below.
+    Use <em>Clear Data</em> above to reset, or upload a new file below.</p>
+</div>
+{% endif %}
+
+{# Upload #}
+<form method="post" enctype="multipart/form-data" style="margin-bottom: var(--space-6);">
+  {% csrf_token %}
+  <div class="card card-dashed upload-section">
+    <p class="upload-label">Upload a CSV file</p>
+    <p class="upload-hint muted">First row = feature names · Last column = target variable</p>
+    <input type="file" name="csv_file" accept=".csv" />
+    <button type="submit" class="btn btn-primary">Load &amp; Visualize</button>
   </div>
-  {% endif %}
+</form>
 
-  {# ── Upload ──────────────────────────────────────────────────────────────── #}
-  <form method="post" enctype="multipart/form-data">
-    {% csrf_token %}
-    <div class="upload-section">
-      <p class="upload-label">Upload a CSV file</p>
-      <p class="upload-hint">First row = feature names &middot; Last column = target variable</p>
-      <input type="file" name="csv_file" accept=".csv" />
-      <br/><br/>
-      <button type="submit" class="btn btn-primary">Load &amp; Visualize</button>
-    </div>
-  </form>
+{% if error %}
+<div class="alert alert-destructive" style="margin-bottom: var(--space-5);">
+  <p><strong>Error:</strong> {{ error }}</p>
+</div>
+{% endif %}
 
-  {% if error %}
-  <div class="error-box">Error: {{ error }}</div>
-  {% endif %}
+{% if scatter_plot %}
 
-  {% if scatter_plot %}
+<div class="dataset-info">
+  <span class="badge badge-secondary">File: <strong>{{ filename }}</strong></span>
+  <span class="badge badge-secondary">Rows: <strong>{{ n_rows }}</strong></span>
+  <span class="badge badge-secondary">Columns: <strong>{{ n_cols }}</strong></span>
+  <span class="badge badge-secondary">Target: <strong>{{ target_col }}</strong></span>
+  <span class="badge badge-secondary">Type: <strong>{{ problem_type }}</strong></span>
+</div>
 
-  <div class="dataset-info">
-    <span class="info-badge">File: <strong>{{ filename }}</strong></span>
-    <span class="info-badge">Rows: <strong>{{ n_rows }}</strong></span>
-    <span class="info-badge">Columns: <strong>{{ n_cols }}</strong></span>
-    <span class="info-badge">Target: <strong>{{ target_col }}</strong></span>
-    <span class="info-badge">Type: <strong>{{ problem_type }}</strong></span>
-  </div>
+{% if problem_explanation %}
+<div class="alert alert-info" style="margin-bottom: var(--space-5);">
+  <p class="alert-title">{{ problem_explanation.title }}</p>
+  <p>{{ problem_explanation.description }}</p>
+  <p><strong>Metrics:</strong> {{ problem_explanation.metrics }}</p>
+</div>
+{% endif %}
 
-  {% if problem_explanation %}
-    <div class="explanation-box">
-    <h3>{{ problem_explanation.title }}</h3>
-    <p>{{ problem_explanation.description }}</p>
-    <p><strong>Metrics:</strong> {{ problem_explanation.metrics }}</p>
-  </div>
-  {% endif %}
-
-  {# ── FORM 2: Table (MOVED BEFORE PLOTS) ──────────────────────────────────── #}
-  <div class="plot-block" id="table-section">
-    <h3 class="plot-heading">Data Preview</h3>
-    <p class="plot-desc">
-      Browse your dataset with interactive search, sorting, and column filtering. 
+{# Table section #}
+<section class="card plot-block" id="table-section">
+  <div class="card-header">
+    <p class="card-title">Data Preview</p>
+    <p class="card-description plot-desc">
+      Browse your dataset with interactive search, sorting, and column filtering.
       Showing rows <strong>{{ row_start }}–{{ row_end }}</strong> of
       <strong>{{ total_rows }}</strong>{% if search_query %} (filtered){% endif %}.
     </p>
+  </div>
+  <div class="card-content">
 
     {# Hidden state form — never inside the swap zone #}
     <form id="table-form" method="post" style="display:none">
@@ -96,35 +100,33 @@
       {% endfor %}
     </form>
 
-    {# Toolbar lives OUTSIDE swap zone — search input is never destroyed #}
     <div class="table-toolbar">
       <input type="text" id="table-search"
-             class="table-search-input"
+             class="input table-search-input"
              placeholder="Search all visible columns…"
              value="{{ search_query }}"
              autocomplete="off">
       <div class="table-toolbar-right">
-        <span class="toolbar-label">Rows:</span>
+        <span class="toolbar-label label-muted">Rows</span>
         {% for opt in page_size_opts %}
-        <button type="button" class="psize-btn {% if opt == page_size %}psize-active{% endif %}"
+        <button type="button" class="btn btn-sm btn-outline psize-btn {% if opt == page_size %}active psize-active{% endif %}"
                 data-size="{{ opt }}">{{ opt }}</button>
         {% endfor %}
       </div>
     </div>
 
-    {# Only this div is replaced on every fetch #}
     <div id="table-inner">
       <div class="col-toggle-bar">
-        <span class="toolbar-label">Columns:</span>
+        <span class="toolbar-label label-muted">Columns</span>
         {% for col in all_columns %}
         <button type="button"
-                class="col-toggle-btn {% if col not in hidden_cols %}col-visible{% endif %}"
+                class="btn btn-sm btn-outline col-toggle-btn {% if col not in hidden_cols %}active col-visible{% endif %}"
                 data-col="{{ col }}">{{ col }}</button>
         {% endfor %}
       </div>
 
       <div class="table-wrap">
-        <table class="data-table">
+        <table class="table data-table">
           <thead>
             <tr>
               {% for col in table_headers %}
@@ -134,9 +136,9 @@
                         data-dir="{% if sort_col == col %}{{ next_sort_dir }}{% else %}asc{% endif %}">
                   {{ col }}
                   {% if sort_col == col %}
-                    {% if sort_dir == 'asc' %}&#x25B2;{% else %}&#x25BC;{% endif %}
+                    {% if sort_dir == 'asc' %}▲{% else %}▼{% endif %}
                   {% else %}
-                    <span class="sort-idle">&#x25B2;&#x25BC;</span>
+                    <span class="sort-idle">▲▼</span>
                   {% endif %}
                 </button>
               </th>
@@ -157,34 +159,38 @@
 
       {% if total_pages > 1 %}
       <div class="pagination-bar">
-        <button type="button" class="page-btn" data-page="{{ current_page|add:'-1' }}"
-                {% if current_page == 1 %}disabled{% endif %}>&#8592; Prev</button>
+        <button type="button" class="btn btn-sm btn-outline page-btn" data-page="{{ current_page|add:'-1' }}"
+                {% if current_page == 1 %}disabled{% endif %}>← Prev</button>
         {% for p in page_range %}
           {% if p is None %}
-            <span class="page-ellipsis">&hellip;</span>
+            <span class="page-ellipsis muted">…</span>
           {% else %}
             <button type="button"
-                    class="page-btn {% if p == current_page %}page-active{% endif %}"
+                    class="btn btn-sm btn-outline page-btn {% if p == current_page %}active page-active{% endif %}"
                     data-page="{{ p }}">{{ p }}</button>
           {% endif %}
         {% endfor %}
-        <button type="button" class="page-btn" data-page="{{ current_page|add:'1' }}"
-                {% if current_page == total_pages %}disabled{% endif %}>Next &#8594;</button>
+        <button type="button" class="btn btn-sm btn-outline page-btn" data-page="{{ current_page|add:'1' }}"
+                {% if current_page == total_pages %}disabled{% endif %}>Next →</button>
       </div>
       {% endif %}
-    </div>{# end #table-inner — only this gets swapped #}
+    </div>
   </div>
+</section>
 
-  {# ── FORM 1: Plots ───────────────────────────────────────────────────────── #}
-  <form method="post" id="viz-form">
-    {% csrf_token %}
-    <input type="hidden" name="action" value="update_plots">
-    <input type="hidden" name="problem_type" value="{{ problem_type }}">
+{# Plots form #}
+<form method="post" id="viz-form">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="update_plots">
+  <input type="hidden" name="problem_type" value="{{ problem_type }}">
 
-    {% if problem_type == 'classification' %}
-    <div class="plot-block">
-      <h3 class="plot-heading">Filter Categories</h3>
-      <p class="plot-desc">Select which categories to display in the plots.</p>
+  {% if problem_type == 'classification' %}
+  <section class="card plot-block">
+    <div class="card-header">
+      <p class="card-title">Filter Categories</p>
+      <p class="card-description plot-desc">Select which categories to display in the plots.</p>
+    </div>
+    <div class="card-content">
       <div class="controls-row">
         {% for cls in unique_classes %}
         <div class="control-item">
@@ -196,26 +202,29 @@
         {% endfor %}
       </div>
     </div>
-    {% endif %}
+  </section>
+  {% endif %}
 
-    {# Swap zone — only images inside here get replaced #}
-    <div id="plots-inner">
-      <div class="plots-grid">
-        <div class="plot-block">
-          <h3 class="plot-heading">Scatter Plot</h3>
-          <p class="plot-desc">Visualize the relationship between two numeric features. Points are colored by the target variable to reveal patterns and correlations.</p>
+  <div id="plots-inner">
+    <div class="plots-grid">
+      <section class="card plot-block">
+        <div class="card-header">
+          <p class="card-title">Scatter Plot</p>
+          <p class="card-description plot-desc">Visualize the relationship between two numeric features. Points are colored by the target variable to reveal patterns and correlations.</p>
+        </div>
+        <div class="card-content">
           <div class="controls-row">
             <div class="control-item">
-              <label for="scatter_x">X Axis:</label>
-              <select name="scatter_x" id="scatter_x">
+              <label for="scatter_x">X Axis</label>
+              <select name="scatter_x" id="scatter_x" class="select">
                 {% for f in feature_cols %}
                 <option value="{{ f }}" {% if f == scatter_x %}selected{% endif %}>{{ f }}</option>
                 {% endfor %}
               </select>
             </div>
             <div class="control-item">
-              <label for="scatter_y">Y Axis:</label>
-              <select name="scatter_y" id="scatter_y">
+              <label for="scatter_y">Y Axis</label>
+              <select name="scatter_y" id="scatter_y" class="select">
                 {% for f in feature_cols %}
                 <option value="{{ f }}" {% if f == scatter_y %}selected{% endif %}>{{ f }}</option>
                 {% endfor %}
@@ -226,14 +235,18 @@
             <img id="scatter-img" src="data:image/png;base64,{{ scatter_plot }}" alt="Scatter plot" />
           </div>
         </div>
+      </section>
 
-        <div class="plot-block">
-          <h3 class="plot-heading">Histogram</h3>
-          <p class="plot-desc">Explore the distribution of values for a single feature. Overlapping histograms show how different target categories are distributed across feature ranges.</p>
+      <section class="card plot-block">
+        <div class="card-header">
+          <p class="card-title">Histogram</p>
+          <p class="card-description plot-desc">Explore the distribution of values for a single feature. Overlapping histograms show how different target categories are distributed across feature ranges.</p>
+        </div>
+        <div class="card-content">
           <div class="controls-row">
             <div class="control-item">
-              <label for="hist_feature">Feature:</label>
-              <select name="hist_feature" id="hist_feature">
+              <label for="hist_feature">Feature</label>
+              <select name="hist_feature" id="hist_feature" class="select">
                 {% for f in feature_cols %}
                 <option value="{{ f }}" {% if f == hist_feature %}selected{% endif %}>{{ f }}</option>
                 {% endfor %}
@@ -244,234 +257,237 @@
             <img id="hist-img" src="data:image/png;base64,{{ hist_plot }}" alt="Histogram" />
           </div>
         </div>
-      </div>
-    </div>{# end #plots-inner #}
-
-    <div class="update-row">
-      <button type="submit" class="btn btn-primary" id="update-plots-btn">Update Plots</button>
+      </section>
     </div>
-  </form>
+  </div>
 
-  <div class="plot-block">
-    <h3 class="plot-heading">Correlation Matrix</h3>
-    <p class="plot-desc">Understand feature relationships through Pearson correlation coefficients. Values range from -1 (strong negative) to +1 (strong positive), helping identify redundant or complementary features.</p>
+  <div class="update-row">
+    <button type="submit" class="btn btn-primary" id="update-plots-btn">Update Plots</button>
+  </div>
+</form>
+
+<section class="card plot-block">
+  <div class="card-header">
+    <p class="card-title">Correlation Matrix</p>
+    <p class="card-description plot-desc">Understand feature relationships through Pearson correlation coefficients. Values range from -1 (strong negative) to +1 (strong positive), helping identify redundant or complementary features.</p>
+  </div>
+  <div class="card-content">
     <div class="plot-img-box">
       <img id="corr-img" src="data:image/png;base64,{{ corr_plot }}" alt="Correlation heatmap" />
     </div>
   </div>
+</section>
 
-  {# ── FORM 3: Training ────────────────────────────────────────────────────── #}
-<div class="plot-block">
-  <h3 class="plot-heading">Model Training</h3>
-  <p class="plot-desc">
-    Choose algorithms, test-split size, and model hyperparameters.
-    The app evaluates the dataset using suitable metrics for classification or regression.
-  </p>
-  {% if model_explanations %}
-<div class="model-catalog">
-  <h4>Model Description </h4>
-
-  {% for key, info in model_explanations.items %}
-  <div class="catalog-card">
-    <h5>{{ key }}</h5>
-    <p>{{ info.description }}</p>
+{# Training section #}
+<section class="card plot-block">
+  <div class="card-header">
+    <p class="card-title">Model Training</p>
+    <p class="card-description plot-desc">
+      Choose algorithms, test-split size, and model hyperparameters.
+      The app evaluates the dataset using suitable metrics for classification or regression.
+    </p>
   </div>
-  {% endfor %}
-</div>
-{% endif %}
+  <div class="card-content">
 
-  <div class="tuning-hints">
-    <h4>Tuning hints</h4>
-    <p><strong>KNN:</strong> Smaller K can fit local patterns but may overfit. Larger K gives smoother predictions.</p>
-    <p><strong>Decision Tree:</strong> A deeper tree can learn more details, but too much depth can overfit.</p>
-    <p><strong>Logistic/Ridge:</strong> Regularisation controls model complexity. Stronger regularisation usually gives a simpler model.</p>
-  </div>
+    {% if model_explanations %}
+    <div class="model-catalog">
+      <h4>Model Description</h4>
+      {% for key, info in model_explanations.items %}
+      <div class="card catalog-card">
+        <div class="card-content-tight">
+          <h5>{{ key }}</h5>
+          <p class="muted">{{ info.description }}</p>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
 
-  <form method="post">
-    {% csrf_token %}
-    <input type="hidden" name="action" value="train">
+    <div class="alert alert-info tuning-hints">
+      <p class="alert-title">Tuning hints</p>
+      <p><strong>KNN:</strong> Smaller K can fit local patterns but may overfit. Larger K gives smoother predictions.</p>
+      <p><strong>Decision Tree:</strong> A deeper tree can learn more details, but too much depth can overfit.</p>
+      <p><strong>Logistic/Ridge:</strong> Regularisation controls model complexity. Stronger regularisation usually gives a simpler model.</p>
+    </div>
 
-    {% for cls in selected_classes %}
-      <input type="hidden" name="selected_classes" value="{{ cls }}">
-    {% endfor %}
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="train">
 
-    <input type="hidden" name="scatter_x" value="{{ scatter_x }}">
-    <input type="hidden" name="scatter_y" value="{{ scatter_y }}">
-    <input type="hidden" name="hist_feature" value="{{ hist_feature }}">
+      {% for cls in selected_classes %}
+        <input type="hidden" name="selected_classes" value="{{ cls }}">
+      {% endfor %}
 
-    <div class="controls-row">
+      <input type="hidden" name="scatter_x" value="{{ scatter_x }}">
+      <input type="hidden" name="scatter_y" value="{{ scatter_y }}">
+      <input type="hidden" name="hist_feature" value="{{ hist_feature }}">
 
-      <div class="control-item">
-        <label for="problem_type">Problem Type:</label>
-        <select name="problem_type" id="problem_type">
-          <option value="classification" {% if problem_type == 'classification' %}selected{% endif %}>
-            Classification
-          </option>
-          <option value="regression" {% if problem_type == 'regression' %}selected{% endif %}>
-            Regression
-          </option>
-        </select>
+      <div class="controls-row">
+
+        <div class="control-item">
+          <label for="problem_type">Problem Type</label>
+          <select name="problem_type" id="problem_type" class="select">
+            <option value="classification" {% if problem_type == 'classification' %}selected{% endif %}>Classification</option>
+            <option value="regression" {% if problem_type == 'regression' %}selected{% endif %}>Regression</option>
+          </select>
+        </div>
+
+        <div class="control-item">
+          <label for="model_key">Algorithm</label>
+          <select name="model_key" id="model_key" class="select">
+            {% for key, label in available_models %}
+            <option value="{{ key }}" {% if training.model_key == key %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="control-item">
+          <label for="test_size">Test Split</label>
+          <select name="test_size" id="test_size" class="select">
+            <option value="0.1"  {% if training.test_size == 0.1 %}selected{% endif %}>10%</option>
+            <option value="0.15" {% if training.test_size == 0.15 %}selected{% endif %}>15%</option>
+            <option value="0.2"  {% if not training or training.test_size == 0.2 %}selected{% endif %}>20% (default)</option>
+            <option value="0.25" {% if training.test_size == 0.25 %}selected{% endif %}>25%</option>
+            <option value="0.3"  {% if training.test_size == 0.3 %}selected{% endif %}>30%</option>
+            <option value="0.4"  {% if training.test_size == 0.4 %}selected{% endif %}>40%</option>
+            <option value="0.5"  {% if training.test_size == 0.5 %}selected{% endif %}>50%</option>
+          </select>
+        </div>
+
+        <div class="control-item hyper-param hp-knn">
+          <label for="k">K</label>
+          <input type="number" name="k" id="k" min="1" max="50" class="input"
+                 value="{{ training.model_params.k|default:5 }}">
+        </div>
+
+        <div class="control-item hyper-param hp-knn">
+          <label for="metric">Distance</label>
+          <select name="metric" id="metric" class="select">
+            <option value="euclidean" {% if training.model_params.metric == 'euclidean' %}selected{% endif %}>Euclidean</option>
+            <option value="manhattan" {% if training.model_params.metric == 'manhattan' %}selected{% endif %}>Manhattan</option>
+          </select>
+        </div>
+
+        <div class="control-item hyper-param hp-tree">
+          <label for="max_depth">Tree Depth</label>
+          <input type="number" name="max_depth" id="max_depth" min="1" max="50" class="input"
+                 value="{{ training.model_params.max_depth|default:5 }}">
+        </div>
+
+        <div class="control-item hyper-param hp-tree">
+          <label for="min_samples_leaf">Leaf Nodes</label>
+          <input type="number" name="min_samples_leaf" id="min_samples_leaf" min="1" max="50" class="input"
+                 value="{{ training.model_params.min_samples_leaf|default:1 }}">
+        </div>
+
+        <div class="control-item hyper-param hp-tree">
+          <label for="criterion">Criterion</label>
+          <select name="criterion" id="criterion" class="select">
+            {% if problem_type == 'classification' %}
+              <option value="gini" {% if training.model_params.criterion == 'gini' %}selected{% endif %}>Gini</option>
+              <option value="entropy" {% if training.model_params.criterion == 'entropy' %}selected{% endif %}>Entropy</option>
+            {% else %}
+              <option value="squared_error" {% if training.model_params.criterion == 'squared_error' %}selected{% endif %}>Squared Error</option>
+              <option value="absolute_error" {% if training.model_params.criterion == 'absolute_error' %}selected{% endif %}>Absolute Error</option>
+            {% endif %}
+          </select>
+        </div>
+
+        <div class="control-item hyper-param hp-logistic">
+          <label for="C">C</label>
+          <input type="number" step="0.001" name="C" id="C" class="input"
+                 value="{{ training.model_params.C|default:1 }}">
+        </div>
+        <div class="control-item hyper-param hp-logistic">
+          <label for="penalty">Penalty</label>
+          <select name="penalty" id="penalty" class="select">
+            <option value="l2" {% if training.model_params.penalty == 'l2' %}selected{% endif %}>L2</option>
+            <option value="l1" {% if training.model_params.penalty == 'l1' %}selected{% endif %}>L1</option>
+          </select>
+        </div>
+
+        <div class="control-item hyper-param hp-ridge">
+          <label for="alpha">Alpha</label>
+          <input type="number" step="0.001" name="alpha" id="alpha" class="input"
+                 value="{{ training.model_params.alpha|default:1 }}">
+        </div>
+
       </div>
 
-      <div class="control-item">
-        <label for="model_key">Algorithm:</label>
-        <select name="model_key" id="model_key">
-          {% for key, label in available_models %}
-          <option value="{{ key }}" {% if training.model_key == key %}selected{% endif %}>
-            {{ label }}
-          </option>
+      <div class="update-row">
+        <button type="submit" class="btn btn-primary">▶ Train Model</button>
+      </div>
+    </form>
+
+    {% if training %}
+    <div class="training-summary">
+      <div class="card summary-card summary-highlight">
+        <span class="summary-label">Best {{ training.score_label }}</span>
+        <span class="summary-value">{{ training.best_test }}</span>
+        <span class="summary-sub muted">at {{ training.param_label }} = {{ training.best_param }}</span>
+      </div>
+
+      <div class="card summary-card">
+        <span class="summary-label">Model</span>
+        <span class="summary-value-sm">{{ training.model_label }}</span>
+      </div>
+
+      <div class="card summary-card">
+        <span class="summary-label">Train samples</span>
+        <span class="summary-value">{{ training.n_train }}</span>
+      </div>
+
+      <div class="card summary-card">
+        <span class="summary-label">Test samples</span>
+        <span class="summary-value">{{ training.n_test }}</span>
+      </div>
+    </div>
+
+    <h4 class="results-table-heading">Evaluation Metrics</h4>
+    <div class="metrics-grid">
+      {% for name, value in training.metrics.items %}
+      <div class="card metric-card">
+        <span class="summary-label">{{ name }}</span>
+        <span class="summary-value-sm">{{ value }}</span>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="alert alert-info" style="margin-top: var(--space-3);">
+      <p><strong>Model interpretation:</strong> {{ training.overfit_message }}</p>
+      <p class="text-xs muted">Train-test gap: {{ training.overfit_gap }}</p>
+    </div>
+
+    <div class="plot-img-box" style="margin-top: var(--space-5);">
+      <img src="data:image/png;base64,{{ training.training_plot }}" alt="Training curve" />
+    </div>
+
+    <h4 class="results-table-heading">Full Results</h4>
+    <div class="table-wrap">
+      <table class="table data-table">
+        <thead>
+          <tr>
+            <th>{{ training.param_label }}</th>
+            <th>Train {{ training.score_label }}</th>
+            <th>Test {{ training.score_label }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in training.results_table %}
+          <tr {% if row.param == training.best_param %}class="best-row"{% endif %}>
+            <td>{{ row.param }}</td>
+            <td>{{ row.train }}</td>
+            <td><strong>{{ row.test }}</strong></td>
+          </tr>
           {% endfor %}
-        </select>
-      </div>
-
-      <div class="control-item">
-        <label for="test_size">Test Split:</label>
-        <select name="test_size" id="test_size">
-          <option value="0.1"  {% if training.test_size == 0.1 %}selected{% endif %}>10%</option>
-          <option value="0.15" {% if training.test_size == 0.15 %}selected{% endif %}>15%</option>
-          <option value="0.2"  {% if not training or training.test_size == 0.2 %}selected{% endif %}>20% (default)</option>
-          <option value="0.25" {% if training.test_size == 0.25 %}selected{% endif %}>25%</option>
-          <option value="0.3"  {% if training.test_size == 0.3 %}selected{% endif %}>30%</option>
-          <option value="0.4"  {% if training.test_size == 0.4 %}selected{% endif %}>40%</option>
-          <option value="0.5"  {% if training.test_size == 0.5 %}selected{% endif %}>50%</option>
-        </select>
-      </div>
-
-      <div class="control-item hyper-param hp-knn">
-        <label for="k">K:</label>
-        <input type="number" name="k" id="k" min="1" max="50"
-               value="{{ training.model_params.k|default:5 }}">
-      </div>
-
-      <div class="control-item hyper-param hp-knn">
-        <label for="metric">Distance:</label>
-        <select name="metric" id="metric">
-          <option value="euclidean" {% if training.model_params.metric == 'euclidean' %}selected{% endif %}>Euclidean</option>
-          <option value="manhattan" {% if training.model_params.metric == 'manhattan' %}selected{% endif %}>Manhattan</option>
-        </select>
-      </div>
-
-      <div class="control-item hyper-param hp-tree">
-        <label for="max_depth">Tree Depth:</label>
-        <input type="number" name="max_depth" id="max_depth" min="1" max="50"
-               value="{{ training.model_params.max_depth|default:5 }}">
-      </div>
-
-      <div class="control-item hyper-param hp-tree">
-        <label for="min_samples_leaf">Leaf Nodes:</label>
-        <input type="number" name="min_samples_leaf" id="min_samples_leaf" min="1" max="50"
-               value="{{ training.model_params.min_samples_leaf|default:1 }}">
-      </div>
-
-      <div class="control-item hyper-param hp-tree">
-        <label for="criterion">Criterion:</label>
-        <select name="criterion" id="criterion">
-          {% if problem_type == 'classification' %}
-            <option value="gini" {% if training.model_params.criterion == 'gini' %}selected{% endif %}>Gini</option>
-            <option value="entropy" {% if training.model_params.criterion == 'entropy' %}selected{% endif %}>Entropy</option>
-          {% else %}
-            <option value="squared_error" {% if training.model_params.criterion == 'squared_error' %}selected{% endif %}>Squared Error</option>
-            <option value="absolute_error" {% if training.model_params.criterion == 'absolute_error' %}selected{% endif %}>Absolute Error</option>
-          {% endif %}
-        </select>
-      </div>
-
-      <div class="control-item hyper-param hp-logistic">
-        <label for="C">C:</label>
-        <input type="number" step="0.001" name="C" id="C"
-               value="{{ training.model_params.C|default:1 }}">
-      </div>
-      <div class="control-item hyper-param hp-logistic">
-        <label for="penalty">Penalty:</label>
-        <select name="penalty" id="penalty">
-          <option value="l2" {% if training.model_params.penalty == 'l2' %}selected{% endif %}>L2</option>
-          <option value="l1" {% if training.model_params.penalty == 'l1' %}selected{% endif %}>L1</option>
-        </select>
-      </div>
-
-      <div class="control-item hyper-param hp-ridge">
-        <label for="alpha">Alpha:</label>
-        <input type="number" step="0.001" name="alpha" id="alpha"
-               value="{{ training.model_params.alpha|default:1 }}">
-      </div>
-
+        </tbody>
+      </table>
     </div>
-
-    <div class="update-row">
-      <button type="submit" class="btn btn-primary">&#9654; Train Model</button>
-    </div>
-  </form>
-
-  {% if training %}
-  <div class="training-summary">
-    <div class="summary-card summary-highlight">
-      <span class="summary-label">Best {{ training.score_label }}</span>
-      <span class="summary-value">{{ training.best_test }}</span>
-      <span class="summary-sub">at {{ training.param_label }} = {{ training.best_param }}</span>
-    </div>
-
-    <div class="summary-card">
-      <span class="summary-label">Model</span>
-      <span class="summary-value-sm">{{ training.model_label }}</span>
-    </div>
-
-    <div class="summary-card">
-      <span class="summary-label">Train samples</span>
-      <span class="summary-value">{{ training.n_train }}</span>
-    </div>
-
-    <div class="summary-card">
-      <span class="summary-label">Test samples</span>
-      <span class="summary-value">{{ training.n_test }}</span>
-    </div>
+    {% endif %}
   </div>
-
-  <h4 class="results-table-heading">Evaluation Metrics</h4>
-  <div class="metrics-grid">
-    {% for name, value in training.metrics.items %}
-    <div class="metric-card">
-      <span class="summary-label">{{ name }}</span>
-      <span class="summary-value-sm">{{ value }}</span>
-    </div>
-    {% endfor %}
-  </div>
-  <div class="description" style="margin-top: 12px;">
-    <strong>Model interpretation:</strong> {{ training.overfit_message }}
-    <br>
-    <span style="font-size: 12px; color:#718096;">
-      Train-test gap: {{ training.overfit_gap }}
-    </span>
-  </div>
-
-  <div class="plot-img-box" style="margin-top:20px;">
-    <img src="data:image/png;base64,{{ training.training_plot }}" alt="Training curve" />
-  </div>
-
-  <h4 class="results-table-heading">Full Results</h4>
-  <div class="table-wrap">
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th>{{ training.param_label }}</th>
-          <th>Train {{ training.score_label }}</th>
-          <th>Test {{ training.score_label }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for row in training.results_table %}
-        <tr {% if row.param == training.best_param %}class="best-row"{% endif %}>
-          <td>{{ row.param }}</td>
-          <td>{{ row.train }}</td>
-          <td><strong>{{ row.test }}</strong></td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {% endif %}
-</div>
+</section>
 {% endif %}
-</div>
+
 {% endblock %}
 
 {% block script %}
@@ -479,17 +495,12 @@
 (function () {
   'use strict';
 
-  // ── Core: fetch table-inner swap ─────────────────────────────────────────
-  // The search input lives OUTSIDE #table-inner so it is never destroyed.
-  // Only the results div is replaced — focus/cursor are fully preserved.
-
   function submitTable() {
     const form  = document.getElementById('table-form');
     const inner = document.getElementById('table-inner');
     const desc  = document.querySelector('#table-section .plot-desc');
     if (!form || !inner) return;
 
-    // Sync the visible search input into the hidden form field before posting
     const visibleSearch = document.getElementById('table-search');
     if (visibleSearch) {
       document.getElementById('search_hidden').value = visibleSearch.value;
@@ -505,22 +516,21 @@
         const newInner = doc.getElementById('table-inner');
         const newDesc  = doc.querySelector('#table-section .plot-desc');
         if (newInner) {
-          inner.outerHTML = newInner.outerHTML;   // swap only results
+          inner.outerHTML = newInner.outerHTML;
           if (desc && newDesc) desc.innerHTML = newDesc.innerHTML;
-          // Sync psize-active highlight to match the current page_size
           const activeSize = document.getElementById('psize_input').value;
           document.querySelectorAll('.psize-btn').forEach(b => {
-            b.classList.toggle('psize-active', b.dataset.size === activeSize);
+            const isActive = b.dataset.size === activeSize;
+            b.classList.toggle('psize-active', isActive);
+            b.classList.toggle('active', isActive);
           });
-          bindInner();   // re-attach listeners inside the new #table-inner
+          bindInner();
         }
       })
       .catch(() => { form.submit(); });
   }
 
-  // ── Listeners on stable elements (search, toolbar) — bound once ──────────
   function bindStable() {
-    // Search — debounced 400 ms; input stays alive across swaps
     const searchEl = document.getElementById('table-search');
     if (searchEl) {
       let timer;
@@ -533,7 +543,6 @@
       });
     }
 
-    // Rows-per-page buttons (outside swap zone)
     document.querySelectorAll('.psize-btn').forEach(btn => {
       btn.addEventListener('click', function () {
         document.getElementById('psize_input').value = this.dataset.size;
@@ -543,13 +552,11 @@
     });
   }
 
-  // ── Listeners inside #table-inner — re-bound after every swap ────────────
   function bindInner() {
     const inner = document.getElementById('table-inner');
     const form  = document.getElementById('table-form');
     if (!inner || !form) return;
 
-    // Column toggles
     inner.querySelectorAll('.col-toggle-btn').forEach(btn => {
       btn.addEventListener('click', function () {
         const col = this.dataset.col;
@@ -567,7 +574,6 @@
       });
     });
 
-    // Sort headers
     inner.querySelectorAll('.sort-btn').forEach(btn => {
       btn.addEventListener('click', function () {
         document.getElementById('sort_col_input').value = this.dataset.col;
@@ -577,7 +583,6 @@
       });
     });
 
-    // Pagination
     inner.querySelectorAll('.page-btn:not([disabled])').forEach(btn => {
       btn.addEventListener('click', function () {
         document.getElementById('page_input').value = this.dataset.page;
@@ -586,7 +591,6 @@
     });
   }
 
-  // ── Viz form: fetch-based plot update, no scroll jump ───────────────────
   function bindViz() {
     const form = document.getElementById('viz-form');
     if (!form) return;
@@ -597,7 +601,6 @@
       const btn = document.getElementById('update-plots-btn');
       if (btn) { btn.disabled = true; btn.textContent = 'Updating…'; }
 
-      // Dim the images while loading
       ['scatter-img','hist-img','corr-img'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.opacity = '0.4';
@@ -608,7 +611,6 @@
         .then(html => {
           const doc = new DOMParser().parseFromString(html, 'text/html');
 
-          // Swap only the three plot images — nothing else moves
           ['scatter-img','hist-img','corr-img'].forEach(id => {
             const newEl = doc.getElementById(id);
             const curEl = document.getElementById(id);
@@ -620,43 +622,42 @@
 
           if (btn) { btn.disabled = false; btn.textContent = 'Update Plots'; }
         })
-        .catch(() => { form.submit(); });   // fallback
+        .catch(() => { form.submit(); });
     });
   }
 
   function bindModelControls() {
-  const modelSelect = document.getElementById('model_key');
-  if (!modelSelect) return;
+    const modelSelect = document.getElementById('model_key');
+    if (!modelSelect) return;
 
-  function updateHyperParams() {
-    const selectedModel = modelSelect.value;
+    function updateHyperParams() {
+      const selectedModel = modelSelect.value;
 
-    document.querySelectorAll('.hyper-param').forEach(el => {
-      el.style.display = 'none';
-    });
+      document.querySelectorAll('.hyper-param').forEach(el => {
+        el.style.display = 'none';
+      });
 
-    if (selectedModel === 'KNN') {
-      document.querySelectorAll('.hp-knn').forEach(el => el.style.display = 'flex');
+      if (selectedModel === 'KNN') {
+        document.querySelectorAll('.hp-knn').forEach(el => el.style.display = 'flex');
+      }
+
+      if (selectedModel === 'DecisionTree') {
+        document.querySelectorAll('.hp-tree').forEach(el => el.style.display = 'flex');
+      }
+
+      if (selectedModel === 'LogisticRegression') {
+        document.querySelectorAll('.hp-logistic').forEach(el => el.style.display = 'flex');
+      }
+
+      if (selectedModel === 'Ridge') {
+        document.querySelectorAll('.hp-ridge').forEach(el => el.style.display = 'flex');
+      }
     }
 
-    if (selectedModel === 'DecisionTree') {
-      document.querySelectorAll('.hp-tree').forEach(el => el.style.display = 'flex');
-    }
-
-    if (selectedModel === 'LogisticRegression') {
-      document.querySelectorAll('.hp-logistic').forEach(el => el.style.display = 'flex');
-    }
-
-    if (selectedModel === 'Ridge') {
-      document.querySelectorAll('.hp-ridge').forEach(el => el.style.display = 'flex');
-    }
+    modelSelect.addEventListener('change', updateHyperParams);
+    updateHyperParams();
   }
 
-  modelSelect.addEventListener('change', updateHyperParams);
-  updateHyperParams();
-}
-
-  // Boot
   bindStable();
   bindInner();
   bindViz();
