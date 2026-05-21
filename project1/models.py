@@ -265,7 +265,7 @@ def run_training(df, feature_cols, target_col, problem_type, model_key, test_siz
     else:
         overfit_message = 'The train and test scores look reasonably balanced for this dataset.'
 
-        final_params = model_params.copy()
+    final_params = model_params.copy()
 
     if model_key == 'KNN':
         final_params['k'] = best_param
@@ -282,10 +282,10 @@ def run_training(df, feature_cols, target_col, problem_type, model_key, test_siz
 
     if problem_type == 'classification':
         metrics = {
-            'Accuracy': round(accuracy_score(y_test, y_pred), 4),
-            'Precision': round(precision_score(y_test, y_pred, average='weighted', zero_division=0), 4),
-            'Recall': round(recall_score(y_test, y_pred, average='weighted', zero_division=0), 4),
-            'F1 Score': round(f1_score(y_test, y_pred, average='weighted', zero_division=0), 4),
+            'Accuracy': round(float(accuracy_score(y_test, y_pred)), 4),
+            'Precision': round(float(precision_score(y_test, y_pred, average='weighted', zero_division=0)), 4),
+            'Recall': round(float(recall_score(y_test, y_pred, average='weighted', zero_division=0)), 4),
+            'F1 Score': round(float(f1_score(y_test, y_pred, average='weighted', zero_division=0)), 4),
         }
         score_label = 'Accuracy'
     else:

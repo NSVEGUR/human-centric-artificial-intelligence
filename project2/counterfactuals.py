@@ -148,7 +148,7 @@ def generate_counterfactuals(model_info, sample_idx, target_class, model_type,
     if model_type == 'lr':
         x_for_pred = scaled_test_X[sample_idx:sample_idx+1]
     else:
-        x_for_pred = x_original.values.reshape(1, -1)
+        x_for_pred = x_original.to_frame().T
 
     original_pred = model.predict(x_for_pred)[0]
     original_proba = model.predict_proba(x_for_pred)[0]
@@ -166,10 +166,11 @@ def generate_counterfactuals(model_info, sample_idx, target_class, model_type,
         n_samples = initial_n * (iteration + 1)
         samples = sample_around_point(x_original, n_samples=n_samples, noise_scale=noise_scale)
 
+        samples_df = pd.DataFrame(samples, columns=feature_names)
         if model_type == 'lr':
-            samples_for_pred = scaler.transform(samples)
+            samples_for_pred = scaler.transform(samples_df)
         else:
-            samples_for_pred = samples
+            samples_for_pred = samples_df
 
         predictions = model.predict(samples_for_pred)
         probabilities = model.predict_proba(samples_for_pred)
