@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Project 3 · Active Learning{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'project3/style.css' %}" />
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<script src="{% static 'plotly-theme.js' %}"></script>
+{% endblock %}
+
+{% block content %}
+
+<header class="page-header">
+    <a href="{% url 'home:index' %}" class="back-link">← Back to Home</a>
+    <h1>Project 3 — Active Learning for Learning-to-Defer</h1>
+    <p class="page-subtitle">Human-Centric Artificial Intelligence · AG News Dataset</p>
+</header>
+
+<div class="alert alert-info" style="margin-bottom: var(--space-6);">
+    <p>
+        This project trains a classifier on the <strong>AG News</strong> dataset and simulates
+        human experts with domain-specific strengths. The goal is to learn when to defer
+        decisions to a human expert using active learning.
+    </p>
+</div>
+<!-- Division to display Task 1 work-->
+<section class="card" style="margin-bottom: var(--space-6);">
+    <div class="card-header">
+        <span class="badge badge-uppercase">Task 1</span>
+        <p class="card-title">Baseline Classifier — TF-IDF + Logistic Regression</p>
+    </div>
+    <div class="card-content">
+        <p class="muted" style="margin-bottom: var(--space-4);">
+            Trained on the full AG News training set (120,000 articles, 4 categories).
+            Features: TF-IDF with bigrams (50k features). Model: Logistic Regression (C=5).
+        </p>
+
+        <div class="row" style="gap: var(--space-4); margin-bottom: var(--space-6); align-items: center;">
+            <div class="card" style="padding: var(--space-4); text-align: center; min-width: 180px;">
+                <p class="muted" style="margin-bottom: var(--space-1);">Test Accuracy</p>
+                <p style="font-size: 2.5rem; font-weight: 700; color: var(--accent);">{{ test_acc }}%</p>
+            </div>
+            <div>
+                <p><strong>Classes:</strong> {% for label in label_names %}{{ label }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+                <p class="muted" style="margin-top: var(--space-2);">
+                    The classifier is trained on all available labeled data and serves as the
+                    baseline that the human-AI team should aim to match or surpass.
+                </p>
+            </div>
+        </div>
+
+        <div id="confusion-matrix-plot" style="width: 100%; height: 420px;"></div>
+    </div>
+</section>
+
+<!-- Division to display Task 2 work -->
+<section class="card" style="margin-bottom: var(--space-6);">
+    <div class="card-header">
+        <span class="badge badge-uppercase">Task 2</span>
+        <p class="card-title">Simulated Experts</p>
+    </div>
+    <div class="card-content">
+        <p class="muted" style="margin-bottom: var(--space-4);">
+            Two simulated experts are designed with expertise in specific regions of the input space.
+            Each expert performs well on their domain but is unreliable outside it.
+        </p>
+
+        <div class="row" style="gap: var(--space-4); margin-bottom: var(--space-6);">
+            {% for expert in experts %}
+            <div class="card" style="flex: 1; padding: var(--space-4);">
+                <p style="font-weight: 600; margin-bottom: var(--space-2);">{{ expert.name }}</p>
+                <p class="muted" style="margin-bottom: var(--space-2);">
+                    Strong class: <strong>{{ expert.strong_class }}</strong>
+                </p>
+                <p class="muted" style="margin-bottom: var(--space-3);">
+                    Overall accuracy: <strong>{{ expert.overall_acc }}%</strong>
+                </p>
+                <table style="width: 100%; font-size: 0.875rem;">
+                    <thead>
+                        <tr>
+                            <th style="text-align: left; padding: 4px 0; color: var(--muted);">Category</th>
+                            <th style="text-align: right; padding: 4px 0; color: var(--muted);">Accuracy</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for label, acc in expert.per_class_acc.items %}
+                        <tr>
+                            <td style="padding: 4px 0;">{{ label }}</td>
+                            <td style="text-align: right; padding: 4px 0;">{{ acc }}%</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div id="expert-accuracy-plot" style="width: 100%; height: 420px;"></div>
+    </div>
+</section>
+
+{% endblock %}
+
+{% block script %}
+<script>
+    const confusionMatrixJson = JSON.parse('{{ confusion_matrix_json|escapejs }}');
+    const expertAccuracyJson = JSON.parse('{{ expert_accuracy_json|escapejs }}');
+
+    Plotly.newPlot('confusion-matrix-plot', confusionMatrixJson.data, confusionMatrixJson.layout);
+    Plotly.newPlot('expert-accuracy-plot', expertAccuracyJson.data, expertAccuracyJson.layout);
+</script>
+{% endblock %}

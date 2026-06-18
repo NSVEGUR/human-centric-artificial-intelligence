@@ -21,6 +21,7 @@ def index(request):
     projects = [
         {"name": "Project 1 - Automated Machine Learning", "url_name": "project1:index"},
         {"name": "Project 2 - Explainability", "url_name": "project2:index"},
+        {"name": "Project 3 - Active Learning", "url_name": "project3:index"},
     ]
     
     context = { 
