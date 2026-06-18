@@ -1,0 +1,38 @@
+.page-header {
+    padding: var(--space-6) 0 var(--space-4);
+    margin-bottom: var(--space-4);
+}
+
+.back-link {
+    display: inline-block;
+    margin-bottom: var(--space-3);
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 0.875rem;
+}
+
+.back-link:hover {
+    color: var(--accent);
+}
+
+.card-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+}
+
+.card-title {
+    font-weight: 600;
+    font-size: 1.1rem;
+    margin: 0;
+}
+
+.row {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.muted {
+    color: var(--muted);
+}
