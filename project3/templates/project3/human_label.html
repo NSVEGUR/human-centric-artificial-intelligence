@@ -1,0 +1,256 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Project 3 · Human Expert{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'project3/style.css' %}" />
+{% endblock %}
+
+{% block content %}
+
+<header class="page-header">
+    <a href="{% url 'project3:index' %}" class="back-link">← Back to Project 3</a>
+    <h1>Task 5 — Interactive Human Expert</h1>
+    <p class="page-subtitle">Label news articles to teach the system your expertise profile</p>
+</header>
+
+<!-- Stats row -->
+<div class="grid-3" style="margin-bottom: var(--space-6); gap: var(--space-4);">
+    <div class="card" style="padding: var(--space-4); text-align: center;">
+        <p class="muted" style="font-size: var(--text-sm); margin-bottom: var(--space-1);">Labels Given</p>
+        <p id="n-labeled" style="font-size: 2rem; font-weight: 700; color: hsl(var(--primary));">{{ n_labeled }}</p>
+    </div>
+    <div class="card" style="padding: var(--space-4); text-align: center;">
+        <p class="muted" style="font-size: var(--text-sm); margin-bottom: var(--space-1);">Estimated Team Accuracy</p>
+        <p id="team-acc" style="font-size: 2rem; font-weight: 700; color: hsl(142 71% 45%);">
+            {% if team_acc %}{{ team_acc }}%{% else %}—{% endif %}
+        </p>
+    </div>
+    <div class="card" style="padding: var(--space-4); text-align: center;">
+        <p class="muted" style="font-size: var(--text-sm); margin-bottom: var(--space-1);">Query Strategy</p>
+        <p id="strategy-display" style="font-size: 1.1rem; font-weight: 600; color: hsl(var(--foreground));">{{ strategy }}</p>
+    </div>
+</div>
+
+<div class="row" style="align-items: flex-start; gap: var(--space-6);">
+
+    <!-- Main labeling card -->
+    <div style="flex: 2; min-width: 0;">
+        <div class="card" style="margin-bottom: var(--space-4);">
+            <div class="card-header" style="flex-direction: row; align-items: center; gap: var(--space-3);">
+                <span class="badge badge-uppercase">Next Query</span>
+                <p class="card-title" id="article-meta">
+                    {% if current_article %}
+                        Classifier predicts: <strong>{{ current_article.clf_pred }}</strong>
+                        ({{ current_article.clf_confidence }}% confidence)
+                    {% else %}
+                        No more articles in pool
+                    {% endif %}
+                </p>
+            </div>
+            <div class="card-content">
+                <div id="article-text" style="
+                    background: hsl(var(--secondary));
+                    border: 1px solid hsl(var(--border));
+                    border-radius: var(--radius);
+                    padding: var(--space-4);
+                    font-size: var(--text-md);
+                    line-height: 1.7;
+                    min-height: 120px;
+                    margin-bottom: var(--space-5);
+                    color: hsl(var(--foreground));
+                ">
+                    {% if current_article %}
+                        {{ current_article.text }}{% if current_article.text|length == 600 %}…{% endif %}
+                    {% else %}
+                        <span class="muted">All pool articles have been queried.</span>
+                    {% endif %}
+                </div>
+
+                <input type="hidden" id="article-idx" value="{% if current_article %}{{ current_article.idx }}{% else %}-1{% endif %}">
+
+                <!-- Category buttons -->
+                <p class="label" style="margin-bottom: var(--space-3);">What category is this article?</p>
+                <div class="row" style="gap: var(--space-3); flex-wrap: wrap;" id="label-buttons">
+                    {% for label in label_names %}
+                    <button
+                        class="btn btn-outline btn-lg"
+                        data-label="{{ forloop.counter0 }}"
+                        onclick="submitLabel({{ forloop.counter0 }})"
+                        {% if not current_article %}disabled{% endif %}
+                    >{{ label }}</button>
+                    {% endfor %}
+                </div>
+
+                <div id="feedback" style="margin-top: var(--space-4); display: none;" class="alert"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Side panel: controls + history -->
+    <div style="flex: 1; min-width: 220px;">
+        <!-- Strategy selector -->
+        <div class="card" style="margin-bottom: var(--space-4);">
+            <div class="card-header">
+                <p class="card-title">Query Strategy</p>
+            </div>
+            <div class="card-content">
+                <label class="label-muted">Strategy</label>
+                <select class="select" id="strategy-select" onchange="changeStrategy(this.value)">
+                    <option value="entropy"          {% if strategy == 'entropy' %}selected{% endif %}>Entropy</option>
+                    <option value="least_confidence" {% if strategy == 'least_confidence' %}selected{% endif %}>Least Confidence</option>
+                    <option value="margin"           {% if strategy == 'margin' %}selected{% endif %}>Margin Sampling</option>
+                    <option value="random"           {% if strategy == 'random' %}selected{% endif %}>Random</option>
+                </select>
+                <p class="muted" style="font-size: var(--text-xs); margin-top: var(--space-2);">
+                    Changing strategy does not reset your labels.
+                </p>
+            </div>
+        </div>
+
+        <!-- Reset button -->
+        <div class="card" style="margin-bottom: var(--space-4);">
+            <div class="card-content">
+                <button class="btn btn-outline btn-block" onclick="resetSession()">
+                    Reset All Labels
+                </button>
+            </div>
+        </div>
+
+        <!-- Recent labels -->
+        <div class="card">
+            <div class="card-header">
+                <p class="card-title">Recent Labels</p>
+            </div>
+            <div class="card-content" style="padding-top: 0;">
+                <div id="history-list">
+                {% if labeled_history %}
+                    {% for item in labeled_history %}
+                    <div style="padding: var(--space-2) 0; border-bottom: 1px solid hsl(var(--border)); font-size: var(--text-sm);">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span style="color: {% if item.correct %}hsl(142 71% 45%){% else %}hsl(var(--destructive)){% endif %}; font-weight:600;">
+                                {% if item.correct %}✓{% else %}✗{% endif %} {{ item.user_label_name }}
+                            </span>
+                            {% if not item.correct %}
+                            <span class="muted" style="font-size: var(--text-xs);">True: {{ item.true_label_name }}</span>
+                            {% endif %}
+                        </div>
+                        <p class="muted" style="font-size: var(--text-xs); margin-top: 2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                            {{ item.text_snippet }}
+                        </p>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="muted" style="font-size: var(--text-sm); padding: var(--space-2) 0;">No labels yet.</p>
+                {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block script %}
+<script>
+const LABEL_NAMES = JSON.parse('{{ label_names_json|escapejs }}');
+
+async function submitLabel(labelIdx) {
+    const articleIdx = parseInt(document.getElementById('article-idx').value);
+    if (articleIdx < 0) return;
+
+    // Disable buttons while submitting
+    document.querySelectorAll('#label-buttons button').forEach(b => b.disabled = true);
+
+    const resp = await fetch("{% url 'project3:human_label_submit' %}", {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({idx: articleIdx, label: labelIdx}),
+    });
+    const data = await resp.json();
+
+    // Show feedback
+    const fb = document.getElementById('feedback');
+    fb.style.display = 'block';
+    if (data.correct) {
+        fb.className = 'alert alert-info';
+        fb.innerHTML = `<strong>✓ Correct!</strong> You labeled it as <strong>${LABEL_NAMES[labelIdx]}</strong>.`;
+    } else {
+        fb.className = 'alert alert-warning';
+        fb.innerHTML = `<strong>✗ Incorrect.</strong> You said <strong>${LABEL_NAMES[labelIdx]}</strong>, true label: <strong>${data.true_label_name}</strong>.`;
+    }
+
+    // Update stats
+    document.getElementById('n-labeled').textContent = data.n_labeled;
+    if (data.team_acc !== null) {
+        document.getElementById('team-acc').textContent = data.team_acc + '%';
+    }
+
+    // Prepend to history
+    if (data.n_labeled) {
+        prependHistory({
+            correct: data.correct,
+            user_label_name: LABEL_NAMES[labelIdx],
+            true_label_name: data.true_label_name,
+            text_snippet: document.getElementById('article-text').textContent.trim().slice(0, 120),
+        });
+    }
+
+    // After 1 second, load next article
+    setTimeout(() => {
+        fb.style.display = 'none';
+        if (data.next_article) {
+            loadNextArticle(data.next_article);
+        } else {
+            document.getElementById('article-text').innerHTML = '<span class="muted">All pool articles have been queried. Thank you!</span>';
+            document.getElementById('article-meta').textContent = 'Pool exhausted';
+            document.getElementById('article-idx').value = '-1';
+        }
+    }, 1200);
+}
+
+function loadNextArticle(article) {
+    document.getElementById('article-idx').value = article.idx;
+    const text = article.text + (article.text.length === 600 ? '…' : '');
+    document.getElementById('article-text').textContent = text;
+    document.getElementById('article-meta').innerHTML =
+        `Classifier predicts: <strong>${article.clf_pred}</strong> (${article.clf_confidence}% confidence)`;
+    document.querySelectorAll('#label-buttons button').forEach(b => b.disabled = false);
+}
+
+function prependHistory(item) {
+    const list = document.getElementById('history-list');
+    const div = document.createElement('div');
+    div.style.cssText = 'padding: 8px 0; border-bottom: 1px solid hsl(var(--border)); font-size: var(--text-sm);';
+    const color = item.correct ? 'hsl(142 71% 45%)' : 'hsl(var(--destructive))';
+    div.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="color:${color}; font-weight:600;">
+                ${item.correct ? '✓' : '✗'} ${item.user_label_name}
+            </span>
+            ${!item.correct ? `<span class="muted" style="font-size:var(--text-xs);">True: ${item.true_label_name}</span>` : ''}
+        </div>
+        <p class="muted" style="font-size:var(--text-xs); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+            ${item.text_snippet}
+        </p>
+    `;
+    list.prepend(div);
+}
+
+async function changeStrategy(strategy) {
+    await fetch("{% url 'project3:human_label_strategy' %}", {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({strategy}),
+    });
+    document.getElementById('strategy-display').textContent = strategy.replace('_', ' ');
+}
+
+async function resetSession() {
+    if (!confirm('Reset all your labels and start fresh?')) return;
+    await fetch("{% url 'project3:human_label_reset' %}", {method: 'POST'});
+    window.location.reload();
+}
+</script>
+{% endblock %}
