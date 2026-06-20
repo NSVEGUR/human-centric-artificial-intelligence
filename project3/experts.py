@@ -3,82 +3,88 @@ from sklearn.metrics import accuracy_score, confusion_matrix
 
 from .data import load_ag_news, LABEL_NAMES
 
-#load test data
 _, _, test_texts, test_labels = load_ag_news()
 
-SPORTS_KEYWORDS = [
-    'game', 'play', 'team', 'player', 'win', 'lose', 'score', 'coach',
-    'league', 'season', 'match', 'tournament', 'championship', 'athlete',
-    'football', 'basketball', 'soccer', 'baseball', 'tennis', 'golf',
-    'olympic', 'sport', 'cup', 'stadium', 'fans', 'referee', 'injury',
-    'pitcher', 'quarterback', 'nfl', 'nba', 'mlb', 'nhl', 'fifa',
-    'goal', 'point', 'shot', 'kick', 'run', 'race', 'cyclist', 'swimmer'
-]
-
-TECH_KEYWORDS = [
-    'software', 'hardware', 'computer', 'technology', 'internet', 'network',
-    'digital', 'data', 'system', 'device', 'mobile', 'phone', 'chip',
-    'processor', 'microsoft', 'apple', 'google', 'linux', 'windows',
-    'server', 'security', 'virus', 'code', 'program', 'algorithm', 'ai',
-    'robot', 'science', 'research', 'space', 'nasa', 'launch', 'satellite',
-    'browser', 'email', 'wireless', 'broadband', 'download', 'upload',
-    'database', 'encryption', 'firewall', 'semiconductor', 'quantum'
-]
-
+# ── Expert Design ──────────────────────────────────────────────────────────────
+# Each expert is simulated with a specified per-class accuracy profile:
+#   - Very high accuracy on their specialty class (> classifier baseline)
+#   - Weaker accuracy on other classes
+#
+# This models the reality from the lecture: experts have limited domain expertise
+# that outperforms the AI in specific regions of the input space, while being
+# worse elsewhere. The L2D system benefits by deferring to the expert only on
+# their specialty class.
+#
+# When the expert is wrong, they predict the second-most-likely class according
+# to the classifier — a realistic error pattern.
 
 class SportsExpert:
-    #Specializes in Sports
+    """
+    Specialises in Sports (class 1).
+    Per-class accuracy: Sports ≈ 97%, all others ≈ 55%.
+    Achieves higher Sports accuracy than the classifier's ~97.7% on easy Sports
+    articles, while being unreliable on World/Business/Sci/Tech.
+    """
     name = "Sports Expert"
     strong_class = 1  # Sports
 
-    def predict_single(self, text, clf_proba):
-        text_lower = text.lower()
-        keyword_hits = sum(1 for kw in SPORTS_KEYWORDS if kw in text_lower)
+    PER_CLASS_ACCURACY = {
+        0: 0.55,   # World   — unreliable
+        1: 0.97,   # Sports  — specialist
+        2: 0.55,   # Business — unreliable
+        3: 0.55,   # Sci/Tech — unreliable
+    }
 
-        if keyword_hits >= 2:
-            if np.random.random() < 0.88:
-                return 1  # Sports - expert is confident
-            else:
-                return int(np.argmax(clf_proba))
-        else:
-            # outside domain - mostly follow classifier but with noise
-            if np.random.random() < 0.65:
-                return int(np.argmax(clf_proba))
-            else:
-                return np.random.randint(0, 4)
+    def predict_single(self, true_label, clf_proba):
+        p = self.PER_CLASS_ACCURACY[true_label]
+        if np.random.random() < p:
+            return true_label  # expert is correct
+        # Wrong prediction: pick second-most-likely class (realistic mistake)
+        sorted_cls = np.argsort(clf_proba)[::-1]
+        for c in sorted_cls:
+            if c != true_label:
+                return int(c)
+        return int((true_label + 1) % 4)
 
-    def predict(self, texts):
+    def predict(self, texts, true_labels_input):
         from .classifier import predict_proba
         np.random.seed(42)
+        labels = list(true_labels_input)
         probas = predict_proba(texts)
-        return [self.predict_single(t, probas[i]) for i, t in enumerate(texts)]
+        return [self.predict_single(labels[i], probas[i]) for i in range(len(texts))]
 
 
 class TechExpert:
-    #Specizlizes in Sci/Tech
+    """
+    Specialises in Sci/Tech (class 3).
+    Per-class accuracy: Sci/Tech ≈ 95%, all others ≈ 55%.
+    """
     name = "Sci/Tech Expert"
     strong_class = 3  # Sci/Tech
 
-    def predict_single(self, text, clf_proba):
-        text_lower = text.lower()
-        keyword_hits = sum(1 for kw in TECH_KEYWORDS if kw in text_lower)
+    PER_CLASS_ACCURACY = {
+        0: 0.55,   # World   — unreliable
+        1: 0.55,   # Sports  — unreliable
+        2: 0.55,   # Business — unreliable
+        3: 0.95,   # Sci/Tech — specialist
+    }
 
-        if keyword_hits >= 2:
-            if np.random.random() < 0.88:
-                return 3  # Sci/Tech - expert is confident
-            else:
-                return int(np.argmax(clf_proba))
-        else:
-            if np.random.random() < 0.65:
-                return int(np.argmax(clf_proba))
-            else:
-                return np.random.randint(0, 4)
+    def predict_single(self, true_label, clf_proba):
+        p = self.PER_CLASS_ACCURACY[true_label]
+        if np.random.random() < p:
+            return true_label
+        sorted_cls = np.argsort(clf_proba)[::-1]
+        for c in sorted_cls:
+            if c != true_label:
+                return int(c)
+        return int((true_label + 1) % 4)
 
-    def predict(self, texts):
+    def predict(self, texts, true_labels_input):
         from .classifier import predict_proba
         np.random.seed(42)
+        labels = list(true_labels_input)
         probas = predict_proba(texts)
-        return [self.predict_single(t, probas[i]) for i, t in enumerate(texts)]
+        return [self.predict_single(labels[i], probas[i]) for i in range(len(texts))]
 
 
 # Instantiate experts
@@ -88,8 +94,8 @@ tech_expert = TechExpert()
 # Evaluate on test set at import time
 print("Evaluating experts on test set...")
 
-sports_preds = sports_expert.predict(test_texts)
-tech_preds = tech_expert.predict(test_texts)
+sports_preds = sports_expert.predict(test_texts, test_labels)
+tech_preds = tech_expert.predict(test_texts, test_labels)
 
 sports_acc = accuracy_score(test_labels, sports_preds)
 tech_acc = accuracy_score(test_labels, tech_preds)

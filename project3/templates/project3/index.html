@@ -20,16 +20,22 @@
     <p class="page-subtitle">Human-Centric Artificial Intelligence · AG News Dataset</p>
 </header>
 
-<div class="alert alert-info" style="margin-bottom: var(--space-6);">
-    <p>
-        This project trains a classifier on the <strong>AG News</strong> dataset and simulates
-        human experts with domain-specific strengths. The goal is to learn when to defer
-        decisions to a human expert using active learning.
-    </p>
+<div style="display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-4); margin-bottom: var(--space-6);">
+    <div class="alert alert-info" style="flex: 1; margin-bottom: 0;">
+        <p>
+            This project trains a classifier on the <strong>AG News</strong> dataset and simulates
+            human experts with domain-specific strengths. The goal is to learn when to defer
+            decisions to a human expert using active learning.
+        </p>
+    </div>
+    <a href="{% url 'project3:report' %}" class="btn btn-outline" style="white-space: nowrap; flex-shrink: 0;">
+        ↓ Download PDF Report
+    </a>
 </div>
-<!-- Division to display Task 1 work-->
+
+<!-- ── Task 1 ─────────────────────────────────────────────────────────────── -->
 <section class="card" style="margin-bottom: var(--space-6);">
-    <div class="card-header">
+    <div class="card-header" style="flex-direction:row; align-items:center; gap: var(--space-3);">
         <span class="badge badge-uppercase">Task 1</span>
         <p class="card-title">Baseline Classifier — TF-IDF + Logistic Regression</p>
     </div>
@@ -42,7 +48,7 @@
         <div class="row" style="gap: var(--space-4); margin-bottom: var(--space-6); align-items: center;">
             <div class="card" style="padding: var(--space-4); text-align: center; min-width: 180px;">
                 <p class="muted" style="margin-bottom: var(--space-1);">Test Accuracy</p>
-                <p style="font-size: 2.5rem; font-weight: 700; color: var(--accent);">{{ test_acc }}%</p>
+                <p style="font-size: 2.5rem; font-weight: 700; color: hsl(var(--primary));">{{ test_acc }}%</p>
             </div>
             <div>
                 <p><strong>Classes:</strong> {% for label in label_names %}{{ label }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
@@ -57,9 +63,9 @@
     </div>
 </section>
 
-<!-- Division to display Task 2 work -->
+<!-- ── Task 2 ─────────────────────────────────────────────────────────────── -->
 <section class="card" style="margin-bottom: var(--space-6);">
-    <div class="card-header">
+    <div class="card-header" style="flex-direction:row; align-items:center; gap: var(--space-3);">
         <span class="badge badge-uppercase">Task 2</span>
         <p class="card-title">Simulated Experts</p>
     </div>
@@ -82,8 +88,8 @@
                 <table style="width: 100%; font-size: 0.875rem;">
                     <thead>
                         <tr>
-                            <th style="text-align: left; padding: 4px 0; color: var(--muted);">Category</th>
-                            <th style="text-align: right; padding: 4px 0; color: var(--muted);">Accuracy</th>
+                            <th style="text-align: left; padding: 4px 0; color: hsl(var(--muted-foreground));">Category</th>
+                            <th style="text-align: right; padding: 4px 0; color: hsl(var(--muted-foreground));">Accuracy</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -103,14 +109,149 @@
     </div>
 </section>
 
+<!-- ── Task 3 ─────────────────────────────────────────────────────────────── -->
+<section class="card" style="margin-bottom: var(--space-6);">
+    <div class="card-header" style="flex-direction:row; align-items:center; gap: var(--space-3);">
+        <span class="badge badge-uppercase">Task 3</span>
+        <p class="card-title">Learning-to-Defer</p>
+    </div>
+    <div class="card-content">
+        <p class="muted" style="margin-bottom: var(--space-4);">
+            The system learns when to predict itself and when to defer to the best available expert.
+            The deferral rule follows the <strong>Bayes-optimal decision</strong>: defer if the
+            classifier's uncertainty exceeds the expected expert error, i.e.,
+            <code>1 − max P(y|x) &gt; 1 − P(expert correct | x)</code>.
+            Sweeping a scale parameter α generates the full <em>accuracy vs. coverage</em> curve.
+        </p>
+
+        <!-- Key metrics row -->
+        <div class="grid-3" style="margin-bottom: var(--space-6); gap: var(--space-4);">
+            <div class="card" style="padding: var(--space-4); text-align: center;">
+                <p class="muted" style="font-size: var(--text-sm); margin-bottom: var(--space-1);">AI Only</p>
+                <p style="font-size: 1.8rem; font-weight: 700; color: hsl(var(--warning));">{{ deferral_stats.baselines.ai_only }}%</p>
+            </div>
+            <div class="card" style="padding: var(--space-4); text-align: center;">
+                <p class="muted" style="font-size: var(--text-sm); margin-bottom: var(--space-1);">L2D Team (α=1)</p>
+                <p style="font-size: 1.8rem; font-weight: 700; color: hsl(var(--primary));">{{ deferral_stats.optimal.team_acc }}%</p>
+            </div>
+            <div class="card" style="padding: var(--space-4); text-align: center;">
+                <p class="muted" style="font-size: var(--text-sm); margin-bottom: var(--space-1);">Deferral Rate (α=1)</p>
+                <p style="font-size: 1.8rem; font-weight: 700; color: hsl(142 71% 45%);">{{ deferral_stats.optimal.deferral_rate }}%</p>
+            </div>
+        </div>
+
+        <!-- Accuracy vs Coverage curve -->
+        <div id="accuracy-coverage-plot" style="width: 100%; height: 440px; margin-bottom: var(--space-4);"></div>
+
+        <!-- Summary bar chart -->
+        <div id="deferral-summary-plot" style="width: 100%; height: 380px;"></div>
+
+        <div class="alert" style="margin-top: var(--space-4);">
+            <p class="alert-title" style="margin-bottom: var(--space-1);">How it works</p>
+            <p>For each test instance, the system computes P(expert correct | x) = Σ<sub>k</sub> P(y=k|x) × accuracy<sub>expert,k</sub>.
+            The <strong>best expert</strong> is selected per-class. Deferral happens when the classifier's uncertainty (1 − max P(y|x))
+            exceeds the expert's expected error (1 − P(expert correct | x)).
+            The parameter α scales this threshold: α=0 always defers, α→∞ never defers, α=1 is Bayes-optimal.</p>
+        </div>
+    </div>
+</section>
+
+<!-- ── Task 4 ─────────────────────────────────────────────────────────────── -->
+<section class="card" style="margin-bottom: var(--space-6);">
+    <div class="card-header" style="flex-direction:row; align-items:center; gap: var(--space-3);">
+        <span class="badge badge-uppercase">Task 4</span>
+        <p class="card-title">Active Learning for Expert Competence Discovery</p>
+    </div>
+    <div class="card-content">
+        <p class="muted" style="margin-bottom: var(--space-2);">
+            We now assume <strong>no expert labels are available initially</strong>.
+            An active learner queries the expert on selected instances to learn the expert's
+            competence profile (per-class accuracy), then uses that to build a deferral policy.
+        </p>
+        <p class="muted" style="margin-bottom: var(--space-4);">
+            Setup: {{ al_stats.n_pool }} unlabeled pool instances, {{ al_stats.n_eval }} held-out
+            evaluation instances. Four query strategies from the lecture are compared.
+            Expert competence is estimated with Laplace smoothing (prior: 50% accuracy, 10 pseudo-counts).
+        </p>
+
+        <!-- Strategy legend cards -->
+        <div class="grid-auto" style="margin-bottom: var(--space-5); gap: var(--space-3);">
+            <div class="card" style="padding: var(--space-3);">
+                <div style="display:flex; align-items:center; gap: var(--space-2); margin-bottom: var(--space-1);">
+                    <span style="width:12px; height:12px; border-radius:50%; background:#f59e0b; flex-shrink:0;"></span>
+                    <strong style="font-size: var(--text-sm);">Random</strong>
+                </div>
+                <p class="muted" style="font-size: var(--text-xs);">Naive baseline. Queries uniformly at random — provides balanced class coverage.</p>
+            </div>
+            <div class="card" style="padding: var(--space-3);">
+                <div style="display:flex; align-items:center; gap: var(--space-2); margin-bottom: var(--space-1);">
+                    <span style="width:12px; height:12px; border-radius:50%; background:#60a5fa; flex-shrink:0;"></span>
+                    <strong style="font-size: var(--text-sm);">Least Confidence</strong>
+                </div>
+                <p class="muted" style="font-size: var(--text-xs);">u<sub>LC</sub>(x) = 1 − max<sub>k</sub> P(k|x). Queries where classifier is least confident.</p>
+            </div>
+            <div class="card" style="padding: var(--space-3);">
+                <div style="display:flex; align-items:center; gap: var(--space-2); margin-bottom: var(--space-1);">
+                    <span style="width:12px; height:12px; border-radius:50%; background:#10b981; flex-shrink:0;"></span>
+                    <strong style="font-size: var(--text-sm);">Margin Sampling</strong>
+                </div>
+                <p class="muted" style="font-size: var(--text-xs);">u<sub>M</sub>(x) = 1 − (P(ŷ₁|x) − P(ŷ₂|x)). Queries where top-2 classes are ambiguous.</p>
+            </div>
+            <div class="card" style="padding: var(--space-3);">
+                <div style="display:flex; align-items:center; gap: var(--space-2); margin-bottom: var(--space-1);">
+                    <span style="width:12px; height:12px; border-radius:50%; background:#8b5cf6; flex-shrink:0;"></span>
+                    <strong style="font-size: var(--text-sm);">Entropy</strong>
+                </div>
+                <p class="muted" style="font-size: var(--text-xs);">u<sub>Ent</sub>(x) = −Σ<sub>k</sub> P(k|x) log P(k|x). Full distribution uncertainty measure.</p>
+            </div>
+        </div>
+
+        <div id="al-learning-curves-plot" style="width: 100%; height: 460px;"></div>
+
+        <div class="alert" style="margin-top: var(--space-4);">
+            <p class="alert-title" style="margin-bottom: var(--space-1);">Key insight</p>
+            <p>Uncertainty-based strategies (Least Confidence, Margin, Entropy) focus on
+            <em>hard examples near the decision boundary</em>, which may be concentrated in certain classes.
+            This biased sampling can slow expert competence discovery compared to random sampling,
+            which covers all classes more evenly. The oracle line shows the team accuracy achievable with
+            full knowledge of expert competence ({{ al_stats.oracle_acc }}%).</p>
+        </div>
+    </div>
+</section>
+
+<!-- ── Task 5 ─────────────────────────────────────────────────────────────── -->
+<section class="card" style="margin-bottom: var(--space-6);">
+    <div class="card-header" style="flex-direction:row; align-items:center; gap: var(--space-3);">
+        <span class="badge badge-uppercase">Task 5</span>
+        <span class="badge badge-secondary">Optional</span>
+        <p class="card-title">Active Learning with Human Expert</p>
+    </div>
+    <div class="card-content">
+        <p class="muted" style="margin-bottom: var(--space-4);">
+            You can act as the human expert. The system selects news articles to show you using
+            the active learning query strategy. Your labels are used to estimate expert competence
+            and build a personalised deferral policy in real time.
+        </p>
+        <a href="{% url 'project3:human_label' %}" class="btn btn-primary">
+            Open Interactive Expert Interface →
+        </a>
+    </div>
+</section>
+
 {% endblock %}
 
 {% block script %}
 <script>
-    const confusionMatrixJson = JSON.parse('{{ confusion_matrix_json|escapejs }}');
-    const expertAccuracyJson = JSON.parse('{{ expert_accuracy_json|escapejs }}');
+    const confusionMatrixJson  = JSON.parse('{{ confusion_matrix_json|escapejs }}');
+    const expertAccuracyJson   = JSON.parse('{{ expert_accuracy_json|escapejs }}');
+    const accurageCoverageJson = JSON.parse('{{ accuracy_coverage_json|escapejs }}');
+    const deferralSummaryJson  = JSON.parse('{{ deferral_summary_json|escapejs }}');
+    const alCurvesJson         = JSON.parse('{{ al_curves_json|escapejs }}');
 
-    Plotly.newPlot('confusion-matrix-plot', confusionMatrixJson.data, confusionMatrixJson.layout);
-    Plotly.newPlot('expert-accuracy-plot', expertAccuracyJson.data, expertAccuracyJson.layout);
+    Plotly.newPlot('confusion-matrix-plot',   confusionMatrixJson.data,  confusionMatrixJson.layout);
+    Plotly.newPlot('expert-accuracy-plot',    expertAccuracyJson.data,   expertAccuracyJson.layout);
+    Plotly.newPlot('accuracy-coverage-plot',  accurageCoverageJson.data, accurageCoverageJson.layout);
+    Plotly.newPlot('deferral-summary-plot',   deferralSummaryJson.data,  deferralSummaryJson.layout);
+    Plotly.newPlot('al-learning-curves-plot', alCurvesJson.data,         alCurvesJson.layout);
 </script>
 {% endblock %}
