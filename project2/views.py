@@ -92,7 +92,7 @@ def update_model(request):
             return JsonResponse({"error": "no model found"}, status=400)
 
         return JsonResponse({
-            "plotly_json":    build_lr_plotly(picked, sort_by=sort_by, filter_class=filter_class, filter_feature=filter_feature),
+            "plotly_json":    build_lr_plotly(picked, sort_by=sort_by, selected_class=filter_class, selected_feature=filter_feature),
             "tradeoff_json":  lr_tradeoff(picked),
             "confusion_json": lr_confusion(picked),
             "gap_json":       lr_gap(picked),
