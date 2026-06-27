@@ -2,12 +2,12 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from scipy.special import softmax
 
 from .data import load_and_preprocess
 
-# Load data
-train_X, test_X, train_y, test_y, mad_vals, num_cols = load_and_preprocess()
+# load once and cache - avoids reprocessing on every import
+_raw = load_and_preprocess()
+train_X, test_X, train_y, test_y, mad_vals, num_cols = _raw
 
 # Feature display names
 FEATURE_DISPLAY_NAMES = {
@@ -17,12 +17,7 @@ FEATURE_DISPLAY_NAMES = {
     'body_mass_g': 'Body Mass (g)',
 }
 
-# Colors for species
-SPECIES_COLORS = {
-    'Adelie': '#4C72B0',
-    'Chinstrap': '#55A868',
-    'Gentoo': '#C44E52',
-}
+# (species colours defined below with dark theme)
 
 
 def compute_pdp(model, feature_name, model_type, n_grid=50, use_train=True):
@@ -44,9 +39,6 @@ def compute_pdp(model, feature_name, model_type, n_grid=50, use_train=True):
     Returns:
         dict with 'grid', 'pdp_values' (per class), 'ice_curves' (per sample per class)
     """
-    from .logistic_reg import scaler
-
-    # Choose dataset
     X = train_X if use_train else test_X
 
     # Create grid of feature values
@@ -68,14 +60,8 @@ def compute_pdp(model, feature_name, model_type, n_grid=50, use_train=True):
         X_modified = X.copy()
         X_modified[feature_name] = grid_val
 
-        # Scale if needed for LR
-        if model_type == 'lr':
-            X_pred = scaler.transform(X_modified)
-        else:
-            X_pred = X_modified
-
-        # Get prediction probabilities
-        proba = model.predict_proba(X_pred)  # shape (n_samples, n_classes)
+        # LR is now trained on raw features - no scaler needed
+        proba = model.predict_proba(X_modified)  # shape (n_samples, n_classes)
 
         # Store for each sample
         ice_curves[:, g_idx, :] = proba
@@ -121,8 +107,6 @@ def compute_ale(model, feature_name, model_type, n_intervals=40, use_train=True)
     Returns:
         dict with 'grid', 'ale_values' (per class), 'derivative_type'
     """
-    from .logistic_reg import scaler
-
     X = train_X if use_train else test_X
     feature_col = X[feature_name].values
     feature_idx = list(X.columns).index(feature_name)
@@ -173,13 +157,9 @@ def compute_ale(model, feature_name, model_type, n_intervals=40, use_train=True)
 
         # Compute effect as f(right_edge) - f(left_edge) averaged over samples in bin
         if model_type == 'lr':
-            # For logistic regression, we can compute exact derivatives
-            # But for consistency with the finite difference approach, we use the same method
-            # The task asks us to note which model uses exact vs approximated derivatives
-
-            # Actually, let's compute the exact derivative for LR
+            # LR trained on raw features - exact finite difference, same as tree
             effects = compute_lr_local_effect_exact(
-                model, scaler, samples_in_bin, feature_idx, left_edge, right_edge
+                model, samples_in_bin, feature_idx, left_edge, right_edge
             )
         else:
             # For decision tree, use finite difference
@@ -217,24 +197,11 @@ def compute_ale(model, feature_name, model_type, n_intervals=40, use_train=True)
     }
 
 
-def compute_lr_local_effect_exact(model, scaler, samples, feature_idx, left_val, right_val):
+def compute_lr_local_effect_exact(model, samples, feature_idx, left_val, right_val):
     """
-    Compute exact local effect for logistic regression using analytical derivatives.
-
-    For multiclass logistic regression with softmax:
-    p_k = exp(z_k) / sum_j(exp(z_j))
-
-    where z_k = w_k . x + b_k
-
-    The partial derivative of p_k with respect to x_i is:
-    dp_k/dx_i = p_k * (w_ki - sum_j(p_j * w_ji))
-
-    For ALE, we integrate this over the interval [left_val, right_val].
-    Since the derivative is complex to integrate analytically, we use a quadrature approach
-    with the exact derivative evaluated at multiple points.
-
-    For simplicity and accuracy, we use the difference in predictions at boundaries:
-    effect = f(x_right) - f(x_left)
+    Compute local effect for logistic regression using finite differences at boundaries.
+    LR is now trained on raw (unscaled) features, so no scaler transform needed.
+    effect = mean over samples of [f(x_right) - f(x_left)]
     """
     n_samples = len(samples)
     n_classes = len(model.classes_)
@@ -249,10 +216,10 @@ def compute_lr_local_effect_exact(model, scaler, samples, feature_idx, left_val,
         row = samples.iloc[[i]].copy()
 
         row[feature_col] = left_val
-        proba_left = model.predict_proba(scaler.transform(row))[0]
+        proba_left = model.predict_proba(row)[0]
 
         row[feature_col] = right_val
-        proba_right = model.predict_proba(scaler.transform(row))[0]
+        proba_right = model.predict_proba(row)[0]
 
         effects += (proba_right - proba_left)
 
@@ -297,37 +264,26 @@ def compute_tree_local_effect(model, samples, feature_idx, left_val, right_val):
 def compute_feature_importance_permutation(model, feature_name, model_type, n_repeats=10):
     """
     Compute permutation feature importance.
-
     Shuffle the feature values and measure decrease in accuracy.
+    LR now uses raw features - no scaler needed.
     """
     from sklearn.metrics import accuracy_score
-    from .logistic_reg import scaler, scaled_test_X
 
     X = test_X.copy()
     y = test_y
 
-    # Baseline accuracy
-    if model_type == 'lr':
-        baseline_preds = model.predict(scaled_test_X)
-    else:
-        baseline_preds = model.predict(X)
-
+    # baseline accuracy - both model types predict on raw features
+    baseline_preds = model.predict(X)
     baseline_acc = accuracy_score(y, baseline_preds)
 
-    # Permutation importance
+    # permute the chosen feature and measure accuracy drop
     importances = []
     for _ in range(n_repeats):
         X_permuted = X.copy()
         X_permuted[feature_name] = np.random.permutation(X_permuted[feature_name].values)
 
-        if model_type == 'lr':
-            X_pred = scaler.transform(X_permuted)
-        else:
-            X_pred = X_permuted
-
-        perm_preds = model.predict(X_pred)
+        perm_preds = model.predict(X_permuted)
         perm_acc = accuracy_score(y, perm_preds)
-
         importances.append(baseline_acc - perm_acc)
 
     return {
@@ -337,316 +293,294 @@ def compute_feature_importance_permutation(model, feature_name, model_type, n_re
     }
 
 
-def build_pdp_plot(pdp_data, show_ice=False, n_ice_samples=50):
-    """
-    Build a Plotly PDP visualization.
+# ── dark theme ────────────────────────────────────────────────────────────────
+PLOT_BG  = "#1a1d2e"
+PAPER_BG = "rgba(0,0,0,0)"
+TEXT     = "#c9d1e0"
+GRID     = "#252840"
+AXIS     = "#353860"
 
-    Args:
-        pdp_data: output from compute_pdp()
-        show_ice: whether to show ICE curves
-        n_ice_samples: max number of ICE curves to show (for performance)
-    """
-    grid = pdp_data['grid']
-    pdp_values = pdp_data['pdp_values']
-    ice_curves = pdp_data.get('ice_curves', {})
-    feature_display = pdp_data['feature_display']
+# override species colours to match the rest of project 2
+SPECIES_COLORS = {
+    "Adelie":    "#4a7fe5",
+    "Chinstrap": "#f5a623",
+    "Gentoo":    "#3dba6e",
+}
+
+
+def _dark_layout(height=400, margin=None):
+    m = margin or dict(l=55, r=25, t=50, b=55)
+    return dict(
+        plot_bgcolor=PLOT_BG,
+        paper_bgcolor=PAPER_BG,
+        font=dict(color=TEXT, family="Inter, system-ui, sans-serif", size=12),
+        height=height,
+        margin=m,
+    )
+
+
+def _axis_style(**extra):
+    return dict(color=TEXT, tickfont=dict(color=TEXT), gridcolor=GRID,
+                linecolor=AXIS, zerolinecolor=AXIS, **extra)
+
+
+def _rug(feature_name, y_val, row=None, col=None):
+    """Tiny tick marks at the bottom showing data distribution."""
+    fv = train_X[feature_name].values
+    kw = dict(row=row, col=col) if row else {}
+    return go.Scatter(
+        x=fv, y=[y_val] * len(fv),
+        mode="markers",
+        marker=dict(symbol="line-ns", size=7,
+                    color="rgba(180,190,210,0.35)", line=dict(width=1)),
+        showlegend=False, hoverinfo="skip",
+    ), kw
+
+
+# ── PDP (standalone) ──────────────────────────────────────────────────────────
+def build_pdp_plot(pdp_data, show_ice=False, n_ice_samples=50):
+    grid            = pdp_data["grid"]
+    pdp_values      = pdp_data["pdp_values"]
+    ice_curves      = pdp_data.get("ice_curves", {})
+    feature_display = pdp_data["feature_display"]
+    class_names     = list(pdp_values.keys())
 
     fig = go.Figure()
 
-    class_names = list(pdp_values.keys())
-
-    # Add ICE curves first (so they're behind PDP)
+    # ICE curves (faint, behind PDP)
     if show_ice and ice_curves:
-        for class_name in class_names:
-            curves = ice_curves[class_name]
-            n_curves = min(n_ice_samples, len(curves))
-            indices = np.random.choice(len(curves), n_curves, replace=False)
-
+        for cls in class_names:
+            curves  = ice_curves[cls]
+            n       = min(n_ice_samples, len(curves))
+            indices = np.random.choice(len(curves), n, replace=False)
             for idx in indices:
                 fig.add_trace(go.Scatter(
-                    x=grid,
-                    y=curves[idx],
-                    mode='lines',
-                    line=dict(color=SPECIES_COLORS.get(class_name, '#999'), width=0.5),
-                    opacity=0.15,
-                    showlegend=False,
-                    hoverinfo='skip',
+                    x=grid, y=curves[idx], mode="lines",
+                    line=dict(color=SPECIES_COLORS.get(cls, "#888"), width=0.6),
+                    opacity=0.12, showlegend=False, hoverinfo="skip",
                 ))
 
-    # Add PDP curves
-    for class_name in class_names:
+    # PDP main curves
+    for cls in class_names:
         fig.add_trace(go.Scatter(
-            x=grid,
-            y=pdp_values[class_name],
-            mode='lines',
-            name=class_name,
-            line=dict(color=SPECIES_COLORS.get(class_name, '#999'), width=3),
-            hovertemplate=f"<b>{class_name}</b><br>" +
-                          f"{feature_display}: %{{x:.2f}}<br>" +
-                          "Probability: %{y:.3f}<extra></extra>",
+            x=grid, y=pdp_values[cls], mode="lines", name=cls,
+            line=dict(color=SPECIES_COLORS.get(cls, "#888"), width=2.5),
+            hovertemplate=f"<b>{cls}</b><br>{feature_display}: %{{x:.2f}}<br>P: %{{y:.3f}}<extra></extra>",
         ))
 
-    # Add feature distribution rug plot at bottom
-    feature_values = train_X[pdp_data['feature_name']].values
-    rug_y = [-0.02] * len(feature_values)  # Small offset below 0
+    # rug
+    rug_trace, _ = _rug(pdp_data["feature_name"], -0.03)
+    fig.add_trace(rug_trace)
 
-    fig.add_trace(go.Scatter(
-        x=feature_values,
-        y=rug_y,
-        mode='markers',
-        marker=dict(symbol='line-ns', size=8, color='#666', line=dict(width=1)),
-        name='Data Distribution',
-        showlegend=False,
-        hoverinfo='skip',
-    ))
-
-    fig.update_layout(
-        title=f"Partial Dependence Plot: {feature_display}",
-        xaxis_title=feature_display,
-        yaxis_title="Predicted Probability",
-        yaxis=dict(range=[-0.05, 1.05]),
-        plot_bgcolor='white',
-        paper_bgcolor='white',
-        height=400,
-        legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='center', x=0.5),
-        hovermode='x unified',
+    layout = _dark_layout(400)
+    layout.update(
+        title=dict(text=f"PDP — {feature_display}", font=dict(color=TEXT, size=14)),
+        xaxis=_axis_style(title=feature_display),
+        yaxis=_axis_style(title="Predicted Probability", range=[-0.07, 1.07]),
+        legend=dict(orientation="h", x=0.5, xanchor="center", y=1.08,
+                    font=dict(color=TEXT), bgcolor="rgba(0,0,0,0)"),
+        hovermode="x unified",
     )
-
-    # Add gridlines
-    fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='#eee')
-    fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='#eee')
-
+    fig.update_layout(**layout)
     return fig.to_json()
 
 
+# ── ALE (standalone) ──────────────────────────────────────────────────────────
 def build_ale_plot(ale_data):
-    """
-    Build a Plotly ALE visualization.
-    """
-    grid = ale_data['grid']
-    ale_values = ale_data['ale_values']
-    feature_display = ale_data['feature_display']
-    derivative_type = ale_data.get('derivative_type', 'unknown')
+    grid            = ale_data["grid"]
+    ale_values      = ale_data["ale_values"]
+    feature_display = ale_data["feature_display"]
+    deriv_type      = ale_data.get("derivative_type", "")
+    class_names     = list(ale_values.keys())
 
     fig = go.Figure()
 
-    class_names = list(ale_values.keys())
-
-    for class_name in class_names:
+    for cls in class_names:
         fig.add_trace(go.Scatter(
-            x=grid,
-            y=ale_values[class_name],
-            mode='lines',
-            name=class_name,
-            line=dict(color=SPECIES_COLORS.get(class_name, '#999'), width=3),
-            hovertemplate=f"<b>{class_name}</b><br>" +
-                          f"{feature_display}: %{{x:.2f}}<br>" +
-                          "ALE Effect: %{y:.4f}<extra></extra>",
+            x=grid, y=ale_values[cls], mode="lines", name=cls,
+            line=dict(color=SPECIES_COLORS.get(cls, "#888"), width=2.5),
+            hovertemplate=f"<b>{cls}</b><br>{feature_display}: %{{x:.2f}}<br>ALE: %{{y:.4f}}<extra></extra>",
         ))
 
-    # Add zero line
-    fig.add_hline(y=0, line_dash='dash', line_color='#999', opacity=0.7)
+    # zero reference line
+    fig.add_hline(y=0, line_dash="dot", line_color="rgba(200,210,230,0.4)", line_width=1)
 
-    # Add feature distribution rug
-    feature_values = train_X[ale_data['feature_name']].values
-    y_min = min(min(v) for v in ale_values.values())
-    rug_y = [y_min - 0.02] * len(feature_values)
+    # rug
+    y_floor = min(min(v) for v in ale_values.values()) - 0.015
+    rug_trace, _ = _rug(ale_data["feature_name"], y_floor)
+    fig.add_trace(rug_trace)
 
-    fig.add_trace(go.Scatter(
-        x=feature_values,
-        y=rug_y,
-        mode='markers',
-        marker=dict(symbol='line-ns', size=8, color='#666', line=dict(width=1)),
-        showlegend=False,
-        hoverinfo='skip',
-    ))
-
-    fig.update_layout(
-        title=f"Accumulated Local Effects: {feature_display}<br><sup>Derivatives: {derivative_type}</sup>",
-        xaxis_title=feature_display,
-        yaxis_title="ALE (centered)",
-        plot_bgcolor='white',
-        paper_bgcolor='white',
-        height=400,
-        legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='center', x=0.5),
-        hovermode='x unified',
+    layout = _dark_layout(400)
+    layout.update(
+        title=dict(text=f"ALE — {feature_display}", font=dict(color=TEXT, size=14)),
+        xaxis=_axis_style(title=feature_display),
+        yaxis=_axis_style(title="ALE effect (centred)"),
+        legend=dict(orientation="h", x=0.5, xanchor="center", y=1.08,
+                    font=dict(color=TEXT), bgcolor="rgba(0,0,0,0)"),
+        hovermode="x unified",
+        annotations=[dict(
+            text=f"<i>{deriv_type}</i>",
+            xref="paper", yref="paper", x=1, y=-0.13,
+            xanchor="right", showarrow=False,
+            font=dict(size=10, color="rgba(180,190,210,0.6)"),
+        )],
     )
-
-    fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='#eee')
-    fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='#eee')
-
+    fig.update_layout(**layout)
     return fig.to_json()
 
 
+# ── Combined PDP + ALE side by side ──────────────────────────────────────────
 def build_combined_feature_effects_plot(model, feature_name, model_type, show_ice=False):
-    """
-    Build a combined visualization with PDP, ALE, and optionally ICE.
-
-    Returns a figure with subplots.
-    """
-    # Compute both
-    pdp_data = compute_pdp(model, feature_name, model_type)
-    ale_data = compute_ale(model, feature_name, model_type)
-
+    pdp_data        = compute_pdp(model, feature_name, model_type)
+    ale_data        = compute_ale(model, feature_name, model_type)
     feature_display = FEATURE_DISPLAY_NAMES.get(feature_name, feature_name)
-    class_names = list(pdp_data['pdp_values'].keys())
+    class_names     = list(pdp_data["pdp_values"].keys())
+    deriv_type      = ale_data.get("derivative_type", "")
 
-    # Create subplots
     fig = make_subplots(
         rows=1, cols=2,
-        subplot_titles=(
-            f"PDP: {feature_display}",
-            f"ALE: {feature_display}"
-        ),
-        horizontal_spacing=0.1,
+        subplot_titles=[
+            f"Partial Dependence (PDP)",
+            f"Accumulated Local Effects (ALE)",
+        ],
+        horizontal_spacing=0.12,
     )
 
-    # PDP subplot
-    for class_name in class_names:
-        # ICE curves first
-        if show_ice and pdp_data.get('ice_curves'):
-            curves = pdp_data['ice_curves'][class_name]
-            n_curves = min(30, len(curves))
-            indices = np.random.choice(len(curves), n_curves, replace=False)
-
+    # ── PDP panel ────────────────────────────────────────────────────────────
+    for cls in class_names:
+        if show_ice and pdp_data.get("ice_curves"):
+            curves  = pdp_data["ice_curves"][cls]
+            n       = min(30, len(curves))
+            indices = np.random.choice(len(curves), n, replace=False)
             for idx in indices:
-                fig.add_trace(
-                    go.Scatter(
-                        x=pdp_data['grid'],
-                        y=curves[idx],
-                        mode='lines',
-                        line=dict(color=SPECIES_COLORS.get(class_name, '#999'), width=0.5),
-                        opacity=0.1,
-                        showlegend=False,
-                        hoverinfo='skip',
-                    ),
-                    row=1, col=1
-                )
+                fig.add_trace(go.Scatter(
+                    x=pdp_data["grid"], y=curves[idx], mode="lines",
+                    line=dict(color=SPECIES_COLORS.get(cls, "#888"), width=0.5),
+                    opacity=0.1, showlegend=False, hoverinfo="skip",
+                ), row=1, col=1)
 
-        # PDP curve
-        fig.add_trace(
-            go.Scatter(
-                x=pdp_data['grid'],
-                y=pdp_data['pdp_values'][class_name],
-                mode='lines',
-                name=class_name,
-                line=dict(color=SPECIES_COLORS.get(class_name, '#999'), width=3),
-                legendgroup=class_name,
-                hovertemplate=f"<b>{class_name}</b><br>Prob: %{{y:.3f}}<extra></extra>",
-            ),
-            row=1, col=1
-        )
+        fig.add_trace(go.Scatter(
+            x=pdp_data["grid"], y=pdp_data["pdp_values"][cls],
+            mode="lines", name=cls, legendgroup=cls,
+            line=dict(color=SPECIES_COLORS.get(cls, "#888"), width=2.5),
+            hovertemplate=f"<b>{cls}</b><br>P: %{{y:.3f}}<extra></extra>",
+        ), row=1, col=1)
 
-    # ALE subplot
-    for class_name in class_names:
-        fig.add_trace(
-            go.Scatter(
-                x=ale_data['grid'],
-                y=ale_data['ale_values'][class_name],
-                mode='lines',
-                name=class_name,
-                line=dict(color=SPECIES_COLORS.get(class_name, '#999'), width=3),
-                legendgroup=class_name,
-                showlegend=False,
-                hovertemplate=f"<b>{class_name}</b><br>ALE: %{{y:.4f}}<extra></extra>",
-            ),
-            row=1, col=2
-        )
+    rug_trace, _ = _rug(feature_name, -0.03)
+    fig.add_trace(rug_trace, row=1, col=1)
 
-    # Add zero line to ALE
-    fig.add_hline(y=0, line_dash='dash', line_color='#999', opacity=0.7, row=1, col=2) # type: ignore
+    # ── ALE panel ────────────────────────────────────────────────────────────
+    for cls in class_names:
+        fig.add_trace(go.Scatter(
+            x=ale_data["grid"], y=ale_data["ale_values"][cls],
+            mode="lines", name=cls, legendgroup=cls, showlegend=False,
+            line=dict(color=SPECIES_COLORS.get(cls, "#888"), width=2.5),
+            hovertemplate=f"<b>{cls}</b><br>ALE: %{{y:.4f}}<extra></extra>",
+        ), row=1, col=2)
 
-    # Add rug plots
-    feature_values = train_X[feature_name].values
+    fig.add_hline(y=0, line_dash="dot",
+                  line_color="rgba(200,210,230,0.4)", line_width=1,
+                  row=1, col=2)
 
-    # For PDP
-    fig.add_trace(
-        go.Scatter(
-            x=feature_values,
-            y=[-0.03] * len(feature_values),
-            mode='markers',
-            marker=dict(symbol='line-ns', size=6, color='#888'),
-            showlegend=False,
-            hoverinfo='skip',
-        ),
-        row=1, col=1
-    )
+    y_floor = min(min(v) for v in ale_data["ale_values"].values()) - 0.015
+    rug_ale, _ = _rug(feature_name, y_floor)
+    fig.add_trace(rug_ale, row=1, col=2)
 
-    # For ALE
-    y_min = min(min(v) for v in ale_data['ale_values'].values()) - 0.01
-    fig.add_trace(
-        go.Scatter(
-            x=feature_values,
-            y=[y_min] * len(feature_values),
-            mode='markers',
-            marker=dict(symbol='line-ns', size=6, color='#888'),
-            showlegend=False,
-            hoverinfo='skip',
-        ),
-        row=1, col=2
-    )
-
-    # Update layout
-    derivative_type = ale_data.get('derivative_type', '')
+    # ── global layout ────────────────────────────────────────────────────────
     fig.update_layout(
-        height=450,
-        plot_bgcolor='white',
-        paper_bgcolor='white',
-        legend=dict(orientation='h', yanchor='bottom', y=1.08, xanchor='center', x=0.5),
-        hovermode='x unified',
-        annotations=[
-            dict(
-                text=f"<i>ALE computed using {derivative_type}</i>",
-                xref="paper", yref="paper",
-                x=0.75, y=-0.12,
-                showarrow=False,
-                font=dict(size=10, color='#666'),
-            )
-        ]
+        **_dark_layout(430, margin=dict(l=55, r=25, t=65, b=65)),
+        hovermode="x unified",
+        showlegend=True,
+        legend=dict(orientation="h", x=0.5, xanchor="center", y=1.12,
+                    font=dict(color=TEXT, size=11), bgcolor="rgba(0,0,0,0)"),
     )
 
-    fig.update_xaxes(title_text=feature_display, row=1, col=1, showgrid=True, gridcolor='#eee')
-    fig.update_xaxes(title_text=feature_display, row=1, col=2, showgrid=True, gridcolor='#eee')
-    fig.update_yaxes(title_text="Probability", row=1, col=1, range=[-0.05, 1.05], showgrid=True, gridcolor='#eee')
-    fig.update_yaxes(title_text="ALE Effect", row=1, col=2, showgrid=True, gridcolor='#eee')
+    ax = _axis_style()
+    fig.update_xaxes(title_text=feature_display, **ax)
+    fig.update_yaxes(title_text="Probability", range=[-0.07, 1.07],
+                     row=1, col=1, **ax)
+    fig.update_yaxes(title_text="ALE effect (centred)",
+                     row=1, col=2, **ax)
+
+    # subplot title colours
+    for ann in fig.layout.annotations:
+        ann.font.color = TEXT
+        ann.font.size  = 12
+
+    # derivative note
+    fig.add_annotation(
+        text=f"<i>{deriv_type}</i>",
+        xref="paper", yref="paper", x=1, y=-0.14,
+        xanchor="right", showarrow=False,
+        font=dict(size=10, color="rgba(180,190,210,0.55)"),
+    )
 
     return fig.to_json()
 
 
+# ── Permutation importance bar chart ─────────────────────────────────────────
 def build_all_features_importance_plot(model, model_type):
-    """
-    Build a bar chart showing permutation importance for all numerical features.
-    """
     importances = []
-    for feature in num_cols:
-        imp = compute_feature_importance_permutation(model, feature, model_type, n_repeats=5)
+    for feat in num_cols:
+        imp = compute_feature_importance_permutation(model, feat, model_type, n_repeats=5)
         importances.append({
-            'feature': feature,
-            'display': FEATURE_DISPLAY_NAMES.get(feature, feature),
-            'importance': imp['mean_importance'],
-            'std': imp['std_importance'],
+            "display":    FEATURE_DISPLAY_NAMES.get(feat, feat),
+            "importance": imp["mean_importance"],
+            "std":        imp["std_importance"],
         })
 
-    # Sort by importance
-    importances.sort(key=lambda x: x['importance'], reverse=True)
+    importances.sort(key=lambda x: x["importance"], reverse=True)
 
-    fig = go.Figure()
+    bar_colors = ["#3dba6e" if i["importance"] > 0 else "#e5604a" for i in importances]
+    x_labels   = [i["display"]    for i in importances]
+    y_vals     = [i["importance"] for i in importances]
+    y_stds     = [i["std"]        for i in importances]
 
-    fig.add_trace(go.Bar(
-        x=[i['display'] for i in importances],
-        y=[i['importance'] for i in importances],
-        error_y=dict(type='data', array=[i['std'] for i in importances]),
-        marker_color='#4C72B0',
-        hovertemplate="<b>%{x}</b><br>Importance: %{y:.4f}<extra></extra>",
+    fig = go.Figure(go.Bar(
+        x=x_labels,
+        y=y_vals,
+        marker_color=bar_colors,
+        marker_line=dict(width=0),
+        error_y=dict(
+            type="data",
+            array=y_stds,
+            color="#ffffff",
+            thickness=2,
+            width=8,
+        ),
+        hovertemplate=(
+            "<b>%{x}</b><br>"
+            "Importance: %{y:.4f}<br>"
+            "\u00b1%{error_y.array:.4f}<extra></extra>"
+        ),
     ))
 
-    fig.update_layout(
-        title="Permutation Feature Importance",
-        xaxis_title="Feature",
-        yaxis_title="Decrease in Accuracy",
-        plot_bgcolor='white',
-        paper_bgcolor='white',
-        height=300,
-    )
+    # annotations placed ABOVE the error bar tip so they are never hidden
+    annotations = []
+    for lbl, val, std in zip(x_labels, y_vals, y_stds):
+        tip = val + std
+        annotations.append(dict(
+            x=lbl,
+            y=tip,
+            text=f"<b>{val:.3f}</b><br><span style='font-size:9px'>\u00b1{std:.3f}</span>",
+            showarrow=False,
+            yanchor="bottom",
+            yshift=6,
+            font=dict(color=TEXT, size=11),
+            bgcolor="rgba(26,29,46,0.75)",
+            borderpad=3,
+        ))
 
+    y_max  = max(v + s for v, s in zip(y_vals, y_stds))
+    y_ceil = y_max * 1.4
+
+    layout = _dark_layout(360, margin=dict(l=55, r=25, t=50, b=65))
+    layout.update(
+        title=dict(text="Permutation Feature Importance", font=dict(color=TEXT, size=13)),
+        xaxis=_axis_style(title="Feature"),
+        yaxis=_axis_style(title="Accuracy drop when shuffled", range=[0, y_ceil]),
+        showlegend=False,
+        annotations=annotations,
+    )
+    fig.update_layout(**layout)
     return fig.to_json()

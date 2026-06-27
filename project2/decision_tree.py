@@ -1,321 +1,304 @@
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.metrics import accuracy_score, confusion_matrix
-import plotly.graph_objects as go
 import numpy as np
+import plotly.graph_objects as go
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import confusion_matrix
 
 from .data import load_and_preprocess
 
-# load data at import time so we dont redo this on every request
-train_X, test_X, train_y, test_y, mad_vals, num_cols = load_and_preprocess()
+# ── data cache ────────────────────────────────────────────────────────────────
+_data_cache = None
 
-# going up to 30 leaves, not sure if thats enough but seems fine for this dataset
-all_trees = []
+def _get_data():
+    global _data_cache
+    if _data_cache is None:
+        X_train, X_test, y_train, y_test, _, _ = load_and_preprocess()
+        _data_cache = (X_train, X_test, y_train, y_test)
+    return _data_cache
 
-for num_leaves in range(2, 31):
-    model = DecisionTreeClassifier(max_leaf_nodes=num_leaves, random_state=42)
-    model.fit(train_X, train_y)
+# ── dark theme - matches project 3 style ─────────────────────────────────────
+PLOT_BG    = "#1a1d2e"
+PAPER_BG   = "rgba(0,0,0,0)"   # transparent - page bg shows through
+TEXT       = "#c9d1e0"
+GRID       = "#252840"
+AXIS       = "#353860"
 
-    test_preds = model.predict(test_X)
-    test_acc = accuracy_score(test_y, test_preds)
+BLUE   = "#4a7fe5"   # split nodes / adelie
+ORANGE = "#f5a623"   # train line / chinstrap
+GREEN  = "#3dba6e"   # leaf nodes / gentoo
+RED    = "#ff4d6d"   # selected star / overfitting
 
-    train_preds = model.predict(train_X)
-    train_acc = accuracy_score(train_y, train_preds)
+SPECIES        = ["Adelie", "Chinstrap", "Gentoo"]
+SPECIES_COLORS = {"Adelie": BLUE, "Chinstrap": ORANGE, "Gentoo": GREEN}
 
-    # get_n_leaves() sometimes gives less than num_leaves
-    # happens when the tree cant find useful splits anymore
-    actual_leaves = model.get_n_leaves()
+# ── model cache ───────────────────────────────────────────────────────────────
+_all_trees = None
 
-    all_trees.append({
-        "model": model,
-        "n_leaves": actual_leaves,
-        "test_acc": test_acc,
-        "train_acc": train_acc,
-    })
-
-# need min and max for normalization later
-biggest_tree = max(t["n_leaves"] for t in all_trees)
-smallest_tree = min(t["n_leaves"] for t in all_trees)
-
+def _train_all_trees():
+    global _all_trees
+    if _all_trees is not None:
+        return
+    X_train, X_test, y_train, y_test = _get_data()
+    trees = []
+    for n in range(2, 31):
+        m = DecisionTreeClassifier(max_leaf_nodes=n, random_state=42)
+        m.fit(X_train, y_train)
+        trees.append({
+            "model":     m,
+            "n_leaves":  m.get_n_leaves(),
+            "train_acc": m.score(X_train, y_train),
+            "test_acc":  m.score(X_test,  y_test),
+        })
+    _all_trees = trees
 
 def get_best_tree(lam):
-    # picks the tree that scores lowest on our objective
-    #
-    # task sheet says minimize: acctest + lambda * Omega
-    # but minimizing accuracy makes no sense so acctest must mean error rate
-    # i think they meant (1 - accuracy) which is the 0-1 loss averaged over samples
-    # thats what the lecture formula actually says anyway
-    #
-    # score = (1 - test_acc) + lambda * norm_leaves
-    # lam=0 just picks most accurate, higher lam starts preferring simpler trees
+    _train_all_trees()
+    max_leaves = max(t["n_leaves"] for t in _all_trees)
+    best, best_score = None, float("inf")
+    for t in _all_trees:
+        score = (1 - t["test_acc"]) + lam * (t["n_leaves"] / max_leaves)
+        if score < best_score:
+            best_score, best = score, t
+    return best
 
-    winner = None
-    lowest = float("inf")
+# ── shared layout ─────────────────────────────────────────────────────────────
+def _base_layout(height=320, margin=None):
+    m = margin or dict(l=50, r=20, t=30, b=50)
+    return dict(
+        plot_bgcolor=PLOT_BG,
+        paper_bgcolor=PAPER_BG,
+        height=height,
+        margin=m,
+        font=dict(color=TEXT, family="Inter, system-ui, sans-serif", size=12),
+    )
 
-    for t in all_trees:
-        # normalize to 0-1 so the leaf count doesnt completely overpower the error term
-        norm_leaves = (t["n_leaves"] - smallest_tree) / (biggest_tree - smallest_tree + 1e-9)
-        score = (1 - t["test_acc"]) + lam * norm_leaves
-
-        if score < lowest:
-            lowest = score
-            winner = t
-
-    return winner
-
-
+# ── decision tree diagram ─────────────────────────────────────────────────────
 def build_tree_plotly(tree_info):
-    # builds the interactive tree visualization
-    # had to do this manually because sklearn doesnt have a plotly export
-    # the basic idea: traverse the tree recursively, assign x,y coords to each node
+    """
+    Renders the decision tree as a clean node-edge graph.
+    Labels are Plotly annotations so they never clip or overflow.
+    """
+    _train_all_trees()
+    X_train, _, _, _ = _get_data()
 
-    model = tree_info["model"]
-    sk_tree = model.tree_
-    feat_names = list(train_X.columns)
-    species = model.classes_
+    model      = tree_info["model"]
+    sk_tree    = model.tree_
+    n_nodes    = sk_tree.node_count
+    feat       = sk_tree.feature
+    thr        = sk_tree.threshold
+    ch_left    = sk_tree.children_left
+    ch_right   = sk_tree.children_right
+    vals       = sk_tree.value
+    feat_names = list(X_train.columns)
+    classes    = model.classes_
+    is_leaf    = ch_left == -1
 
-    pos_x = {}
-    pos_y = {}
-    labels = {}
-    line_x = []
-    line_y = []
+    # ── tree layout: recursive, depth-first ──────────────────────────────────
+    pos_x = [0.0] * n_nodes
+    pos_y = [0.0] * n_nodes
 
-    # this needs to be a list not an int
-    # otherwise the nested function cant modify it (python closure thing)
-    pos_counter = [0]
+    def _layout(node, x0, y, w):
+        pos_x[node] = x0 + w / 2
+        pos_y[node] = -y
+        l, r = ch_left[node], ch_right[node]
+        if l != -1:
+            _layout(l, x0,       y + 1, w / 2)
+            _layout(r, x0 + w/2, y + 1, w / 2)
 
-    def place_node(node_id, depth):
-        left_child = sk_tree.children_left[node_id]
-        right_child = sk_tree.children_right[node_id]
+    _layout(0, 0, 0, 2 ** model.get_depth())
 
-        if left_child == -1:
-            # leaf - assign next x position
-            pos_x[node_id] = pos_counter[0]
-            pos_y[node_id] = -depth
-            pos_counter[0] += 1
-        else:
-            # internal node - do children first, then center parent between them
-            place_node(left_child, depth + 1)
-            place_node(right_child, depth + 1)
-            pos_x[node_id] = (pos_x[left_child] + pos_x[right_child]) / 2
-            pos_y[node_id] = -depth
+    # ── edges ────────────────────────────────────────────────────────────────
+    ex, ey = [], []
+    for nd in range(n_nodes):
+        for ch in [ch_left[nd], ch_right[nd]]:
+            if ch != -1:
+                ex += [pos_x[nd], pos_x[ch], None]
+                ey += [pos_y[nd], pos_y[ch], None]
 
-        if left_child == -1:
-            best_class = np.argmax(sk_tree.value[node_id][0])
-            labels[node_id] = f"class: {species[best_class]}<br>samples: {sk_tree.n_node_samples[node_id]}"
-        else:
-            feat = feat_names[sk_tree.feature[node_id]]
-            thresh = round(sk_tree.threshold[node_id], 2)
-            labels[node_id] = f"{feat} <= {thresh}<br>samples: {sk_tree.n_node_samples[node_id]}"
-
-    place_node(0, 0)
-
-    # build edge lines - None separates each line segment so plotly doesnt join them
-    for node_id in range(sk_tree.node_count):
-        lc = sk_tree.children_left[node_id]
-        rc = sk_tree.children_right[node_id]
-        if lc != -1:
-            line_x += [pos_x[node_id], pos_x[lc], None]
-            line_y += [pos_y[node_id], pos_y[lc], None]
-            line_x += [pos_x[node_id], pos_x[rc], None]
-            line_y += [pos_y[node_id], pos_y[rc], None]
-
-    leaves   = [i for i in range(sk_tree.node_count) if sk_tree.children_left[i] == -1]
-    internal = [i for i in range(sk_tree.node_count) if sk_tree.children_left[i] != -1]
-
-    fig = go.Figure()
-
-    # edges first so they go behind the nodes
-    fig.add_trace(go.Scatter(
-        x=line_x, y=line_y,
-        mode="lines",
-        line=dict(color="#aaa", width=1.5),
+    trace_edges = go.Scatter(
+        x=ex, y=ey, mode="lines",
+        line=dict(color="#3a4060", width=1.5),
         hoverinfo="none",
-        showlegend=False
-    ))
-
-    # decision nodes - blue squares
-    fig.add_trace(go.Scatter(
-        x=[pos_x[i] for i in internal],
-        y=[pos_y[i] for i in internal],
-        mode="markers+text",
-        marker=dict(size=18, color="#4C72B0", symbol="square"),
-        text=[labels[i] for i in internal],
-        textposition="top center",
-        hovertext=[labels[i] for i in internal],
-        hoverinfo="text",
-        name="Decision Node",
-        textfont=dict(size=8)
-    ))
-
-    # leaf nodes - green circles
-    # size 18 matches the decision nodes, looked weird when they were different
-    fig.add_trace(go.Scatter(
-        x=[pos_x[i] for i in leaves],
-        y=[pos_y[i] for i in leaves],
-        mode="markers+text",
-        marker=dict(size=18, color="#55A868", symbol="circle"),
-        text=[labels[i] for i in leaves],
-        textposition="top center",
-        hovertext=[labels[i] for i in leaves],
-        hoverinfo="text",
-        name="Leaf Node",
-        textfont=dict(size=8)
-    ))
-
-    fig.update_layout(
-        title=f"Decision Tree — Leaves: {tree_info['n_leaves']} | Test Acc: {tree_info['test_acc']:.2%} | Train Acc: {tree_info['train_acc']:.2%}",
-        xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-        yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-        plot_bgcolor="white",
-        paper_bgcolor="white",
-        height=600,
-        margin=dict(l=20, r=20, t=60, b=20),  # b=20 might need more if labels get cut off
-        legend=dict(orientation="h", y=-0.05)
     )
 
-    return fig.to_json()
+    # ── node markers (two separate traces for legend) ─────────────────────────
+    sx, sy, sh = [], [], []   # split nodes
+    lx, ly, lh = [], [], []   # leaf nodes
+
+    for nd in range(n_nodes):
+        majority = classes[int(np.argmax(vals[nd][0]))]
+        count    = int(vals[nd][0].sum())
+        if is_leaf[nd]:
+            lx.append(pos_x[nd]); ly.append(pos_y[nd])
+            lh.append(f"<b>Leaf → {majority}</b><br>Samples: {count}")
+        else:
+            fname = feat_names[feat[nd]] if feat[nd] < len(feat_names) else "?"
+            sx.append(pos_x[nd]); sy.append(pos_y[nd])
+            sh.append(f"<b>{fname} ≤ {thr[nd]:.2f}</b><br>Samples: {count}")
+
+    trace_splits = go.Scatter(
+        x=sx, y=sy, mode="markers", name="Decision node",
+        marker=dict(size=18, color=BLUE, symbol="square",
+                    line=dict(width=2, color="#7aaeff")),
+        customdata=sh,
+        hovertemplate="%{customdata}<extra></extra>",
+    )
+    trace_leaves = go.Scatter(
+        x=lx, y=ly, mode="markers", name="Leaf node",
+        marker=dict(size=18, color=GREEN, symbol="circle",
+                    line=dict(width=2, color="#7adba0")),
+        customdata=lh,
+        hovertemplate="%{customdata}<extra></extra>",
+    )
+
+    # ── annotations: always-visible labels above each node ───────────────────
+    # Human-readable short names
+    SHORT = {
+        "bill_length_mm":    "bill len",
+        "bill_depth_mm":     "bill dep",
+        "flipper_length_mm": "flipper",
+        "body_mass_g":       "mass (g)",
+        "island_Biscoe":     "Biscoe?",
+        "island_Dream":      "Dream?",
+        "island_Torgersen":  "Torgersen?",
+        "sex_Male":          "Male?",
+        "sex_Female":        "Female?",
+    }
+
+    annotations = []
+    for nd in range(n_nodes):
+        majority = classes[int(np.argmax(vals[nd][0]))]
+        count    = int(vals[nd][0].sum())
+
+        if is_leaf[nd]:
+            label = f"<b>{majority}</b><br><span style='font-size:8px'>{count} samples</span>"
+            bg    = "rgba(30,60,40,0.88)"
+            bc    = GREEN
+        else:
+            fname = feat_names[feat[nd]] if feat[nd] < len(feat_names) else "?"
+            short = SHORT.get(fname, fname.replace("_", " "))
+            label = f"<b>{short}</b><br><span style='font-size:8px'>≤ {thr[nd]:.2f}</span>"
+            bg    = "rgba(20,35,80,0.88)"
+            bc    = BLUE
+
+        annotations.append(dict(
+            x=pos_x[nd], y=pos_y[nd],
+            text=label,
+            showarrow=False,
+            font=dict(size=9, color="white", family="Inter, monospace"),
+            bgcolor=bg,
+            bordercolor=bc,
+            borderwidth=1,
+            borderpad=3,
+            xanchor="center",
+            yanchor="middle",
+        ))
+
+    layout = _base_layout(height=500, margin=dict(l=10, r=10, t=20, b=30))
+    layout.update(
+        showlegend=True,
+        legend=dict(
+            orientation="h", x=0.5, xanchor="center", y=-0.04,
+            font=dict(color=TEXT, size=11), bgcolor="rgba(0,0,0,0)",
+        ),
+        xaxis=dict(visible=False),
+        yaxis=dict(visible=False),
+        annotations=annotations,
+    )
+
+    return go.Figure(data=[trace_edges, trace_splits, trace_leaves], layout=layout).to_json()
 
 
+# ── accuracy vs complexity tradeoff ──────────────────────────────────────────
 def build_tradeoff_plot(selected_tree):
-    # shows all trained trees plotted as accuracy vs number of leaves
-    # red star = currently selected model
-    # useful for seeing where the accuracy starts to plateau
+    _train_all_trees()
+    x     = [t["n_leaves"]        for t in _all_trees]
+    ytest = [t["test_acc"]  * 100 for t in _all_trees]
+    ytrain= [t["train_acc"] * 100 for t in _all_trees]
 
-    leaf_counts = [t["n_leaves"] for t in all_trees]
-    test_accs = [t["test_acc"] * 100 for t in all_trees]
-    train_accs = [t["train_acc"] * 100 for t in all_trees]
+    traces = [
+        go.Scatter(x=x, y=ytrain, mode="lines+markers", name="Train",
+                   line=dict(color=ORANGE, width=2, dash="dot"), marker=dict(size=4),
+                   hovertemplate="Leaves: %{x}<br>Train: %{y:.1f}%<extra></extra>"),
+        go.Scatter(x=x, y=ytest, mode="lines+markers", name="Test",
+                   line=dict(color=BLUE, width=2), marker=dict(size=4),
+                   hovertemplate="Leaves: %{x}<br>Test: %{y:.1f}%<extra></extra>"),
+        go.Scatter(
+            x=[selected_tree["n_leaves"]], y=[selected_tree["test_acc"] * 100],
+            mode="markers", name="Selected",
+            marker=dict(size=14, color=RED, symbol="star"),
+            hovertemplate=(
+                f"<b>Selected</b><br>Leaves: {selected_tree['n_leaves']}"
+                f"<br>Test: {selected_tree['test_acc']*100:.1f}%<extra></extra>"
+            ),
+        ),
+    ]
 
-    fig = go.Figure()
-
-    fig.add_trace(go.Scatter(
-        x=leaf_counts, y=train_accs,
-        mode="lines+markers",
-        name="Train Accuracy",
-        line=dict(color="#4C72B0", width=2),
-        marker=dict(size=6),
-        hovertemplate="Leaves: %{x}<br>Train Acc: %{y:.2f}%<extra></extra>"
-    ))
-
-    fig.add_trace(go.Scatter(
-        x=leaf_counts, y=test_accs,
-        mode="lines+markers",
-        name="Test Accuracy",
-        line=dict(color="#55A868", width=2),
-        marker=dict(size=6),
-        hovertemplate="Leaves: %{x}<br>Test Acc: %{y:.2f}%<extra></extra>"
-    ))
-
-    fig.add_trace(go.Scatter(
-        x=[selected_tree["n_leaves"]],
-        y=[selected_tree["test_acc"] * 100],
-        mode="markers",
-        name="Selected Model",
-        marker=dict(size=14, color="#C44E52", symbol="star"),
-        hovertemplate=f"Selected — Leaves: {selected_tree['n_leaves']}<br>Test Acc: {selected_tree['test_acc']:.2%}<extra></extra>"
-    ))
-
-    fig.update_layout(
-        title="Accuracy vs Complexity Tradeoff",
-        xaxis_title="Number of Leaves (Complexity)",
-        yaxis_title="Accuracy (%)",
-        plot_bgcolor="white",
-        paper_bgcolor="white",
-        height=300,
-        margin=dict(l=20, r=20, t=50, b=40),
-        legend=dict(orientation="h", y=-0.25),
-        yaxis=dict(range=[50, 102])
+    layout = _base_layout(height=300)
+    layout.update(
+        xaxis=dict(title="Leaves (complexity)", color=TEXT,
+                   gridcolor=GRID, linecolor=AXIS, tickcolor=TEXT),
+        yaxis=dict(title="Accuracy (%)", range=[60, 102], color=TEXT,
+                   gridcolor=GRID, linecolor=AXIS, tickcolor=TEXT),
+        legend=dict(orientation="h", y=-0.35, font=dict(color=TEXT),
+                    bgcolor="rgba(0,0,0,0)"),
     )
+    return go.Figure(data=traces, layout=layout).to_json()
 
-    return fig.to_json()
 
-
+# ── confusion matrix ──────────────────────────────────────────────────────────
 def build_confusion_plot(tree_info):
-    # confusion matrix heatmap
-    # copied the hover text logic from build_gap_plot and adapted it
-    # rows = actual, columns = predicted, diagonal = correct
+    _, X_test, _, y_test = _get_data()
+    y_pred = tree_info["model"].predict(X_test)
+    cm     = confusion_matrix(y_test, y_pred, labels=SPECIES)
+    text   = [[str(cm[i][j]) for j in range(3)] for i in range(3)]
 
-    model = tree_info["model"]
-    preds = model.predict(test_X)
-    species = list(model.classes_)
-
-    cm = confusion_matrix(test_y, preds, labels=species)
-
-    hover_text = []
-    for i in range(len(species)):
-        row = []
-        for j in range(len(species)):
-            total = cm[i].sum()
-            pct = cm[i][j] / total * 100 if total > 0 else 0
-            row.append(f"Actual: {species[i]}<br>Predicted: {species[j]}<br>Count: {cm[i][j]}<br>({pct:.1f}%)")
-        hover_text.append(row)
-
-    fig = go.Figure(go.Heatmap(
-        z=cm,
-        x=species,
-        y=species,
-        colorscale="Blues",
-        text=cm,
-        texttemplate="%{text}",
-        hovertext=hover_text,
-        hoverinfo="text",
-        showscale=True
-    ))
-
-    fig.update_layout(
-        title="Confusion Matrix (Test Set)",
-        xaxis_title="Predicted Species",
-        yaxis_title="Actual Species",
-        plot_bgcolor="white",
-        paper_bgcolor="white",
-        height=300,
-        margin=dict(l=20, r=20, t=50, b=40)
+    heatmap = go.Heatmap(
+        z=cm.tolist(), x=SPECIES, y=SPECIES,
+        colorscale=[[0, PLOT_BG], [1, BLUE]],
+        text=text, texttemplate="<b>%{text}</b>",
+        textfont=dict(size=18, color="white"),
+        hovertemplate="Actual: %{y}<br>Predicted: %{x}<br>Count: %{z}<extra></extra>",
+        showscale=False,
     )
 
-    return fig.to_json()
+    layout = _base_layout(height=300, margin=dict(l=80, r=20, t=20, b=70))
+    layout.update(
+        xaxis=dict(title="Predicted", color=TEXT, tickfont=dict(color=TEXT), side="bottom"),
+        yaxis=dict(title="Actual",    color=TEXT, tickfont=dict(color=TEXT), autorange="reversed"),
+    )
+    return go.Figure(data=[heatmap], layout=layout).to_json()
 
 
+# ── train vs test gap ─────────────────────────────────────────────────────────
 def build_gap_plot(tree_info):
-    # bar chart for train vs test accuracy
-    # 5% gap threshold for overfitting - not sure what the right number is but 5 felt ok
+    tr = round(tree_info["train_acc"] * 100, 2)
+    te = round(tree_info["test_acc"]  * 100, 2)
+    gap = round(tr - te, 2)
 
-    tr_acc = round(tree_info["train_acc"] * 100, 2)
-    te_acc = round(tree_info["test_acc"] * 100, 2)
-    gap = round(tr_acc - te_acc, 2)
+    traces = [
+        go.Bar(name="Train", x=[""], y=[tr], marker_color=ORANGE,
+               text=[f"{tr}%"], textposition="outside", textfont=dict(color=TEXT),
+               hovertemplate=f"Train: {tr}%<extra></extra>"),
+        go.Bar(name="Test",  x=[""], y=[te], marker_color=BLUE,
+               text=[f"{te}%"], textposition="outside", textfont=dict(color=TEXT),
+               hovertemplate=f"Test: {te}%<extra></extra>"),
+    ]
 
-    fig = go.Figure()
+    gc    = RED if gap > 5 else GREEN
+    glabel = f"Gap: {gap}%  {'⚠ overfitting' if gap > 5 else '✓ good fit'}"
 
-    fig.add_trace(go.Bar(
-        name="Train Accuracy",
-        x=["Accuracy"], y=[tr_acc],
-        marker_color="#4C72B0",
-        text=[f"{tr_acc}%"],
-        textposition="outside",
-        hovertemplate=f"Train: {tr_acc}%<extra></extra>"
-    ))
-
-    fig.add_trace(go.Bar(
-        name="Test Accuracy",
-        x=["Accuracy"], y=[te_acc],
-        marker_color="#55A868",
-        text=[f"{te_acc}%"],
-        textposition="outside",
-        hovertemplate=f"Test: {te_acc}%<extra></extra>"
-    ))
-
-    title_color = "#C44E52" if gap > 5 else "#27ae60"
-    title_text = f"Gap: {gap}% {'(possible overfitting)' if gap > 5 else '(looks fine)'}"
-
-    fig.update_layout(
-        title=f"Train vs Test Accuracy — {title_text}",
-        title_font_color=title_color,
-        yaxis_title="Accuracy (%)",
+    layout = _base_layout(height=300)
+    layout.update(
         barmode="group",
-        plot_bgcolor="white",
-        paper_bgcolor="white",
-        height=300,
-        margin=dict(l=20, r=20, t=50, b=40),
-        yaxis=dict(range=[0, 110]),
-        legend=dict(orientation="h", y=-0.25)
+        yaxis=dict(range=[0, 115], title="Accuracy (%)", color=TEXT,
+                   gridcolor=GRID, tickcolor=TEXT),
+        xaxis=dict(color=TEXT, tickcolor=TEXT),
+        legend=dict(orientation="h", y=-0.35, font=dict(color=TEXT),
+                    bgcolor="rgba(0,0,0,0)"),
+        annotations=[dict(
+            text=glabel, x=0.5, y=1.06,
+            xref="paper", yref="paper", showarrow=False,
+            font=dict(color=gc, size=13),
+        )],
     )
-
-    return fig.to_json()
+    return go.Figure(data=traces, layout=layout).to_json()

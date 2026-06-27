@@ -726,10 +726,15 @@
             var confusionPlot = JSON.parse(data.confusion_json);
             var gapPlot      = JSON.parse(data.gap_json);
 
-            Plotly.react("plotly-chart",    mainPlot.data,      mainPlot.layout,      config);
-            Plotly.react("tradeoff-chart",  tradeoffPlot.data,  tradeoffPlot.layout,  config);
-            Plotly.react("confusion-chart", confusionPlot.data, confusionPlot.layout, config);
-            Plotly.react("gap-chart",       gapPlot.data,       gapPlot.layout,       config);
+            // purge first so annotations/traces from the previous chart type are fully cleared
+            Plotly.purge("plotly-chart");
+            Plotly.purge("tradeoff-chart");
+            Plotly.purge("confusion-chart");
+            Plotly.purge("gap-chart");
+            Plotly.newPlot("plotly-chart",    mainPlot.data,      mainPlot.layout,      config);
+            Plotly.newPlot("tradeoff-chart",  tradeoffPlot.data,  tradeoffPlot.layout,  config);
+            Plotly.newPlot("confusion-chart", confusionPlot.data, confusionPlot.layout, config);
+            Plotly.newPlot("gap-chart",       gapPlot.data,       gapPlot.layout,       config);
         })
         .catch(function(err) {
             console.error("Fetch error:", err);
