@@ -6,7 +6,7 @@ from .data import LABEL_NAMES, load_ag_news
 from .classifier import predict_proba
 from .experts import sports_expert, tech_expert, sports_per_class, tech_per_class
 
-print("Running Active Learning simulation for expert competence discovery...")
+print("  [4/4] Running Active Learning simulation...")
 
 # ── Setup ─────────────────────────────────────────────────────────────────────
 np.random.seed(0)
@@ -33,13 +33,13 @@ eval_texts = [test_texts[i] for i in eval_idx]
 eval_labels = test_labels[eval_idx]
 
 # Precompute classifier probabilities on pool and eval sets
-print("  Computing classifier probabilities on pool and eval sets...")
+print("         Computing classifier probabilities...")
 pool_probas = predict_proba(pool_texts)   # (N_POOL, 4)
 eval_probas = predict_proba(eval_texts)   # (N_EVAL, 4)
 
 # Precompute ground-truth expert predictions on pool (simulate querying)
 # We choose the "best expert" per-instance for Task 4 queries
-print("  Precomputing expert predictions on pool...")
+print("         Precomputing expert predictions on pool...")
 pool_sports_preds = np.array(sports_expert.predict(pool_texts, pool_labels))
 pool_tech_preds = np.array(tech_expert.predict(pool_texts, pool_labels))
 
@@ -117,7 +117,7 @@ oracle_acc = _evaluate_deferral(
 results = {}  # strategy_name -> list of (n_queries, team_acc)
 
 for strategy_name, utility_fn in STRATEGIES.items():
-    print(f"  Simulating strategy: {strategy_name}...")
+    print(f"         Strategy: {strategy_name}...")
     np.random.seed(42)
 
     # Running estimates of expert per-class accuracy
@@ -159,8 +159,8 @@ for strategy_name, utility_fn in STRATEGIES.items():
 
     results[strategy_name] = curve
 
-print(f"  Oracle team accuracy (true competence): {oracle_acc:.2f}%")
-print("Active Learning simulation complete.")
+print(f"         Oracle team accuracy: {oracle_acc:.2f}%")
+print("─" * 52)
 
 
 def get_al_stats():
