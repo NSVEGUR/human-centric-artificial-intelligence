@@ -4,7 +4,7 @@
 {% block title %}Project 3 · Active Learning{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'project3/style.css' %}" />
+<link rel="stylesheet" href="{% static 'project3/style.css' %}?v=4" />
 {% endblock %}
 
 {% block extra_scripts %}
@@ -33,8 +33,38 @@
     </a>
 </div>
 
+<div class="project-layout">
+
+<!-- ── Sidebar ────────────────────────────────────────────────────────────── -->
+<nav class="project-sidebar" aria-label="Page sections">
+    <span class="sidebar-label">Tasks</span>
+    <a class="sidebar-link active" href="#sec-task1">
+        <svg class="sidebar-icon" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+        <span>Baseline Classifier</span>
+    </a>
+    <a class="sidebar-link" href="#sec-task2">
+        <svg class="sidebar-icon" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+        <span>Simulated Experts</span>
+    </a>
+    <a class="sidebar-link" href="#sec-task3">
+        <svg class="sidebar-icon" viewBox="0 0 24 24"><line x1="6" y1="3" x2="6" y2="15"></line><circle cx="18" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><path d="M18 9a9 9 0 0 1-9 9"></path></svg>
+        <span>Learning to Defer</span>
+    </a>
+    <a class="sidebar-link" href="#sec-task4">
+        <svg class="sidebar-icon" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+        <span>Active Learning</span>
+    </a>
+    <a class="sidebar-link task5-link" href="#sec-task5">
+        <svg class="sidebar-icon" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+        <span>Try It Yourself</span>
+    </a>
+</nav>
+
+<!-- ── Main content ───────────────────────────────────────────────────────── -->
+<div>
+
 <!-- ── Task 1 ─────────────────────────────────────────────────────────────── -->
-<section class="card" style="margin-bottom: var(--space-6);">
+<section id="sec-task1" class="card" style="margin-bottom: var(--space-6);">
     <div class="card-header" style="flex-direction:row; align-items:center; gap: var(--space-3);">
         <span class="badge badge-uppercase">Task 1</span>
         <p class="card-title">Baseline Classifier — TF-IDF + Logistic Regression</p>
@@ -64,7 +94,7 @@
 </section>
 
 <!-- ── Task 2 ─────────────────────────────────────────────────────────────── -->
-<section class="card" style="margin-bottom: var(--space-6);">
+<section id="sec-task2" class="card" style="margin-bottom: var(--space-6);">
     <div class="card-header" style="flex-direction:row; align-items:center; gap: var(--space-3);">
         <span class="badge badge-uppercase">Task 2</span>
         <p class="card-title">Simulated Experts</p>
@@ -110,12 +140,28 @@
 </section>
 
 <!-- ── Task 3 ─────────────────────────────────────────────────────────────── -->
-<section class="card" style="margin-bottom: var(--space-6);">
+<section id="sec-task3" class="card" style="margin-bottom: var(--space-6);">
     <div class="card-header" style="flex-direction:row; align-items:center; gap: var(--space-3);">
         <span class="badge badge-uppercase">Task 3</span>
-        <p class="card-title">Learning-to-Defer</p>
+        <div>
+            <p class="card-title">Learning to Defer</p>
+            <p class="muted" style="font-size: var(--text-sm); margin-top: 2px;">When should the AI ask for help?</p>
+        </div>
     </div>
     <div class="card-content">
+
+        <!-- Headline result -->
+        <div class="alert alert-info" style="margin-bottom: var(--space-5); border-left: 3px solid hsl(var(--primary));">
+            <p style="font-size: var(--text-md);">
+                Working together, the human-AI team achieves
+                <strong style="color: hsl(var(--primary)); font-size: var(--text-lg);">{{ deferral_stats.optimal.team_acc }}%</strong>
+                accuracy — better than the AI alone
+                (<strong>{{ deferral_stats.baselines.ai_only }}%</strong>).
+                The system deferred <strong>{{ deferral_stats.optimal.deferral_rate }}%</strong>
+                of decisions to the most appropriate human expert.
+            </p>
+        </div>
+
         <p class="muted" style="margin-bottom: var(--space-4);">
             The system learns when to predict itself and when to defer to the best available expert.
             The deferral rule follows the <strong>Bayes-optimal decision</strong>: defer if the
@@ -157,10 +203,13 @@
 </section>
 
 <!-- ── Task 4 ─────────────────────────────────────────────────────────────── -->
-<section class="card" style="margin-bottom: var(--space-6);">
+<section id="sec-task4" class="card" style="margin-bottom: var(--space-6);">
     <div class="card-header" style="flex-direction:row; align-items:center; gap: var(--space-3);">
         <span class="badge badge-uppercase">Task 4</span>
-        <p class="card-title">Active Learning for Expert Competence Discovery</p>
+        <div>
+            <p class="card-title">Active Learning for Expert Competence Discovery</p>
+            <p class="muted" style="font-size: var(--text-sm); margin-top: 2px;">Learning who to ask — and when</p>
+        </div>
     </div>
     <div class="card-content">
         <p class="muted" style="margin-bottom: var(--space-2);">
@@ -220,11 +269,14 @@
 </section>
 
 <!-- ── Task 5 ─────────────────────────────────────────────────────────────── -->
-<section class="card" style="margin-bottom: var(--space-6);">
+<section id="sec-task5" class="card task5-card" style="margin-bottom: var(--space-6);">
     <div class="card-header" style="flex-direction:row; align-items:center; gap: var(--space-3);">
         <span class="badge badge-uppercase">Task 5</span>
         <span class="badge badge-secondary">Optional</span>
-        <p class="card-title">Active Learning with Human Expert</p>
+        <div>
+            <p class="card-title">Active Learning with Human Expert</p>
+            <p class="muted" style="font-size: var(--text-sm); margin-top: 2px;">Try it yourself — you are the expert</p>
+        </div>
     </div>
     <div class="card-content">
         <p class="muted" style="margin-bottom: var(--space-4);">
@@ -237,6 +289,9 @@
         </a>
     </div>
 </section>
+
+</div><!-- end project-main -->
+</div><!-- end project-layout -->
 
 {% endblock %}
 
@@ -253,5 +308,29 @@
     Plotly.newPlot('accuracy-coverage-plot',  accurageCoverageJson.data, accurageCoverageJson.layout);
     Plotly.newPlot('deferral-summary-plot',   deferralSummaryJson.data,  deferralSummaryJson.layout);
     Plotly.newPlot('al-learning-curves-plot', alCurvesJson.data,         alCurvesJson.layout);
+
+    // Scroll-spy: highlight sidebar link matching the visible section
+    (function () {
+        const links = document.querySelectorAll('.project-sidebar .sidebar-link[href^="#"]');
+        const sections = [];
+        links.forEach(function(link) {
+            const id = link.getAttribute('href').slice(1);
+            const el = document.getElementById(id);
+            if (el) sections.push({ el: el, link: link });
+        });
+        if (!sections.length) return;
+
+        const obs = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting) {
+                    links.forEach(function(l) { l.classList.remove('active'); });
+                    const match = sections.find(function(s) { return s.el === entry.target; });
+                    if (match) match.link.classList.add('active');
+                }
+            });
+        }, { rootMargin: '-10% 0px -80% 0px', threshold: 0 });
+
+        sections.forEach(function(s) { obs.observe(s.el); });
+    })();
 </script>
 {% endblock %}

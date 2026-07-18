@@ -4,12 +4,14 @@
 {% block title %}Project 2 · Explainability{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'project2/style.css' %}" />
+<link rel="stylesheet" href="{% static 'project2/style.css' %}?v=4" />
 {% endblock %}
 
 {% block extra_scripts %}
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 <script src="{% static 'plotly-theme.js' %}"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
 {% endblock %}
 
 {% block content %}
@@ -28,133 +30,78 @@
     </p>
 </div>
 
-<div class="main-container">
+<div class="project-layout p2-layout">
 
-    <!-- LEFT PANEL -->
-    <aside class="controls-panel">
+    <!-- ── SIDEBAR ── -->
+    <nav class="project-sidebar" aria-label="Project 2 controls" style="gap: 0;">
 
-        <!-- STEP 1: MODEL TYPE -->
-        <section class="card">
-            <div class="card-header">
-                <span class="badge badge-uppercase">Step 1</span>
-                <p class="card-title">Choose a Model</p>
-            </div>
-            <div class="card-content stack-sm">
-                <div class="card card-selectable active" id="card-tree" onclick="selectModel('tree')">
-                    <div class="card-content-tight">
-                        <div class="row" style="gap: var(--space-2); margin-bottom: var(--space-2);">
-                            <input type="radio" name="model_type" value="tree" id="radio-tree" checked>
-                            <span class="model-name">Decision Tree</span>
-                        </div>
-                        <p class="model-desc muted">
-                            Works like a flowchart of yes/no questions.
-                            Easy to understand — just follow the branches.
-                            Great for seeing exactly how a decision is made.
-                        </p>
-                    </div>
-                </div>
+        <!-- Model selection -->
+        <span class="sidebar-label">Model</span>
 
-                <div class="card card-selectable" id="card-lr" onclick="selectModel('lr')">
-                    <div class="card-content-tight">
-                        <div class="row" style="gap: var(--space-2); margin-bottom: var(--space-2);">
-                            <input type="radio" name="model_type" value="lr" id="radio-lr">
-                            <span class="model-name">Logistic Regression</span>
-                        </div>
-                        <p class="model-desc muted">
-                            Weighs each feature and adds them up to make a decision.
-                            The bar chart shows which features matter most
-                            and whether they push towards or away from each species.
-                        </p>
-                    </div>
-                </div>
+        <label class="model-radio-card active" id="card-tree" onclick="selectModel('tree')">
+            <input type="radio" name="model_type" value="tree" id="radio-tree" checked>
+            <div class="model-radio-header">
+                <span class="model-radio-dot"></span>
+                <span class="model-radio-title">Decision Tree</span>
             </div>
-        </section>
+            <span class="model-radio-sub">Flowchart of yes/no questions</span>
+        </label>
 
-        <!-- STEP 2: LAMBDA SLIDER -->
-        <section class="card">
-            <div class="card-header">
-                <span class="badge badge-uppercase">Step 2</span>
-                <p class="card-title">Adjust Complexity (λ)</p>
-                <p class="card-description">
-                    Move the slider or type a value to balance
-                    <strong>accuracy</strong> vs <strong>simplicity</strong>.
-                </p>
+        <label class="model-radio-card" id="card-lr" onclick="selectModel('lr')">
+            <input type="radio" name="model_type" value="lr" id="radio-lr">
+            <div class="model-radio-header">
+                <span class="model-radio-dot"></span>
+                <span class="model-radio-title">Logistic Regression</span>
             </div>
-            <div class="card-content stack">
-                <div class="lambda-top-row">
-                    <div class="lambda-hint-block">
-                        <span class="lambda-hint">Accurate</span>
-                        <span class="lambda-hint-desc muted">low λ</span>
-                    </div>
-                    <input
-                        type="number"
-                        id="lambda-input"
-                        min="0"
-                        max="1"
-                        step="0.01"
-                        value="0.00"
-                        class="input lambda-number-input"
-                    >
-                    <div class="lambda-hint-block">
-                        <span class="lambda-hint">Simple</span>
-                        <span class="lambda-hint-desc muted">high λ</span>
-                    </div>
-                </div>
-                <input
-                    type="range"
-                    id="lambda-slider"
-                    min="0"
-                    max="1"
-                    step="0.01"
-                    value="0"
-                    class="slider"
-                >
-            </div>
-        </section>
+            <span class="model-radio-sub">Weighs each feature</span>
+        </label>
 
-        <!-- STEP 3: MODEL STATS -->
-        <section class="card">
-            <div class="card-header">
-                <span class="badge badge-uppercase">Step 3</span>
-                <p class="card-title">Current Model Performance</p>
-                <p class="card-description">These numbers describe the currently selected model.</p>
-            </div>
-            <div class="card-content stats-list">
-                <div class="stat-row">
-                    <div>
-                        <span class="stat-label">Test Accuracy</span>
-                        <span class="stat-hint muted">How often it predicts correctly on unseen data</span>
-                    </div>
-                    <span class="stat-value" id="stat-accuracy">{{ initial_accuracy }}%</span>
-                </div>
-                <div class="stat-row">
-                    <div>
-                        <span class="stat-label">Complexity (Ω)</span>
-                        <span class="stat-hint muted" id="stat-omega-hint">Number of leaf nodes in the tree</span>
-                    </div>
-                    <span class="stat-value" id="stat-complexity">{{ initial_complexity }}</span>
-                </div>
-            </div>
-        </section>
+        <!-- Lambda slider -->
+        <div class="sidebar-divider" style="margin-top: var(--space-3);"></div>
+        <span class="sidebar-label">Complexity (λ)</span>
 
-        <!-- LR ONLY CONTROLS -->
-        <section class="card" id="lr-controls" style="display:none;">
-            <div class="card-header">
-                <span class="badge badge-uppercase">Step 4</span>
-                <p class="card-title">Chart Options</p>
-                <p class="card-description">Customize how the logistic regression chart looks.</p>
+        <div class="sidebar-lambda">
+            <div class="lambda-compact-row">
+                <span>Accurate</span>
+                <input type="number" id="lambda-input" min="0" max="1" step="0.01" value="0.00"
+                       class="input lambda-compact-input">
+                <span>Simple</span>
             </div>
-            <div class="card-content stack">
+            <input type="range" id="lambda-slider" min="0" max="1" step="0.01" value="0" class="slider">
+            <p id="lambda-feedback" style="font-size: var(--text-xs); color: hsl(var(--muted-foreground)); margin: 0; line-height: 1.4;">
+                Optimising for accuracy. The model may overfit and be hard to explain.
+            </p>
+        </div>
+
+        <!-- Performance stats -->
+        <div class="sidebar-divider"></div>
+        <span class="sidebar-label">Performance</span>
+
+        <div class="sidebar-stats">
+            <div class="sidebar-stat-row">
+                <span class="sidebar-stat-label">Test Accuracy</span>
+                <span class="sidebar-stat-value" id="stat-accuracy">{{ initial_accuracy }}%</span>
+            </div>
+            <div class="sidebar-stat-row">
+                <span class="sidebar-stat-label" id="stat-omega-label">Complexity (Ω)</span>
+                <span class="sidebar-stat-value" id="stat-complexity">{{ initial_complexity }}</span>
+            </div>
+        </div>
+
+        <!-- LR-only chart options (hidden by default) -->
+        <div id="lr-controls" style="display:none;">
+            <div class="sidebar-divider"></div>
+            <span class="sidebar-label">Chart Options</span>
+            <div style="padding: var(--space-1) var(--space-3) var(--space-3); display: flex; flex-direction: column; gap: var(--space-3);">
                 <div>
-                    <label class="label-muted">Sort bars by</label>
-                    <select id="sort-by" class="select">
+                    <label class="label-muted" style="font-size: var(--text-xs); display: block; margin-bottom: 4px;">Sort bars by</label>
+                    <select id="sort-by" class="select" style="font-size: var(--text-xs);">
                         <option value="magnitude">Most important first</option>
                         <option value="alphabetical">A to Z (feature name)</option>
                     </select>
                 </div>
-
                 <div>
-                    <label class="label-muted">Filter by species</label>
+                    <label class="label-muted" style="font-size: var(--text-xs); display: block; margin-bottom: 4px;">Filter by species</label>
                     <div class="pill-group">
                         <button class="btn btn-sm btn-outline class-btn active" data-class="">All</button>
                         <button class="btn btn-sm btn-outline class-btn" data-class="Adelie">Adelie</button>
@@ -163,10 +110,9 @@
                     </div>
                     <input type="hidden" id="class-filter" value="">
                 </div>
-
                 <div>
-                    <label class="label-muted">Filter by feature</label>
-                    <select id="feature-filter" class="select">
+                    <label class="label-muted" style="font-size: var(--text-xs); display: block; margin-bottom: 4px;">Filter by feature</label>
+                    <select id="feature-filter" class="select" style="font-size: var(--text-xs);">
                         <option value="">All Features</option>
                         <option value="bill_length_mm">Bill Length</option>
                         <option value="bill_depth_mm">Bill Depth</option>
@@ -177,38 +123,55 @@
                     </select>
                 </div>
             </div>
-        </section>
+        </div>
 
-    </aside>
+        <!-- View navigation -->
+        <div class="sidebar-divider"></div>
+        <span class="sidebar-label">Views</span>
 
-    <!-- RIGHT PANEL -->
-    <main class="chart-panel">
+        <button class="sidebar-link active" data-tab="explorer">
+            <svg class="sidebar-icon" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line><line x1="2" y1="20" x2="22" y2="20"></line></svg>
+            <span>Model Explorer</span>
+        </button>
+        <button class="sidebar-link" data-tab="whatif">
+            <svg class="sidebar-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            <span>What if?</span>
+        </button>
+        <button class="sidebar-link" data-tab="whatmatters">
+            <svg class="sidebar-icon" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+            <span>What matters?</span>
+        </button>
 
-        <!-- formula card -->
-        <section class="card">
-            <div class="card-header">
-                <span class="badge badge-outline badge-uppercase">Optimization Objective</span>
-            </div>
+    </nav>
+
+    <!-- ── MAIN CONTENT ── -->
+    <div>
+
+        <p class="tab-subtitle" id="tab-subtitle-text" style="margin-bottom: var(--space-4);">Explore how the model makes decisions and how accuracy and complexity trade off.</p>
+
+        <!-- ── Tab 1: Model Explorer ── -->
+        <div class="tab-panel active" id="tab-explorer">
+
+        <!-- formula card (collapsible) -->
+        <details class="card" style="margin-bottom: var(--space-4);">
+            <summary style="padding: var(--space-3) var(--space-4); cursor: pointer; font-size: var(--text-sm); font-weight: 500; display: flex; align-items: center; gap: var(--space-2);">
+                <span class="badge badge-outline badge-uppercase">Technical details</span>
+                <span class="muted" style="font-size: var(--text-xs);">How the optimisation formula works ▼</span>
+            </summary>
             <div class="card-content stack">
                 <div>
-                    <p class="label-muted">From the lecture</p>
-                    <p class="code-block">
-                        arg min &nbsp; <sup>1</sup>&frasl;<sub>n</sub> &nbsp;
-                        &sum;<sub>i=1</sub><sup>n</sup> &nbsp;
-                        ℓ(f(x<sub>i</sub>), y<sub>i</sub>) + λΩ(f)
-                    </p>
+                    <p class="label-muted" style="margin-bottom: var(--space-2);">From the lecture</p>
+                    <div id="formula-lecture" style="padding: var(--space-3) var(--space-4); background: hsl(var(--secondary)); border: 1px solid hsl(var(--border)); border-radius: var(--radius); overflow-x: auto;"></div>
                 </div>
 
                 <div>
-                    <p class="label-muted">How we use it in this tool</p>
-                    <p class="code-block">
-                        min (1 − acc<sub>test</sub>) + λ · Ω(f)
-                    </p>
+                    <p class="label-muted" style="margin-bottom: var(--space-2);">How we use it in this tool</p>
+                    <div id="formula-tool" style="padding: var(--space-3) var(--space-4); background: hsl(var(--secondary)); border: 1px solid hsl(var(--border)); border-radius: var(--radius); overflow-x: auto;"></div>
                 </div>
 
                 <div class="formula-terms">
                     <div class="formula-term-row">
-                        <span class="formula-term">(1 − acc<sub>test</sub>)</span>
+                        <span class="formula-term" id="term-error"></span>
                         <span class="formula-term-desc muted">
                             Replaces the average 0-1 loss — it equals 0 when the model
                             is perfect and 1 when it gets everything wrong.
@@ -216,14 +179,14 @@
                         </span>
                     </div>
                     <div class="formula-term-row">
-                        <span class="formula-term">λ</span>
+                        <span class="formula-term" id="term-lambda"></span>
                         <span class="formula-term-desc muted">
                             The regularization parameter you control with the slider.
                             Higher λ means we care more about keeping the model simple.
                         </span>
                     </div>
                     <div class="formula-term-row">
-                        <span class="formula-term">Ω(f)</span>
+                        <span class="formula-term" id="term-omega"></span>
                         <span class="formula-term-desc muted" id="omega-desc">
                             For Decision Trees: number of leaves (more leaves = more complex).
                             We normalize this to [0,1] so it stays on the same scale as the error.
@@ -231,7 +194,7 @@
                     </div>
                 </div>
             </div>
-        </section>
+        </details>
 
         <!-- chart header -->
         <section class="card">
@@ -249,7 +212,7 @@
         </section>
 
         <!-- how to read the chart -->
-        <div class="alert alert-info">
+        <div class="alert alert-info" style="margin-top:var(--space-3); margin-bottom:var(--space-4);">
             <p id="chart-desc-text">
                 Each <strong>square node</strong> asks a yes/no question about the penguin.
                 Follow the branches left or right until you reach a
@@ -311,12 +274,10 @@
             </div>
         </section>
 
-        <!-- ========================================
-             TASK 4: COUNTERFACTUAL EXPLANATIONS
-             ======================================== -->
-        <div class="separator">
-            <span class="separator-text">Task 4 · Counterfactual Explanations</span>
-        </div>
+        </div><!-- close tab-explorer -->
+
+        <!-- ── Tab 2: What if? (Counterfactuals) ── -->
+        <div class="tab-panel" id="tab-whatif">
 
         <section class="card cf-section">
             <div class="card-header">
@@ -366,33 +327,28 @@
                     </button>
                 </div>
 
-                <!-- Original sample info -->
                 <div id="cf-original-info" class="alert alert-info" style="display:none; margin-top: var(--space-5);">
                     <p class="alert-title">Original Sample</p>
                     <div class="cf-original-grid" id="cf-original-grid"></div>
                 </div>
 
-                <!-- Loading indicator -->
                 <div id="cf-loading" class="loading-row" style="display:none;">
                     <div class="spinner"></div>
                     <span>Generating counterfactuals…</span>
                 </div>
 
-                <!-- Results -->
                 <div id="cf-results" style="display:none; margin-top: var(--space-6);">
                     <div class="row-between" style="margin-bottom: var(--space-4);">
                         <h4>Counterfactual Results</h4>
                         <span id="cf-results-summary" class="badge badge-success"></span>
                     </div>
 
-                    <!-- Main visualization -->
                     <section class="card" style="margin-bottom: var(--space-4);">
                         <div class="card-content">
                             <div id="cf-main-chart" style="width:100%; min-height:600px;"></div>
                         </div>
                     </section>
 
-                    <!-- Table visualization -->
                     <section class="card" style="margin-bottom: var(--space-4);">
                         <div class="card-header">
                             <p class="card-title">Feature Changes Heatmap</p>
@@ -406,11 +362,9 @@
                         </div>
                     </section>
 
-                    <!-- Detailed counterfactual cards -->
                     <div id="cf-cards-container" class="cf-cards-container"></div>
                 </div>
 
-                <!-- No results message -->
                 <div id="cf-no-results" class="alert alert-warning" style="display:none; margin-top: var(--space-4);">
                     <p class="alert-title">No counterfactuals found</p>
                     <p>This might happen if:</p>
@@ -423,41 +377,49 @@
             </div>
         </section>
 
-        <!-- ========================================
-             TASK 5: FEATURE EFFECT PLOTS
-             ======================================== -->
-        <div class="separator">
-            <span class="separator-text">Task 5 · Global Feature Effects (PDP & ALE)</span>
-        </div>
+        </div><!-- close tab-whatif -->
 
-        <section class="card fe-section">
-            <div class="card-header">
-                <p class="card-title">Understanding Feature Effects</p>
-                <p class="card-description">
-                    These plots show how each feature globally affects the model's predictions across all samples.
-                </p>
-            </div>
+        <!-- ── Tab 3: What matters? (Feature Effects) ── -->
+        <div class="tab-panel" id="tab-whatmatters">
+
+        <!-- Collapsible methodology reference — same pattern as Technical Details -->
+        <details class="card" style="margin-bottom: var(--space-4);">
+            <summary style="padding: var(--space-3) var(--space-4); cursor: pointer; font-size: var(--text-sm); font-weight: 500; display: flex; align-items: center; gap: var(--space-2);">
+                <span class="badge badge-outline badge-uppercase">Method reference</span>
+                <span class="muted" style="font-size: var(--text-xs);">How PDP &amp; ALE work ▼</span>
+            </summary>
             <div class="card-content">
                 <div class="fe-methods-grid">
                     <div class="card">
                         <div class="card-content">
                             <h4 style="margin-bottom: var(--space-2);">PDP (Partial Dependence Plot)</h4>
                             <p class="muted text-sm" style="margin-bottom: var(--space-3);">Shows the <strong>average effect</strong> of a feature on the prediction. For each feature value, we average the predictions over all samples.</p>
-                            <p class="code-block text-sm">PDP(x<sub>s</sub>) = <sup>1</sup>/<sub>n</sub> &sum;<sub>i</sub> f(x<sub>s</sub>, x<sub>c</sub><sup>(i)</sup>)</p>
+                            <div id="formula-pdp" class="code-block text-sm" style="padding:var(--space-2) var(--space-3); overflow-x:auto;"></div>
                         </div>
                     </div>
                     <div class="card">
                         <div class="card-content">
                             <h4 style="margin-bottom: var(--space-2);">ALE (Accumulated Local Effects)</h4>
                             <p class="muted text-sm" style="margin-bottom: var(--space-3);">More robust when features are correlated. Computes <strong>local effects</strong> by looking at how predictions change within small intervals.</p>
-                            <p class="code-block text-sm" id="fe-derivative-note">
-                                <strong>Derivatives:</strong> <span id="fe-derivative-type">Select a feature to see derivative method</span>
+                            <div id="formula-ale" class="code-block text-sm" style="padding:var(--space-2) var(--space-3); margin-bottom:var(--space-2); overflow-x:auto;"></div>
+                            <p class="muted" style="font-size:var(--text-xs); margin-top:var(--space-1);">
+                                <strong style="color:hsl(var(--foreground));">Method:</strong>
+                                <span id="fe-derivative-type">finite difference (discretization)</span>
                             </p>
                         </div>
                     </div>
                 </div>
+            </div>
+        </details>
 
-                <div class="fe-controls" style="margin-top: var(--space-5);">
+        <!-- Compute section — always visible -->
+        <section class="card fe-section">
+            <div class="card-header">
+                <p class="card-title">Compute Feature Effects</p>
+                <p class="card-description">Select a feature and click compute to see how it affects the model's predictions across all samples.</p>
+            </div>
+            <div class="card-content">
+                <div class="fe-controls">
                     <div class="cf-control-row">
                         <div class="cf-control-item">
                             <label class="label-muted">Select Numerical Feature</label>
@@ -486,13 +448,11 @@
                     </button>
                 </div>
 
-                <!-- Loading indicator -->
-                <div id="fe-loading" class="loading-row" style="display:none;">
+                <div id="fe-loading" class="loading-row" style="display:none; margin-top:var(--space-4);">
                     <div class="spinner"></div>
                     <span>Computing feature effects…</span>
                 </div>
 
-                <!-- Results -->
                 <div id="fe-results" style="display:none; margin-top: var(--space-5);">
                     <section class="card" style="margin-bottom: var(--space-4);">
                         <div class="card-header">
@@ -553,27 +513,27 @@
             </div>
         </section>
 
-    </main>
+        </div><!-- close tab-whatmatters -->
 
-</div>
+    </div><!-- end main content -->
+
+</div><!-- end project-layout -->
 
 {% endblock %}
 
 {% block script %}
 <script type="text/javascript">
 
-    // initial data from django - all passed as json strings
-    var initialPlotData     = JSON.parse("{{ initial_plot|escapejs }}");
-    var initialTradeoffData = JSON.parse("{{ initial_tradeoff|escapejs }}");
+    var initialPlotData      = JSON.parse("{{ initial_plot|escapejs }}");
+    var initialTradeoffData  = JSON.parse("{{ initial_tradeoff|escapejs }}");
     var initialConfusionData = JSON.parse("{{ initial_confusion|escapejs }}");
-    var initialGapData      = JSON.parse("{{ initial_gap|escapejs }}");
+    var initialGapData       = JSON.parse("{{ initial_gap|escapejs }}");
 
-    // grab ui elements
     var lambdaSlider          = document.getElementById("lambda-slider");
     var lambdaInput           = document.getElementById("lambda-input");
     var statAccuracy          = document.getElementById("stat-accuracy");
     var statComplexity        = document.getElementById("stat-complexity");
-    var statOmegaHint         = document.getElementById("stat-omega-hint");
+    var statOmegaLabel        = document.getElementById("stat-omega-label");
     var omegaDesc             = document.getElementById("omega-desc");
     var loadingBadge          = document.getElementById("loading-badge");
     var chartTitle            = document.getElementById("chart-title");
@@ -590,13 +550,35 @@
 
     var config = { responsive: true, displayModeBar: false, displaylogo: false };
 
-    // render all four charts on initial load
+    katex.render(
+        "\\operatorname{arg\\,min}_{f} \\; \\frac{1}{n} \\sum_{i=1}^{n} \\ell\\bigl(f(x_i),\\, y_i\\bigr) + \\lambda\\,\\Omega(f)",
+        document.getElementById("formula-lecture"),
+        { displayMode: true, throwOnError: false }
+    );
+    katex.render(
+        "\\min \\; (1 - \\mathrm{acc}_{\\mathrm{test}}) + \\lambda \\cdot \\Omega(f)",
+        document.getElementById("formula-tool"),
+        { displayMode: true, throwOnError: false }
+    );
+    katex.render("(1 - \\mathrm{acc}_{\\mathrm{test}})", document.getElementById("term-error"),   { throwOnError: false });
+    katex.render("\\lambda",                              document.getElementById("term-lambda"),  { throwOnError: false });
+    katex.render("\\Omega(f)",                            document.getElementById("term-omega"),   { throwOnError: false });
+    katex.render(
+        "\\text{PDP}(x_s) = \\dfrac{1}{n} \\sum_{i=1}^{n} f\\bigl(x_s,\\, x_c^{(i)}\\bigr)",
+        document.getElementById("formula-pdp"),
+        { displayMode: false, throwOnError: false }
+    );
+    katex.render(
+        "\\widehat{\\text{ALE}}(x_s) = \\sum_{k=1}^{K} \\frac{1}{n_k} \\sum_{i \\in N_k} \\!\\bigl[f(z_k,\\,x_c^{(i)}) - f(z_{k-1},\\,x_c^{(i)})\\bigr]",
+        document.getElementById("formula-ale"),
+        { displayMode: false, throwOnError: false }
+    );
+
     Plotly.newPlot("plotly-chart",   initialPlotData.data,      initialPlotData.layout,      config);
     Plotly.newPlot("tradeoff-chart", initialTradeoffData.data,  initialTradeoffData.layout,  config);
     Plotly.newPlot("confusion-chart",initialConfusionData.data, initialConfusionData.layout, config);
     Plotly.newPlot("gap-chart",      initialGapData.data,       initialGapData.layout,       config);
 
-    // called when user clicks a model card
     function selectModel(type) {
         if (type === "tree") {
             radioTree.checked = true;
@@ -606,7 +588,7 @@
             chartTitle.textContent = "Decision Tree";
             chartSubtitle.textContent = "Showing the best tree for the current lambda value";
             chartDescText.innerHTML = "Each <strong>square node</strong> asks a yes/no question about the penguin. Follow the branches left or right until you reach a <strong>circle (leaf)</strong> — that is the predicted species. Hover over any node for more details.";
-            statOmegaHint.textContent = "Number of leaf nodes in the tree";
+            if (statOmegaLabel) statOmegaLabel.textContent = "Complexity (Ω)";
             omegaDesc.textContent = "For Decision Trees: number of leaves (more leaves = more complex). We normalize this to [0,1] so it is on the same scale as the error.";
         } else {
             radioLr.checked = true;
@@ -616,15 +598,35 @@
             chartTitle.textContent = "Logistic Regression";
             chartSubtitle.textContent = "Bar height shows how strongly each feature influences the prediction";
             chartDescText.innerHTML = "Each <strong>bar</strong> shows how much a feature pushes the model towards predicting a species. <strong>Tall bars</strong> mean a very important feature. <strong>Positive</strong> values push towards this species. <strong>Negative</strong> values push away. Use the filters on the left to explore.";
-            statOmegaHint.textContent = "Sum of absolute values of all coefficients";
+            if (statOmegaLabel) statOmegaLabel.textContent = "Complexity (Ω)";
             omegaDesc.textContent = "For Logistic Regression: the L1 norm of the coefficients (sum of absolute values). Larger coefficients = more complex model. We normalize this to [0,1] so it is on the same scale as the error.";
+        }
+        var feDerivType = document.getElementById("fe-derivative-type");
+        if (feDerivType) {
+            feDerivType.textContent = type === "lr"
+                ? "exact (analytical)"
+                : "finite difference (discretization)";
         }
         fetchAndUpdate();
     }
 
-    // keep slider and number input in sync
+    function updateLambdaFeedback(val) {
+        var el = document.getElementById("lambda-feedback");
+        if (!el) return;
+        if (val <= 0.15) {
+            el.textContent = "Optimising for accuracy. The model may overfit and be harder to explain.";
+        } else if (val <= 0.4) {
+            el.textContent = "Balanced — reasonable accuracy with moderate complexity. A good starting point.";
+        } else if (val <= 0.7) {
+            el.textContent = "Leaning towards simplicity. Easier to understand, with some accuracy trade-off.";
+        } else {
+            el.textContent = "Optimising for simplicity. Very easy to understand but may sacrifice accuracy.";
+        }
+    }
+
     lambdaSlider.addEventListener("input", function() {
         lambdaInput.value = parseFloat(this.value).toFixed(2);
+        updateLambdaFeedback(parseFloat(this.value));
         debouncedFetch();
     });
 
@@ -634,6 +636,7 @@
         if (val < 0) val = 0;
         if (val > 1) val = 1;
         lambdaSlider.value = val;
+        updateLambdaFeedback(val);
         debouncedFetch();
     });
 
@@ -649,7 +652,6 @@
         }
     });
 
-    // class filter pill buttons
     var classBtns = document.querySelectorAll(".class-btn");
     classBtns.forEach(function(btn) {
         btn.addEventListener("click", function() {
@@ -664,8 +666,7 @@
         var timer;
         return function() {
             clearTimeout(timer);
-            var args = arguments;
-            var ctx = this;
+            var args = arguments, ctx = this;
             timer = setTimeout(function() { fn.apply(ctx, args); }, delay);
         };
     }
@@ -685,13 +686,12 @@
         return cookieValue;
     }
 
-    // main fetch - updates all four charts at once
     function fetchAndUpdate() {
         var modelType       = radioTree.checked ? "tree" : "lr";
         var lambdaVal       = parseFloat(lambdaSlider.value);
-        var sortBy          = sortByDropdown.value;
-        var selectedClass   = classFilterInput.value || null;
-        var selectedFeature = featureFilterDropdown.value || null;
+        var sortBy          = sortByDropdown ? sortByDropdown.value : "magnitude";
+        var selectedClass   = classFilterInput ? (classFilterInput.value || null) : null;
+        var selectedFeature = featureFilterDropdown ? (featureFilterDropdown.value || null) : null;
 
         loadingBadge.style.display = "inline-flex";
 
@@ -711,22 +711,16 @@
         })
         .then(function(response) { return response.json(); })
         .then(function(data) {
-            if (data.error) {
-                console.error("Server error:", data.error);
-                return;
-            }
+            if (data.error) { console.error("Server error:", data.error); return; }
 
-            // update stats
             statAccuracy.textContent   = data.accuracy + "%";
             statComplexity.textContent = data.complexity;
 
-            // update all four charts
-            var mainPlot     = JSON.parse(data.plotly_json);
-            var tradeoffPlot = JSON.parse(data.tradeoff_json);
+            var mainPlot      = JSON.parse(data.plotly_json);
+            var tradeoffPlot  = JSON.parse(data.tradeoff_json);
             var confusionPlot = JSON.parse(data.confusion_json);
-            var gapPlot      = JSON.parse(data.gap_json);
+            var gapPlot       = JSON.parse(data.gap_json);
 
-            // purge first so annotations/traces from the previous chart type are fully cleared
             Plotly.purge("plotly-chart");
             Plotly.purge("tradeoff-chart");
             Plotly.purge("confusion-chart");
@@ -736,45 +730,53 @@
             Plotly.newPlot("confusion-chart", confusionPlot.data, confusionPlot.layout, config);
             Plotly.newPlot("gap-chart",       gapPlot.data,       gapPlot.layout,       config);
         })
-        .catch(function(err) {
-            console.error("Fetch error:", err);
-        })
-        .finally(function() {
-            loadingBadge.style.display = "none";
-        });
+        .catch(function(err) { console.error("Fetch error:", err); })
+        .finally(function() { loadingBadge.style.display = "none"; });
     }
 
     var debouncedFetch = debounce(fetchAndUpdate, 300);
 
-    sortByDropdown.addEventListener("change", fetchAndUpdate);
-    featureFilterDropdown.addEventListener("change", fetchAndUpdate);
+    if (sortByDropdown) sortByDropdown.addEventListener("change", fetchAndUpdate);
+    if (featureFilterDropdown) featureFilterDropdown.addEventListener("change", fetchAndUpdate);
 
-    // mark decision tree as active on load
-    cardTree.classList.add("active");
+    // ── View tab switching (sidebar links) ────────────────────────────────
+    var TAB_SUBTITLES = {
+        explorer:    'Explore how the model makes decisions and how accuracy and complexity trade off.',
+        whatif:      'Ask: "What would need to change for the model to predict differently?" — Counterfactual explanations.',
+        whatmatters: 'Ask: "Which features drive predictions?" — Partial Dependence & Accumulated Local Effects.'
+    };
 
-    // ==========================================
-    // TASK 4: COUNTERFACTUAL EXPLANATIONS
-    // ==========================================
+    var sidebarTabBtns = document.querySelectorAll('.project-sidebar .sidebar-link[data-tab]');
+    var tabPanels      = document.querySelectorAll('.tab-panel');
+    var tabSubtitleEl  = document.getElementById('tab-subtitle-text');
 
-    var cfSampleSelect = document.getElementById("cf-sample-select");
-    var cfTargetClass = document.getElementById("cf-target-class");
-    var cfKSelect = document.getElementById("cf-k-select");
-    var cfGenerateBtn = document.getElementById("cf-generate-btn");
-    var cfOriginalInfo = document.getElementById("cf-original-info");
-    var cfOriginalGrid = document.getElementById("cf-original-grid");
-    var cfLoading = document.getElementById("cf-loading");
-    var cfResults = document.getElementById("cf-results");
-    var cfNoResults = document.getElementById("cf-no-results");
+    sidebarTabBtns.forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var target = this.dataset.tab;
+            sidebarTabBtns.forEach(function(b) { b.classList.remove('active'); });
+            tabPanels.forEach(function(p) { p.classList.remove('active'); });
+            this.classList.add('active');
+            document.getElementById('tab-' + target).classList.add('active');
+            if (tabSubtitleEl) tabSubtitleEl.textContent = TAB_SUBTITLES[target] || '';
+        });
+    });
+
+    // ── TASK 4: COUNTERFACTUAL EXPLANATIONS ──────────────────────────────
+    var cfSampleSelect   = document.getElementById("cf-sample-select");
+    var cfTargetClass    = document.getElementById("cf-target-class");
+    var cfKSelect        = document.getElementById("cf-k-select");
+    var cfGenerateBtn    = document.getElementById("cf-generate-btn");
+    var cfOriginalInfo   = document.getElementById("cf-original-info");
+    var cfOriginalGrid   = document.getElementById("cf-original-grid");
+    var cfLoading        = document.getElementById("cf-loading");
+    var cfResults        = document.getElementById("cf-results");
+    var cfNoResults      = document.getElementById("cf-no-results");
     var cfResultsSummary = document.getElementById("cf-results-summary");
     var cfCardsContainer = document.getElementById("cf-cards-container");
-    var speciesBtns = document.querySelectorAll(".species-btn");
+    var speciesBtns      = document.querySelectorAll(".species-btn");
 
-    // Default-select Adelie button on load
-    if (speciesBtns.length) {
-        speciesBtns[0].classList.add("active");
-    }
+    if (speciesBtns.length) speciesBtns[0].classList.add("active");
 
-    // Load test samples on page load
     function loadTestSamples() {
         fetch("/project2/get-samples/")
             .then(function(response) { return response.json(); })
@@ -796,7 +798,6 @@
 
     loadTestSamples();
 
-    // Species button handlers
     speciesBtns.forEach(function(btn) {
         btn.addEventListener("click", function() {
             speciesBtns.forEach(function(b) { b.classList.remove("active"); });
@@ -805,201 +806,117 @@
         });
     });
 
-    // Generate counterfactuals
     cfGenerateBtn.addEventListener("click", function() {
-        var sampleIdx = parseInt(cfSampleSelect.value);
+        var sampleIdx   = parseInt(cfSampleSelect.value);
         var targetClass = cfTargetClass.value;
-        var k = parseInt(cfKSelect.value);
-        var modelType = radioTree.checked ? "tree" : "lr";
-        var lambdaVal = parseFloat(lambdaSlider.value);
+        var k           = parseInt(cfKSelect.value);
+        var modelType   = radioTree.checked ? "tree" : "lr";
+        var lambdaVal   = parseFloat(lambdaSlider.value);
 
-        // Show loading
-        cfLoading.style.display = "flex";
-        cfResults.style.display = "none";
-        cfNoResults.style.display = "none";
+        cfLoading.style.display    = "flex";
+        cfResults.style.display    = "none";
+        cfNoResults.style.display  = "none";
         cfOriginalInfo.style.display = "none";
 
         fetch("/project2/counterfactuals/", {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-CSRFToken": getCookie("csrftoken"),
-            },
-            body: JSON.stringify({
-                sample_idx: sampleIdx,
-                target_class: targetClass,
-                model_type: modelType,
-                lambda_val: lambdaVal,
-                k: k,
-            }),
+            headers: { "Content-Type": "application/json", "X-CSRFToken": getCookie("csrftoken") },
+            body: JSON.stringify({ sample_idx: sampleIdx, target_class: targetClass, model_type: modelType, lambda_val: lambdaVal, k: k }),
         })
         .then(function(response) { return response.json(); })
         .then(function(data) {
             cfLoading.style.display = "none";
-
-            if (data.error) {
-                console.error("Server error:", data.error);
-                cfNoResults.style.display = "block";
-                return;
-            }
-
-            // Show original sample info
+            if (data.error) { cfNoResults.style.display = "block"; return; }
             displayOriginalSample(data.original);
-
             if (data.counterfactuals && data.counterfactuals.length > 0) {
-                // Show results
                 cfResults.style.display = "block";
                 cfResultsSummary.textContent = "Found " + data.found_count + ", showing top " + data.counterfactuals.length;
-
-                // Render main visualization
-                var mainViz = JSON.parse(data.visualization);
-                Plotly.newPlot("cf-main-chart", mainViz.data, mainViz.layout, config);
-
-                // Render table visualization
-                var tableViz = JSON.parse(data.table_visualization);
-                Plotly.newPlot("cf-table-chart", tableViz.data, tableViz.layout, config);
-
-                // Render counterfactual cards
+                Plotly.newPlot("cf-main-chart",  JSON.parse(data.visualization).data,       JSON.parse(data.visualization).layout,       config);
+                Plotly.newPlot("cf-table-chart", JSON.parse(data.table_visualization).data, JSON.parse(data.table_visualization).layout, config);
                 displayCounterfactualCards(data.counterfactuals, data.original, targetClass);
             } else {
                 cfNoResults.style.display = "block";
             }
         })
-        .catch(function(err) {
-            console.error("Fetch error:", err);
-            cfLoading.style.display = "none";
-            cfNoResults.style.display = "block";
-        });
+        .catch(function() { cfLoading.style.display = "none"; cfNoResults.style.display = "block"; });
     });
 
     function displayOriginalSample(original) {
         cfOriginalInfo.style.display = "flex";
-
         var html = '<div class="cf-original-item"><span class="cf-label">Sample:</span><span class="cf-value">#' + original.index + '</span></div>';
         html += '<div class="cf-original-item"><span class="cf-label">Actual:</span><span class="cf-value cf-species-' + original.actual_species.toLowerCase() + '">' + original.actual_species + '</span></div>';
         html += '<div class="cf-original-item"><span class="cf-label">Predicted:</span><span class="cf-value">' + original.predicted_species + '</span></div>';
-
-        // Probabilities
         html += '<div class="cf-original-item cf-proba-row">';
         for (var sp in original.probabilities) {
             html += '<span class="cf-proba"><span class="cf-proba-label">' + sp + ':</span> ' + original.probabilities[sp] + '%</span>';
         }
         html += '</div>';
-
         cfOriginalGrid.innerHTML = html;
     }
 
     function displayCounterfactualCards(counterfactuals, original, targetClass) {
         var html = '<h4 style="margin-bottom: var(--space-3);">Detailed Counterfactuals</h4>';
-
         counterfactuals.forEach(function(cf) {
-            html += '<div class="card cf-card">';
-            html += '<div class="card-header-row cf-card-header">';
+            html += '<div class="card cf-card"><div class="card-header-row cf-card-header">';
             html += '<span class="badge">#' + cf.rank + '</span>';
             html += '<span class="muted text-sm">Distance: ' + cf.distance + '</span>';
             html += '<span class="text-sm" style="margin-left: auto;"><strong>' + targetClass + '</strong> probability: ' + cf.target_probability + '%</span>';
-            html += '</div>';
-
-            html += '<div class="card-content">';
-            html += '<p class="label-muted" style="margin-bottom: var(--space-2);">Changes required</p>';
-
+            html += '</div><div class="card-content"><p class="label-muted" style="margin-bottom: var(--space-2);">Changes required</p>';
             if (cf.changes.length === 0) {
                 html += '<p class="text-sm" style="color: hsl(var(--success));">No significant changes needed</p>';
             } else {
                 html += '<table class="table"><thead><tr><th>Feature</th><th>Original</th><th>New Value</th><th>Change</th></tr></thead><tbody>';
-
                 cf.changes.forEach(function(change) {
-                    var changeClass = '';
-                    if (change.is_numerical) {
-                        changeClass = change.change > 0 ? 'cf-change-up' : 'cf-change-down';
-                    }
-                    html += '<tr>';
-                    html += '<td>' + change.feature + '</td>';
-                    html += '<td>' + change.original + '</td>';
-                    html += '<td>' + change.counterfactual + '</td>';
-                    html += '<td class="' + changeClass + '">' + (change.is_numerical ? (change.change > 0 ? '+' : '') + change.change : change.change) + '</td>';
-                    html += '</tr>';
+                    var changeClass = change.is_numerical ? (change.change > 0 ? 'cf-change-up' : 'cf-change-down') : '';
+                    html += '<tr><td>' + change.feature + '</td><td>' + change.original + '</td><td>' + change.counterfactual + '</td><td class="' + changeClass + '">' + (change.is_numerical ? (change.change > 0 ? '+' : '') + change.change : change.change) + '</td></tr>';
                 });
-
                 html += '</tbody></table>';
             }
-
             html += '</div></div>';
         });
-
         cfCardsContainer.innerHTML = html;
     }
 
-    // ==========================================
-    // TASK 5: FEATURE EFFECT PLOTS
-    // ==========================================
-
-    var feFeatureSelect = document.getElementById("fe-feature-select");
-    var feShowIce = document.getElementById("fe-show-ice");
-    var feComputeBtn = document.getElementById("fe-compute-btn");
-    var feLoading = document.getElementById("fe-loading");
-    var feResults = document.getElementById("fe-results");
+    // ── TASK 5: FEATURE EFFECT PLOTS ─────────────────────────────────────
+    var feFeatureSelect  = document.getElementById("fe-feature-select");
+    var feShowIce        = document.getElementById("fe-show-ice");
+    var feComputeBtn     = document.getElementById("fe-compute-btn");
+    var feLoading        = document.getElementById("fe-loading");
+    var feResults        = document.getElementById("fe-results");
     var feDerivativeType = document.getElementById("fe-derivative-type");
 
     feComputeBtn.addEventListener("click", function() {
-        var feature = feFeatureSelect.value;
-        var showIce = feShowIce.checked;
+        var feature   = feFeatureSelect.value;
+        var showIce   = feShowIce.checked;
         var modelType = radioTree.checked ? "tree" : "lr";
         var lambdaVal = parseFloat(lambdaSlider.value);
 
-        // Show loading
         feLoading.style.display = "flex";
         feResults.style.display = "none";
 
         fetch("/project2/feature-effects/", {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-CSRFToken": getCookie("csrftoken"),
-            },
-            body: JSON.stringify({
-                feature: feature,
-                model_type: modelType,
-                lambda_val: lambdaVal,
-                show_ice: showIce,
-            }),
+            headers: { "Content-Type": "application/json", "X-CSRFToken": getCookie("csrftoken") },
+            body: JSON.stringify({ feature: feature, model_type: modelType, lambda_val: lambdaVal, show_ice: showIce }),
         })
         .then(function(response) { return response.json(); })
         .then(function(data) {
             feLoading.style.display = "none";
-
-            if (data.error) {
-                console.error("Server error:", data.error);
-                return;
-            }
-
-            // Show results
+            if (data.error) { console.error("Server error:", data.error); return; }
             feResults.style.display = "block";
-
-            // Update derivative type note
             feDerivativeType.textContent = data.derivative_type;
-
-            // Render combined plot
-            var combinedPlot = JSON.parse(data.combined_plot);
-            Plotly.newPlot("fe-combined-chart", combinedPlot.data, combinedPlot.layout, config);
-
-            // Render individual PDP plot
-            var pdpPlot = JSON.parse(data.pdp_plot);
-            Plotly.newPlot("fe-pdp-chart", pdpPlot.data, pdpPlot.layout, config);
-
-            // Render individual ALE plot
-            var alePlot = JSON.parse(data.ale_plot);
-            Plotly.newPlot("fe-ale-chart", alePlot.data, alePlot.layout, config);
-
-            // Render importance plot
-            var importancePlot = JSON.parse(data.importance_plot);
-            Plotly.newPlot("fe-importance-chart", importancePlot.data, importancePlot.layout, config);
+            Plotly.newPlot("fe-combined-chart",  JSON.parse(data.combined_plot).data,    JSON.parse(data.combined_plot).layout,    config);
+            Plotly.newPlot("fe-pdp-chart",       JSON.parse(data.pdp_plot).data,         JSON.parse(data.pdp_plot).layout,         config);
+            Plotly.newPlot("fe-ale-chart",       JSON.parse(data.ale_plot).data,         JSON.parse(data.ale_plot).layout,         config);
+            Plotly.newPlot("fe-importance-chart",JSON.parse(data.importance_plot).data,  JSON.parse(data.importance_plot).layout,  config);
         })
-        .catch(function(err) {
-            console.error("Fetch error:", err);
-            feLoading.style.display = "none";
-        });
+        .catch(function(err) { console.error("Fetch error:", err); feLoading.style.display = "none"; });
     });
+
+    // Initialise ALE derivative label to match the default model (tree)
+    if (feDerivativeType) {
+        feDerivativeType.textContent = "finite difference (discretization)";
+    }
 
 </script>
 {% endblock script %}

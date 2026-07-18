@@ -55,13 +55,12 @@ def _train_all_lr():
 
 def get_best_lr(lam):
     _train_all_lr()
-    max_omega = max(m["omega"] for m in _all_lr_models)
-    best, best_score = None, float("inf")
-    for m in _all_lr_models:
-        score = (1 - m["test_acc"]) + lam * (m["omega"] / max_omega)
-        if score < best_score:
-            best_score, best = score, m
-    return best
+    # Sort ascending by omega (simplest first). lam=0 → most complex, lam=1 → simplest.
+    # Direct mapping avoids the tie-breaking collapse that occurs when all models
+    # have identical test accuracy (Palmer Penguins is linearly separable).
+    sorted_models = sorted(_all_lr_models, key=lambda m: m["omega"])
+    idx = round((1 - lam) * (len(sorted_models) - 1))
+    return sorted_models[idx]
 
 # ── shared layout ─────────────────────────────────────────────────────────────
 def _base_layout(height=320, margin=None):

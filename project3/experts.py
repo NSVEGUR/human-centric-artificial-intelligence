@@ -92,7 +92,7 @@ sports_expert = SportsExpert()
 tech_expert = TechExpert()
 
 # Evaluate on test set at import time
-print("Evaluating experts on test set...")
+print("  [2/4] Evaluating expert annotators...")
 
 sports_preds = sports_expert.predict(test_texts, test_labels)
 tech_preds = tech_expert.predict(test_texts, test_labels)
@@ -119,8 +119,7 @@ def per_class_accuracy(y_true, y_pred):
 sports_per_class = per_class_accuracy(test_labels, sports_preds)
 tech_per_class = per_class_accuracy(test_labels, tech_preds)
 
-print(f"Sports Expert overall accuracy: {sports_acc:.4f}")
-print(f"Tech Expert overall accuracy: {tech_acc:.4f}")
+print(f"         Sports: {sports_acc * 100:.2f}%   Tech: {tech_acc * 100:.2f}%")
 
 
 def get_expert_stats():

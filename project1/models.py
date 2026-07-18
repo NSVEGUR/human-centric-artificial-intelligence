@@ -119,30 +119,44 @@ PROBLEM_EXPLANATIONS = {
 MODEL_EXPLANATIONS = {
     'classification': {
         'KNN': {
-            'description': 'KNN works by checking the closest data points and assigning the class based on what most of the neighbours belong to. The value of K decides how many neighbours are considered. If K is too small, the model may become sensitive to noise, while a larger K makes the prediction more stable but less detailed.'
+            'description': 'KNN works by checking the closest data points and assigning the class based on what most of the neighbours belong to. The value of K decides how many neighbours are considered. If K is too small, the model may become sensitive to noise, while a larger K makes the prediction more stable but less detailed.',
+            'interpretability': 'Medium',
+            'interpretability_note': 'Explains decisions by pointing to similar examples in the training data.',
         },
         'DecisionTree': {
-            'description': 'A decision tree splits the data step by step based on feature values until it reaches a decision. It is easy to understand because it follows a rule-based structure. The depth of the tree controls how complex it becomes, and limiting it helps avoid overfitting.'
+            'description': 'A decision tree splits the data step by step based on feature values until it reaches a decision. It is easy to understand because it follows a rule-based structure. The depth of the tree controls how complex it becomes, and limiting it helps avoid overfitting.',
+            'interpretability': 'High',
+            'interpretability_note': 'Shows its full reasoning as a series of yes/no questions — easy to follow and audit.',
         },
         'LogisticRegression': {
-            'description': 'Logistic regression predicts probabilities for different classes and assigns the most likely one. It is a simple and effective model, especially for linearly separable data. The regularisation parameter helps control overfitting by limiting how complex the model can become.'
-        }
+            'description': 'Logistic regression predicts probabilities for different classes and assigns the most likely one. It is a simple and effective model, especially for linearly separable data. The regularisation parameter helps control overfitting by limiting how complex the model can become.',
+            'interpretability': 'Medium',
+            'interpretability_note': 'Each feature gets a weight showing how strongly it pushes towards or away from each class.',
+        },
     },
 
     'regression': {
         'KNN': {
-            'description': 'KNN regression predicts a value by averaging the values of nearby data points. It assumes that similar inputs will have similar outputs. The choice of K affects how smooth or sensitive the predictions are.'
+            'description': 'KNN regression predicts a value by averaging the values of nearby data points. It assumes that similar inputs will have similar outputs. The choice of K affects how smooth or sensitive the predictions are.',
+            'interpretability': 'Medium',
+            'interpretability_note': 'Predictions come from averaging similar past examples — intuitive but not directly formulaic.',
         },
         'DecisionTree': {
-            'description': 'A decision tree for regression divides the data into regions and predicts values based on the average within each region. It can capture non-linear patterns but may overfit if the tree becomes too deep.'
+            'description': 'A decision tree for regression divides the data into regions and predicts values based on the average within each region. It can capture non-linear patterns but may overfit if the tree becomes too deep.',
+            'interpretability': 'High',
+            'interpretability_note': 'The full decision path is visible as a flowchart of conditions leading to a predicted value.',
         },
         'LinearRegression': {
-            'description': 'Linear regression models a straight-line relationship between features and the target variable. It is simple and works well when the relationship between variables is roughly linear.'
+            'description': 'Linear regression models a straight-line relationship between features and the target variable. It is simple and works well when the relationship between variables is roughly linear.',
+            'interpretability': 'High',
+            'interpretability_note': 'Each feature coefficient directly shows its influence — a larger coefficient means a stronger effect.',
         },
         'Ridge': {
-            'description': 'Ridge regression is similar to linear regression but includes a penalty term to prevent overfitting. It is useful when there are many correlated features and helps make the model more stable.'
-        }
-    }
+            'description': 'Ridge regression is similar to linear regression but includes a penalty term to prevent overfitting. It is useful when there are many correlated features and helps make the model more stable.',
+            'interpretability': 'High',
+            'interpretability_note': 'Like linear regression, coefficients show feature importance — regularisation keeps them small and reliable.',
+        },
+    },
 }
 
 

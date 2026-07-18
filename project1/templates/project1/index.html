@@ -4,19 +4,25 @@
 {% block title %}Project 1 · Automated ML{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'project1/style.css' %}" />
+<link rel="stylesheet" href="{% static 'project1/style.css' %}?v=4" />
 {% endblock %}
 
 {% block content %}
+
+<!-- Upload loading overlay -->
+<div class="upload-overlay" id="upload-overlay" style="display:none;">
+  <div class="spinner" style="width: 2rem; height: 2rem;"></div>
+  <p>Analysing your dataset…</p>
+</div>
 
 <header class="page-header">
   <a href="{% url 'home:index' %}" class="back-link">← Back to Home</a>
   <div class="page-header-row">
     <div>
-      <h1>Automated Machine Learning</h1>
-      <p class="page-subtitle">{{ description }}</p>
+      <h1>Project 1 — Automated Machine Learning</h1>
+      <p class="page-subtitle">Human-Centric AI · Upload your own CSV dataset</p>
     </div>
-    {% if has_data %}
+    {% if scatter_plot %}
     <form method="post">
       {% csrf_token %}
       <input type="hidden" name="action" value="clear">
@@ -29,7 +35,10 @@
   </div>
 </header>
 
-{# Session banner #}
+<div class="alert alert-info" style="margin-bottom: var(--space-5);">
+  <p>Upload any CSV file — the last column is treated as the target. The tool automatically detects whether it's a classification or regression problem and guides you through data exploration and model training.</p>
+</div>
+
 {% if loaded_from_session %}
 <div class="alert alert-warning" style="margin-bottom: var(--space-5);">
   <p>📌 Showing data from your previous session
@@ -38,16 +47,36 @@
 </div>
 {% endif %}
 
-{# Upload #}
-<form method="post" enctype="multipart/form-data" style="margin-bottom: var(--space-6);">
-  {% csrf_token %}
-  <div class="card card-dashed upload-section">
-    <p class="upload-label">Upload a CSV file</p>
-    <p class="upload-hint muted">First row = feature names · Last column = target variable</p>
-    <input type="file" name="csv_file" accept=".csv" />
-    <button type="submit" class="btn btn-primary">Load &amp; Visualize</button>
-  </div>
-</form>
+<div class="project-layout">
+
+<!-- ── Sidebar ──────────────────────────────────────────────────────────── -->
+<nav class="project-sidebar" aria-label="Page steps">
+  <span class="sidebar-label">Steps</span>
+
+  <button class="sidebar-link {% if scatter_plot %}step-completed{% else %}active{% endif %}" data-panel="panel-upload">
+    <svg class="sidebar-icon" viewBox="0 0 24 24"><polyline points="16 16 12 12 8 16"></polyline><line x1="12" y1="12" x2="12" y2="21"></line><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"></path></svg>
+    <span>Upload Data</span>
+    {% if scatter_plot %}<span style="margin-left:auto;font-size:var(--text-xs);color:hsl(var(--primary));">✓</span>{% endif %}
+  </button>
+
+  <button class="sidebar-link {% if not scatter_plot %}step-future{% elif not training %}active{% endif %}" data-panel="panel-preview">
+    <svg class="sidebar-icon" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line><line x1="9" y1="3" x2="9" y2="21"></line></svg>
+    <span>Data Preview</span>
+  </button>
+
+  <button class="sidebar-link {% if not scatter_plot %}step-future{% endif %}" data-panel="panel-explore">
+    <svg class="sidebar-icon" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line><line x1="2" y1="20" x2="22" y2="20"></line></svg>
+    <span>Explore Data</span>
+  </button>
+
+  <button class="sidebar-link {% if not scatter_plot %}step-future{% elif training %}active{% endif %}" data-panel="panel-train">
+    <svg class="sidebar-icon" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+    <span>Train a Model</span>
+  </button>
+</nav>
+
+<!-- ── Main content ─────────────────────────────────────────────────────── -->
+<div>
 
 {% if error %}
 <div class="alert alert-destructive" style="margin-bottom: var(--space-5);">
@@ -55,545 +84,631 @@
 </div>
 {% endif %}
 
-{% if has_data %}
-
-<div class="dataset-info">
-  <span class="badge badge-secondary">File: <strong>{{ filename }}</strong></span>
-  <span class="badge badge-secondary">Rows: <strong>{{ n_rows }}</strong></span>
-  <span class="badge badge-secondary">Columns: <strong>{{ n_cols }}</strong></span>
-  <span class="badge badge-secondary">Target: <strong>{{ target_col }}</strong></span>
-  <span class="badge badge-secondary">Type: <strong>{{ problem_type }}</strong></span>
-</div>
-
-<div class="alert alert-info guide-card" style="margin-bottom: var(--space-5);">
-  <p class="alert-title">Welcome — here is what this tool does and how to use it</p>
-  <p>
-    This page walks you through a complete machine learning workflow from start to finish.
-    You start by uploading a CSV file, the tool figures out whether it is a
-    classification or regression problem, and then you can explore your data visually,
-    train several different models, and compare how well they perform. Everything you
-    see is interactive — there are no static images anywhere on this page.
-  </p>
-  <p>
-    Once your data is loaded you will see three charts. The <strong>scatter plot</strong>
-    lets you pick any two features and see how your data points spread out, coloured by
-    their class or value. The <strong>histogram</strong> shows you the distribution of a
-    single feature so you can spot skew, outliers, or overlap between classes. The
-    <strong>correlation matrix</strong> is the best place to start — it shows at a glance
-    which features are strongly related to each other and which are independent, which
-    helps you pick the most informative pair to look at in the scatter plot.
-  </p>
-  <p>
-    You can interact with every chart by hovering over any point or cell to see its
-    exact values. Drag a rectangle on a chart to zoom into a busy area, and
-    double-click anywhere to zoom back out.
-    {% if problem_type == 'classification' %}
-    Each class appears separately in the chart legend — click a class name once to hide
-    it, and double-click it to show only that class. This is really useful when classes
-    overlap and you want to focus on just one or two of them.
-    {% endif %}
-    The dropdowns above each chart let you switch which features you are looking at and
-    the chart redraws instantly without any page reload.
-  </p>
-  <p>
-    Once you have a feel for the data, head down to the <strong>Model Training</strong>
-    section. Choose an algorithm, set how much of your data to hold back for testing,
-    tune the hyperparameters, and hit Train. The tool will sweep through a range of
-    hyperparameter values automatically and show you a <strong>hyperparameter sweep
-    chart</strong> so you can see exactly where performance peaks and where the model
-    starts to overfit. Below that is the <strong>Decision Boundary Explorer</strong>,
-    which is the most visual part of this tool. It draws the regions of the feature
-    space where the model would predict each class, overlaid with your actual data points,
-    so you can see not just how accurate the model is but exactly where and why it gets
-    things wrong. Hover any point on that chart to see its true label, what the model
-    predicted, and the feature values that led to that decision.
-  </p>
-  <p>
-    A good workflow to follow is to open the correlation matrix first, find a feature
-    pair with low correlation to each other but strong separation between classes, plot
-    them in the scatter plot to confirm, then train a model and open the boundary
-    explorer on that same pair to see how the model carves up that space.
-  </p>
-</div>
-
-{% if problem_explanation %}
-<div class="alert alert-info" style="margin-bottom: var(--space-5);">
-  <p class="alert-title">{{ problem_explanation.title }}</p>
-  <p>{{ problem_explanation.description }}</p>
-  <p><strong>Metrics:</strong> {{ problem_explanation.metrics }}</p>
-</div>
-{% endif %}
-
-{# Table section #}
-<section class="card plot-block" id="table-section">
-  <div class="card-header">
-    <p class="card-title">Data Preview</p>
-    <p class="card-description plot-desc">
-      Browse your dataset with interactive search, sorting, and column filtering.
-      Showing rows <strong>{{ row_start }}–{{ row_end }}</strong> of
-      <strong>{{ total_rows }}</strong>{% if search_query %} (filtered){% endif %}.
-    </p>
-  </div>
-  <div class="card-content">
-
-    {# Hidden state form — never inside the swap zone #}
-    <form id="table-form" method="post" style="display:none">
+<!-- ── Panel 1: Upload ── -->
+<div id="panel-upload" class="wizard-panel {% if not scatter_plot %}active{% endif %}">
+  <section style="margin-bottom: var(--space-6);">
+    <form method="post" enctype="multipart/form-data" id="upload-form">
       {% csrf_token %}
-      <input type="hidden" name="action"       value="table">
-      <input type="hidden" name="sort_col"     id="sort_col_input" value="{{ sort_col }}">
-      <input type="hidden" name="sort_dir"     id="sort_dir_input" value="{{ sort_dir }}">
-      <input type="hidden" name="table_page"   id="page_input"     value="{{ current_page }}">
-      <input type="hidden" name="page_size"    id="psize_input"    value="{{ page_size }}">
-      <input type="hidden" name="table_search" id="search_hidden"  value="{{ search_query }}">
-      <input type="hidden" name="problem_type" value="{{ problem_type }}">
-      {% for c in hidden_cols %}
-      <input type="hidden" name="hidden_cols" class="hidden-col-inp" value="{{ c }}">
-      {% endfor %}
+      <div class="card card-dashed upload-section">
+        <p class="upload-label">Upload a CSV file</p>
+        <p class="upload-hint muted">First row = feature names · Last column = target variable · File is analysed automatically</p>
+        <label class="btn btn-primary" style="cursor: pointer;">
+          Choose File
+          <input type="file" name="csv_file" id="csv-file-input" accept=".csv" style="display: none;" />
+        </label>
+        <p id="upload-filename" class="muted" style="font-size: var(--text-sm); margin-top: var(--space-2);"></p>
+      </div>
     </form>
+  </section>
+</div>
 
-    <div class="table-toolbar">
-      <input type="text" id="table-search"
-             class="input table-search-input"
-             placeholder="Search all visible columns…"
-             value="{{ search_query }}"
-             autocomplete="off">
-      <div class="table-toolbar-right">
-        <span class="toolbar-label label-muted">Rows</span>
-        {% for opt in page_size_opts %}
-        <button type="button" class="btn btn-sm btn-outline psize-btn {% if opt == page_size %}active psize-active{% endif %}"
-                data-size="{{ opt }}">{{ opt }}</button>
+{% if scatter_plot %}
+
+<!-- ── Panel 2: Data Preview ── -->
+<div id="panel-preview" class="wizard-panel {% if not training %}active{% endif %}">
+
+  <div class="dataset-info">
+    <span class="badge badge-secondary">File: <strong>{{ filename }}</strong></span>
+    <span class="badge badge-secondary">Rows: <strong>{{ n_rows }}</strong></span>
+    <span class="badge badge-secondary">Columns: <strong>{{ n_cols }}</strong></span>
+    <span class="badge badge-secondary">Target: <strong>{{ target_col }}</strong></span>
+    <span class="badge badge-secondary">Type: <strong>{{ problem_type }}</strong></span>
+  </div>
+
+  <section class="card" style="margin-bottom: var(--space-5);">
+    <div class="card-header">
+      <p class="card-title">Dataset Health</p>
+      <p class="card-description">A quick look at your data before training — who collected it and for what purpose matters.</p>
+    </div>
+    <div class="card-content">
+
+      {% if class_distribution %}
+      <p class="label-muted" style="margin-bottom: var(--space-2);">Class distribution (target: <strong>{{ target_col }}</strong>)</p>
+      <div style="display: flex; flex-direction: column; gap: var(--space-2); margin-bottom: var(--space-4);">
+        {% for cls, info in class_distribution.items %}
+        <div style="display: flex; align-items: center; gap: var(--space-3);">
+          <span style="width: 120px; font-size: var(--text-sm); text-align: right; flex-shrink: 0;">{{ cls }}</span>
+          <div style="flex: 1; background: hsl(var(--secondary)); border-radius: 4px; height: 16px; overflow: hidden;">
+            <div style="width: {{ info.pct }}%; background: hsl(var(--primary)); height: 100%; border-radius: 4px; transition: width 0.4s;"></div>
+          </div>
+          <span style="font-size: var(--text-sm); min-width: 60px; color: hsl(var(--muted-foreground));">{{ info.pct }}% ({{ info.count }})</span>
+        </div>
         {% endfor %}
+      </div>
+      {% endif %}
+
+      {% if target_stats %}
+      <p class="label-muted" style="margin-bottom: var(--space-2);">Target distribution (<strong>{{ target_col }}</strong>)</p>
+      <div style="display: flex; gap: var(--space-4); flex-wrap: wrap; margin-bottom: var(--space-4);">
+        <span class="badge badge-secondary">Min: <strong>{{ target_stats.min }}</strong></span>
+        <span class="badge badge-secondary">Max: <strong>{{ target_stats.max }}</strong></span>
+        <span class="badge badge-secondary">Mean: <strong>{{ target_stats.mean }}</strong></span>
+        <span class="badge badge-secondary">Median: <strong>{{ target_stats.median }}</strong></span>
+      </div>
+      {% endif %}
+
+      {% if imbalance_flag %}
+      <div class="alert alert-warning" style="margin-bottom: var(--space-4);">
+        <p><strong>Class imbalance detected.</strong> One or more classes represent less than 10% of the data. Models trained on imbalanced data tend to underperform on minority classes — consider checking your metrics per class, not just overall accuracy.</p>
+      </div>
+      {% endif %}
+
+      <div class="alert" style="background: hsl(var(--accent)); border-left: 3px solid hsl(var(--primary)); padding: var(--space-3) var(--space-4);">
+        <p style="font-size: var(--text-sm); color: hsl(var(--foreground));">
+          <strong>Think critically about your data.</strong> Data is always collected with a specific goal in mind — the patterns it contains reflect who collected it, when, and why. ML models learn from these patterns and will reproduce any biases present in the data.
+        </p>
       </div>
     </div>
+  </section>
 
-    <div id="table-inner">
-      <div class="col-toggle-bar">
-        <span class="toolbar-label label-muted">Columns</span>
-        {% for col in all_columns %}
-        <button type="button"
-                class="btn btn-sm btn-outline col-toggle-btn {% if col not in hidden_cols %}active col-visible{% endif %}"
-                data-col="{{ col }}">{{ col }}</button>
+  {% if problem_explanation %}
+  <div class="alert alert-info" style="margin-bottom: var(--space-5);">
+    <p class="alert-title">{{ problem_explanation.title }}</p>
+    <p>{{ problem_explanation.description }}</p>
+    <p><strong>Metrics:</strong> {{ problem_explanation.metrics }}</p>
+  </div>
+  {% endif %}
+
+  <section id="sec-preview" class="card plot-block" style="margin-bottom: var(--space-6);">
+    <div class="card-header">
+      <p class="card-title">Data Preview</p>
+      <p class="card-description plot-desc">
+        Browse your dataset with interactive search, sorting, and column filtering.
+        Showing rows <strong>{{ row_start }}–{{ row_end }}</strong> of
+        <strong>{{ total_rows }}</strong>{% if search_query %} (filtered){% endif %}.
+      </p>
+    </div>
+    <div class="card-content">
+
+      <form id="table-form" method="post" style="display:none">
+        {% csrf_token %}
+        <input type="hidden" name="action"       value="table">
+        <input type="hidden" name="sort_col"     id="sort_col_input" value="{{ sort_col }}">
+        <input type="hidden" name="sort_dir"     id="sort_dir_input" value="{{ sort_dir }}">
+        <input type="hidden" name="table_page"   id="page_input"     value="{{ current_page }}">
+        <input type="hidden" name="page_size"    id="psize_input"    value="{{ page_size }}">
+        <input type="hidden" name="table_search" id="search_hidden"  value="{{ search_query }}">
+        <input type="hidden" name="problem_type" value="{{ problem_type }}">
+        {% for c in hidden_cols %}
+        <input type="hidden" name="hidden_cols" class="hidden-col-inp" value="{{ c }}">
+        {% endfor %}
+      </form>
+
+      <div class="table-toolbar">
+        <input type="text" id="table-search"
+               class="input table-search-input"
+               placeholder="Search all visible columns…"
+               value="{{ search_query }}"
+               autocomplete="off">
+        <div class="table-toolbar-right">
+          <span class="toolbar-label label-muted">Rows</span>
+          {% for opt in page_size_opts %}
+          <button type="button" class="btn btn-sm btn-outline psize-btn {% if opt == page_size %}active psize-active{% endif %}"
+                  data-size="{{ opt }}">{{ opt }}</button>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div id="table-inner">
+        <div class="col-toggle-bar">
+          <span class="toolbar-label label-muted">Columns</span>
+          {% for col in all_columns %}
+          <button type="button"
+                  class="btn btn-sm btn-outline col-toggle-btn {% if col not in hidden_cols %}active col-visible{% endif %}"
+                  data-col="{{ col }}">{{ col }}</button>
+          {% endfor %}
+        </div>
+
+        <div class="table-wrap">
+          <table class="table data-table">
+            <thead>
+              <tr>
+                {% for col in table_headers %}
+                <th>
+                  <button type="button" class="sort-btn"
+                          data-col="{{ col }}"
+                          data-dir="{% if sort_col == col %}{{ next_sort_dir }}{% else %}asc{% endif %}">
+                    {{ col }}
+                    {% if sort_col == col %}
+                      {% if sort_dir == 'asc' %}▲{% else %}▼{% endif %}
+                    {% else %}
+                      <span class="sort-idle">▲▼</span>
+                    {% endif %}
+                  </button>
+                </th>
+                {% endfor %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in table_rows %}
+              <tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>
+              {% empty %}
+              <tr><td colspan="{{ table_headers|length }}" class="no-results">
+                No rows match your search.
+              </td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        {% if total_pages > 1 %}
+        <div class="pagination-bar">
+          <button type="button" class="btn btn-sm btn-outline page-btn" data-page="{{ current_page|add:'-1' }}"
+                  {% if current_page == 1 %}disabled{% endif %}>← Prev</button>
+          {% for p in page_range %}
+            {% if p is None %}
+              <span class="page-ellipsis muted">…</span>
+            {% else %}
+              <button type="button"
+                      class="btn btn-sm btn-outline page-btn {% if p == current_page %}active page-active{% endif %}"
+                      data-page="{{ p }}">{{ p }}</button>
+            {% endif %}
+          {% endfor %}
+          <button type="button" class="btn btn-sm btn-outline page-btn" data-page="{{ current_page|add:'1' }}"
+                  {% if current_page == total_pages %}disabled{% endif %}>Next →</button>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  <div class="wizard-next">
+    <button type="button" class="btn btn-outline" onclick="showPanel('panel-explore')">Explore Data →</button>
+  </div>
+</div>
+
+<!-- ── Panel 3: Explore Data ── -->
+<div id="panel-explore" class="wizard-panel">
+  <section id="sec-explore" style="margin-bottom: var(--space-6);">
+    <form method="post" id="viz-form">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="update_plots">
+      <input type="hidden" name="problem_type" value="{{ problem_type }}">
+
+      {% if problem_type == 'classification' %}
+      <section class="card plot-block" style="margin-bottom: var(--space-4);">
+        <div class="card-header">
+          <p class="card-title">Filter Categories</p>
+          <p class="card-description plot-desc">Select which categories to display in the plots.</p>
+        </div>
+        <div class="card-content">
+          <div class="controls-row">
+            {% for cls in unique_classes %}
+            <div class="control-item">
+              <input type="checkbox" name="selected_classes" value="{{ cls }}"
+                     id="check_{{ cls }}"
+                     {% if cls in selected_classes %}checked{% endif %}>
+              <label for="check_{{ cls }}">{{ cls }}</label>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </section>
+      {% endif %}
+
+      <div id="plots-inner">
+        <div class="plots-grid">
+          <section class="card plot-block">
+            <div class="card-header">
+              <p class="card-title">Scatter Plot</p>
+              <p class="card-description plot-desc">Visualize the relationship between two numeric features. Points are colored by the target variable to reveal patterns and correlations.</p>
+            </div>
+            <div class="card-content">
+              <div class="controls-row">
+                <div class="control-item">
+                  <label for="scatter_x">X Axis</label>
+                  <select name="scatter_x" id="scatter_x" class="select">
+                    {% for f in feature_cols %}
+                    <option value="{{ f }}" {% if f == scatter_x %}selected{% endif %}>{{ f }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="control-item">
+                  <label for="scatter_y">Y Axis</label>
+                  <select name="scatter_y" id="scatter_y" class="select">
+                    {% for f in feature_cols %}
+                    <option value="{{ f }}" {% if f == scatter_y %}selected{% endif %}>{{ f }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
+              <div class="plot-img-box">
+                <img id="scatter-img" src="data:image/png;base64,{{ scatter_plot }}" alt="Scatter plot" />
+              </div>
+            </div>
+          </section>
+
+          <section class="card plot-block">
+            <div class="card-header">
+              <p class="card-title">Histogram</p>
+              <p class="card-description plot-desc">Explore the distribution of values for a single feature. Overlapping histograms show how different target categories are distributed across feature ranges.</p>
+            </div>
+            <div class="card-content">
+              <div class="controls-row">
+                <div class="control-item">
+                  <label for="hist_feature">Feature</label>
+                  <select name="hist_feature" id="hist_feature" class="select">
+                    {% for f in feature_cols %}
+                    <option value="{{ f }}" {% if f == hist_feature %}selected{% endif %}>{{ f }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
+              <div class="plot-img-box">
+                <img id="hist-img" src="data:image/png;base64,{{ hist_plot }}" alt="Histogram" />
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <div class="update-row">
+        <button type="submit" class="btn btn-primary" id="update-plots-btn">Update Plots</button>
+      </div>
+    </form>
+
+    <section class="card plot-block" style="margin-top: var(--space-4);">
+      <div class="card-header">
+        <p class="card-title">Correlation Matrix</p>
+        <p class="card-description plot-desc">Understand feature relationships through Pearson correlation coefficients. Values range from -1 (strong negative) to +1 (strong positive), helping identify redundant or complementary features.</p>
+      </div>
+      <div class="card-content">
+        <div class="plot-img-box">
+          <img id="corr-img" src="data:image/png;base64,{{ corr_plot }}" alt="Correlation heatmap" />
+        </div>
+      </div>
+    </section>
+  </section>
+
+  <div class="wizard-next">
+    <button type="button" class="btn btn-outline" onclick="showPanel('panel-train')">Train a Model →</button>
+  </div>
+</div>
+
+<!-- ── Panel 4: Train a Model ── -->
+<div id="panel-train" class="wizard-panel {% if training %}active{% endif %}">
+  <section id="sec-train" class="card plot-block">
+    <div class="card-header">
+      <p class="card-title">Model Training</p>
+      <p class="card-description plot-desc">
+        Choose algorithms, test-split size, and model hyperparameters.
+        The app evaluates the dataset using suitable metrics for classification or regression.
+      </p>
+    </div>
+    <div class="card-content">
+
+      {% if model_explanations %}
+      <div class="model-catalog">
+        <h4>Model Comparison</h4>
+        {% for key, info in model_explanations.items %}
+        <div class="card catalog-card">
+          <div class="card-content-tight">
+            <div style="display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-2);">
+              <h5 style="margin: 0;">{{ key }}</h5>
+              {% if info.interpretability == 'High' %}
+              <span class="badge badge-success" style="font-size: var(--text-xs);">High interpretability</span>
+              {% elif info.interpretability == 'Medium' %}
+              <span class="badge badge-warning" style="font-size: var(--text-xs);">Medium interpretability</span>
+              {% endif %}
+            </div>
+            <p class="muted" style="margin-bottom: var(--space-1);">{{ info.description }}</p>
+            {% if info.interpretability_note %}
+            <p style="font-size: var(--text-xs); color: hsl(var(--muted-foreground)); font-style: italic;">{{ info.interpretability_note }}</p>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <div class="alert alert-info tuning-hints">
+        <p class="alert-title">Tuning hints</p>
+        <p><strong>KNN:</strong> Smaller K can fit local patterns but may overfit. Larger K gives smoother predictions.</p>
+        <p><strong>Decision Tree:</strong> A deeper tree can learn more details, but too much depth can overfit.</p>
+        <p><strong>Logistic/Ridge:</strong> Regularisation controls model complexity. Stronger regularisation usually gives a simpler model.</p>
+      </div>
+
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="train">
+
+        {% for cls in selected_classes %}
+          <input type="hidden" name="selected_classes" value="{{ cls }}">
+        {% endfor %}
+
+        <input type="hidden" name="scatter_x" value="{{ scatter_x }}">
+        <input type="hidden" name="scatter_y" value="{{ scatter_y }}">
+        <input type="hidden" name="hist_feature" value="{{ hist_feature }}">
+
+        <div class="controls-row">
+
+          <div class="control-item">
+            <label for="problem_type">Problem Type</label>
+            <select name="problem_type" id="problem_type" class="select">
+              <option value="classification" {% if problem_type == 'classification' %}selected{% endif %}>Classification</option>
+              <option value="regression" {% if problem_type == 'regression' %}selected{% endif %}>Regression</option>
+            </select>
+          </div>
+
+          <div class="control-item">
+            <label for="model_key">Algorithm</label>
+            <select name="model_key" id="model_key" class="select">
+              {% for key, label in available_models %}
+              <option value="{{ key }}" {% if training.model_key == key %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="control-item">
+            <label for="test_size">Test Split</label>
+            <select name="test_size" id="test_size" class="select">
+              <option value="0.1"  {% if training.test_size == 0.1 %}selected{% endif %}>10%</option>
+              <option value="0.15" {% if training.test_size == 0.15 %}selected{% endif %}>15%</option>
+              <option value="0.2"  {% if not training or training.test_size == 0.2 %}selected{% endif %}>20% (default)</option>
+              <option value="0.25" {% if training.test_size == 0.25 %}selected{% endif %}>25%</option>
+              <option value="0.3"  {% if training.test_size == 0.3 %}selected{% endif %}>30%</option>
+              <option value="0.4"  {% if training.test_size == 0.4 %}selected{% endif %}>40%</option>
+              <option value="0.5"  {% if training.test_size == 0.5 %}selected{% endif %}>50%</option>
+            </select>
+          </div>
+
+          <div class="control-item hyper-param hp-knn">
+            <label for="k">K</label>
+            <input type="number" name="k" id="k" min="1" max="50" class="input"
+                   value="{{ training.model_params.k|default:5 }}">
+          </div>
+
+          <div class="control-item hyper-param hp-knn">
+            <label for="metric">Distance</label>
+            <select name="metric" id="metric" class="select">
+              <option value="euclidean" {% if training.model_params.metric == 'euclidean' %}selected{% endif %}>Euclidean</option>
+              <option value="manhattan" {% if training.model_params.metric == 'manhattan' %}selected{% endif %}>Manhattan</option>
+            </select>
+          </div>
+
+          <div class="control-item hyper-param hp-tree">
+            <label for="max_depth">Tree Depth</label>
+            <input type="number" name="max_depth" id="max_depth" min="1" max="50" class="input"
+                   value="{{ training.model_params.max_depth|default:5 }}">
+          </div>
+
+          <div class="control-item hyper-param hp-tree">
+            <label for="min_samples_leaf">Leaf Nodes</label>
+            <input type="number" name="min_samples_leaf" id="min_samples_leaf" min="1" max="50" class="input"
+                   value="{{ training.model_params.min_samples_leaf|default:1 }}">
+          </div>
+
+          <div class="control-item hyper-param hp-tree">
+            <label for="criterion">Criterion</label>
+            <select name="criterion" id="criterion" class="select">
+              {% if problem_type == 'classification' %}
+                <option value="gini" {% if training.model_params.criterion == 'gini' %}selected{% endif %}>Gini</option>
+                <option value="entropy" {% if training.model_params.criterion == 'entropy' %}selected{% endif %}>Entropy</option>
+              {% else %}
+                <option value="squared_error" {% if training.model_params.criterion == 'squared_error' %}selected{% endif %}>Squared Error</option>
+                <option value="absolute_error" {% if training.model_params.criterion == 'absolute_error' %}selected{% endif %}>Absolute Error</option>
+              {% endif %}
+            </select>
+          </div>
+
+          <div class="control-item hyper-param hp-logistic">
+            <label for="C">C</label>
+            <input type="number" step="0.001" name="C" id="C" class="input"
+                   value="{{ training.model_params.C|default:1 }}">
+          </div>
+          <div class="control-item hyper-param hp-logistic">
+            <label for="penalty">Penalty</label>
+            <select name="penalty" id="penalty" class="select">
+              <option value="l2" {% if training.model_params.penalty == 'l2' %}selected{% endif %}>L2</option>
+              <option value="l1" {% if training.model_params.penalty == 'l1' %}selected{% endif %}>L1</option>
+            </select>
+          </div>
+
+          <div class="control-item hyper-param hp-ridge">
+            <label for="alpha">Alpha</label>
+            <input type="number" step="0.001" name="alpha" id="alpha" class="input"
+                   value="{{ training.model_params.alpha|default:1 }}">
+          </div>
+
+        </div>
+
+        <div class="update-row">
+          <button type="submit" class="btn btn-primary">▶ Train Model</button>
+        </div>
+      </form>
+
+      {% if training %}
+      <div class="training-summary">
+        <div class="card summary-card summary-highlight">
+          <span class="summary-label">Best {{ training.score_label }}</span>
+          <span class="summary-value">{{ training.best_test }}</span>
+          <span class="summary-sub muted">at {{ training.param_label }} = {{ training.best_param }}</span>
+        </div>
+
+        <div class="card summary-card">
+          <span class="summary-label">Model</span>
+          <span class="summary-value-sm">{{ training.model_label }}</span>
+        </div>
+
+        <div class="card summary-card">
+          <span class="summary-label">Train samples</span>
+          <span class="summary-value">{{ training.n_train }}</span>
+        </div>
+
+        <div class="card summary-card">
+          <span class="summary-label">Test samples</span>
+          <span class="summary-value">{{ training.n_test }}</span>
+        </div>
+      </div>
+
+      <h4 class="results-table-heading">Evaluation Metrics</h4>
+      <div class="metrics-grid">
+        {% for name, value in training.metrics.items %}
+        <div class="card metric-card">
+          <span class="summary-label">{{ name }}</span>
+          <span class="summary-value-sm">{{ value }}</span>
+        </div>
         {% endfor %}
       </div>
 
+      <div class="alert alert-info" style="margin-top: var(--space-3);">
+        <p><strong>Model interpretation:</strong> {{ training.overfit_message }}</p>
+        <p class="text-xs muted">Train-test gap: {{ training.overfit_gap }}</p>
+      </div>
+
+      <div class="plot-img-box" style="margin-top: var(--space-5);">
+        <img src="data:image/png;base64,{{ training.training_plot }}" alt="Training curve" />
+      </div>
+
+      <h4 class="results-table-heading">Full Results</h4>
       <div class="table-wrap">
         <table class="table data-table">
           <thead>
             <tr>
-              {% for col in table_headers %}
-              <th>
-                <button type="button" class="sort-btn"
-                        data-col="{{ col }}"
-                        data-dir="{% if sort_col == col %}{{ next_sort_dir }}{% else %}asc{% endif %}">
-                  {{ col }}
-                  {% if sort_col == col %}
-                    {% if sort_dir == 'asc' %}▲{% else %}▼{% endif %}
-                  {% else %}
-                    <span class="sort-idle">▲▼</span>
-                  {% endif %}
-                </button>
-              </th>
-              {% endfor %}
+              <th>{{ training.param_label }}</th>
+              <th>Train {{ training.score_label }}</th>
+              <th>Test {{ training.score_label }}</th>
             </tr>
           </thead>
           <tbody>
-            {% for row in table_rows %}
-            <tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>
-            {% empty %}
-            <tr><td colspan="{{ table_headers|length }}" class="no-results">
-              No rows match your search.
-            </td></tr>
+            {% for row in training.results_table %}
+            <tr {% if row.param == training.best_param %}class="best-row"{% endif %}>
+              <td>{{ row.param }}</td>
+              <td>{{ row.train }}</td>
+              <td><strong>{{ row.test }}</strong></td>
+            </tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
-
-      {% if total_pages > 1 %}
-      <div class="pagination-bar">
-        <button type="button" class="btn btn-sm btn-outline page-btn" data-page="{{ current_page|add:'-1' }}"
-                {% if current_page == 1 %}disabled{% endif %}>← Prev</button>
-        {% for p in page_range %}
-          {% if p is None %}
-            <span class="page-ellipsis muted">…</span>
-          {% else %}
-            <button type="button"
-                    class="btn btn-sm btn-outline page-btn {% if p == current_page %}active page-active{% endif %}"
-                    data-page="{{ p }}">{{ p }}</button>
-          {% endif %}
-        {% endfor %}
-        <button type="button" class="btn btn-sm btn-outline page-btn" data-page="{{ current_page|add:'1' }}"
-                {% if current_page == total_pages %}disabled{% endif %}>Next →</button>
-      </div>
       {% endif %}
-    </div>
-  </div>
-</section>
-
-
-<div class="plots-grid">
-  <section class="card plot-block">
-    <div class="card-header">
-      <p class="card-title">Scatter Plot</p>
-      <p class="card-description plot-desc">Visualize the relationship between two numeric features. Points are colored by the target variable. Hover for exact values, drag to zoom, double-click to reset.</p>
-    </div>
-    <div class="card-content">
-      <div class="controls-row">
-        <div class="control-item">
-          <label for="scatter_x">X Axis</label>
-          <select id="scatter_x" class="select">
-            {% for f in feature_cols %}
-            <option value="{{ f }}" {% if f == scatter_x %}selected{% endif %}>{{ f }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="control-item">
-          <label for="scatter_y">Y Axis</label>
-          <select id="scatter_y" class="select">
-            {% for f in feature_cols %}
-            <option value="{{ f }}" {% if f == scatter_y %}selected{% endif %}>{{ f }}</option>
-            {% endfor %}
-          </select>
-        </div>
-      </div>
-      <div class="plot-box" id="scatter-plot"></div>
-    </div>
-  </section>
-
-  <section class="card plot-block">
-    <div class="card-header">
-      <p class="card-title">Histogram</p>
-      <p class="card-description plot-desc">Explore the distribution of values for a single feature. Overlapping histograms show how different target categories are distributed across feature ranges.</p>
-    </div>
-    <div class="card-content">
-      <div class="controls-row">
-        <div class="control-item">
-          <label for="hist_feature">Feature</label>
-          <select id="hist_feature" class="select">
-            {% for f in feature_cols %}
-            <option value="{{ f }}" {% if f == hist_feature %}selected{% endif %}>{{ f }}</option>
-            {% endfor %}
-          </select>
-        </div>
-      </div>
-      <div class="plot-box" id="hist-plot"></div>
     </div>
   </section>
 </div>
 
-<section class="card plot-block">
-  <div class="card-header">
-    <p class="card-title">Correlation Matrix</p>
-    <p class="card-description plot-desc">Understand feature relationships through Pearson correlation coefficients. Values range from -1 (strong negative) to +1 (strong positive), helping identify redundant or complementary features.</p>
-  </div>
-  <div class="card-content">
-    <div class="plot-box" id="corr-plot"></div>
-  </div>
-</section>
+{% endif %}{# end if scatter_plot #}
 
-{# Training section #}
-<section class="card plot-block">
-  <div class="card-header">
-    <p class="card-title">Model Training</p>
-    <p class="card-description plot-desc">
-      Choose algorithms, test-split size, and model hyperparameters.
-      The app evaluates the dataset using suitable metrics for classification or regression.
-    </p>
-  </div>
-  <div class="card-content">
+</div><!-- end main content -->
+</div><!-- end project-layout -->
 
-    {% if model_explanations %}
-    <div class="model-catalog">
-      <h4>Model Description</h4>
-      {% for key, info in model_explanations.items %}
-      <div class="card catalog-card">
-        <div class="card-content-tight">
-          <h5>{{ key }}</h5>
-          <p class="muted">{{ info.description }}</p>
-        </div>
-      </div>
-      {% endfor %}
-    </div>
-    {% endif %}
+{% endblock %}
 
-    <div class="alert alert-info tuning-hints">
-      <p class="alert-title">Tuning hints</p>
-      <p><strong>KNN:</strong> Smaller K can fit local patterns but may overfit. Larger K gives smoother predictions.</p>
-      <p><strong>Decision Tree:</strong> A deeper tree can learn more details, but too much depth can overfit.</p>
-      <p><strong>Logistic/Ridge:</strong> Regularisation controls model complexity. Stronger regularisation usually gives a simpler model.</p>
-    </div>
-
-    <form method="post" id="train-form">
-      {% csrf_token %}
-      <input type="hidden" name="action" value="train">
-
-      {# these get synced by JS on change so the plot state survives training #}
-      <input type="hidden" name="scatter_x" id="hidden_scatter_x" value="{{ scatter_x }}">
-      <input type="hidden" name="scatter_y" id="hidden_scatter_y" value="{{ scatter_y }}">
-      <input type="hidden" name="hist_feature" id="hidden_hist_feature" value="{{ hist_feature }}">
-
-      <div class="controls-row">
-
-        <div class="control-item">
-          <label for="problem_type">Problem Type</label>
-          <select name="problem_type" id="problem_type" class="select">
-            <option value="classification" {% if problem_type == 'classification' %}selected{% endif %}>Classification</option>
-            <option value="regression" {% if problem_type == 'regression' %}selected{% endif %}>Regression</option>
-          </select>
-        </div>
-
-        <div class="control-item">
-          <label for="model_key">Algorithm</label>
-          <select name="model_key" id="model_key" class="select">
-            {% for key, label in available_models %}
-            <option value="{{ key }}" {% if training.model_key == key %}selected{% endif %}>{{ label }}</option>
-            {% endfor %}
-          </select>
-        </div>
-
-        <div class="control-item">
-          <label for="test_size">Test Split</label>
-          <select name="test_size" id="test_size" class="select">
-            <option value="0.1"  {% if training.test_size == 0.1 %}selected{% endif %}>10%</option>
-            <option value="0.15" {% if training.test_size == 0.15 %}selected{% endif %}>15%</option>
-            <option value="0.2"  {% if not training or training.test_size == 0.2 %}selected{% endif %}>20% (default)</option>
-            <option value="0.25" {% if training.test_size == 0.25 %}selected{% endif %}>25%</option>
-            <option value="0.3"  {% if training.test_size == 0.3 %}selected{% endif %}>30%</option>
-            <option value="0.4"  {% if training.test_size == 0.4 %}selected{% endif %}>40%</option>
-            <option value="0.5"  {% if training.test_size == 0.5 %}selected{% endif %}>50%</option>
-          </select>
-        </div>
-
-        {% if feature_cols|length > 1 %}
-        <div class="control-item">
-          <label for="boundary_x">Boundary X</label>
-          <select name="boundary_x" id="boundary_x" class="select">
-            {% for f in feature_cols %}
-            <option value="{{ f }}" {% if f == boundary_x|default:scatter_x %}selected{% endif %}>{{ f }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="control-item">
-          <label for="boundary_y">Boundary Y</label>
-          <select name="boundary_y" id="boundary_y" class="select">
-            {% for f in feature_cols %}
-            <option value="{{ f }}" {% if f == boundary_y|default:scatter_y %}selected{% endif %}>{{ f }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        {% endif %}
-
-        <div class="control-item hyper-param hp-knn">
-          <label for="k">K</label>
-          <input type="number" name="k" id="k" min="1" max="50" class="input"
-                 value="{{ training.model_params.k|default:5 }}">
-        </div>
-
-        <div class="control-item hyper-param hp-knn">
-          <label for="metric">Distance</label>
-          <select name="metric" id="metric" class="select">
-            <option value="euclidean" {% if training.model_params.metric == 'euclidean' %}selected{% endif %}>Euclidean</option>
-            <option value="manhattan" {% if training.model_params.metric == 'manhattan' %}selected{% endif %}>Manhattan</option>
-          </select>
-        </div>
-
-        <div class="control-item hyper-param hp-tree">
-          <label for="max_depth">Tree Depth</label>
-          <input type="number" name="max_depth" id="max_depth" min="1" max="50" class="input"
-                 value="{{ training.model_params.max_depth|default:5 }}">
-        </div>
-
-        <div class="control-item hyper-param hp-tree">
-          <label for="min_samples_leaf">Leaf Nodes</label>
-          <input type="number" name="min_samples_leaf" id="min_samples_leaf" min="1" max="50" class="input"
-                 value="{{ training.model_params.min_samples_leaf|default:1 }}">
-        </div>
-
-        <div class="control-item hyper-param hp-tree">
-          <label for="criterion">Criterion</label>
-          <select name="criterion" id="criterion" class="select">
-            {% if problem_type == 'classification' %}
-              <option value="gini" {% if training.model_params.criterion == 'gini' %}selected{% endif %}>Gini</option>
-              <option value="entropy" {% if training.model_params.criterion == 'entropy' %}selected{% endif %}>Entropy</option>
-            {% else %}
-              <option value="squared_error" {% if training.model_params.criterion == 'squared_error' %}selected{% endif %}>Squared Error</option>
-              <option value="absolute_error" {% if training.model_params.criterion == 'absolute_error' %}selected{% endif %}>Absolute Error</option>
-            {% endif %}
-          </select>
-        </div>
-
-        <div class="control-item hyper-param hp-logistic">
-          <label for="C">C</label>
-          <input type="number" step="0.001" name="C" id="C" class="input"
-                 value="{{ training.model_params.C|default:1 }}">
-        </div>
-        <div class="control-item hyper-param hp-logistic">
-          <label for="penalty">Penalty</label>
-          <select name="penalty" id="penalty" class="select">
-            <option value="l2" {% if training.model_params.penalty == 'l2' %}selected{% endif %}>L2</option>
-            <option value="l1" {% if training.model_params.penalty == 'l1' %}selected{% endif %}>L1</option>
-          </select>
-        </div>
-
-        <div class="control-item hyper-param hp-ridge">
-          <label for="alpha">Alpha</label>
-          <input type="number" step="0.001" name="alpha" id="alpha" class="input"
-                 value="{{ training.model_params.alpha|default:1 }}">
-        </div>
-
-      </div>
-
-      <div class="update-row">
-        <button type="submit" class="btn btn-primary">▶ Train Model</button>
-      </div>
-    </form>
-
-    {% if training %}
-    <div class="training-summary">
-      <div class="card summary-card summary-highlight">
-        <span class="summary-label">Best {{ training.score_label }}</span>
-        <span class="summary-value">{{ training.best_test }}</span>
-        <span class="summary-sub muted">at {{ training.param_label }} = {{ training.best_param }}</span>
-      </div>
-
-      <div class="card summary-card">
-        <span class="summary-label">Model</span>
-        <span class="summary-value-sm">{{ training.model_label }}</span>
-      </div>
-
-      <div class="card summary-card">
-        <span class="summary-label">Train samples</span>
-        <span class="summary-value">{{ training.n_train }}</span>
-      </div>
-
-      <div class="card summary-card">
-        <span class="summary-label">Test samples</span>
-        <span class="summary-value">{{ training.n_test }}</span>
-      </div>
-    </div>
-
-    <h4 class="results-table-heading">Evaluation Metrics</h4>
-    <div class="metrics-grid">
-      {% for name, value in training.metrics.items %}
-      <div class="card metric-card">
-        <span class="summary-label">{{ name }}</span>
-        <span class="summary-value-sm">{{ value }}</span>
-      </div>
-      {% endfor %}
-    </div>
-
-    <div class="alert alert-info" style="margin-top: var(--space-3);">
-      <p><strong>Model interpretation:</strong> {{ training.overfit_message }}</p>
-      <p class="text-xs muted">Train-test gap: {{ training.overfit_gap }}</p>
-    </div>
-
-    <h4 class="results-table-heading">Hyperparameter Sweep</h4>
-    <p class="plot-desc muted">Train vs test score for every value of {{ training.param_label }}. Hover any point for the exact score — the highlighted point is the best test score.</p>
-    <div class="plot-box" id="curve-plot" style="margin-top: var(--space-3);"></div>
-
-    {% if training_json %}
-    <h4 class="results-table-heading">Decision Boundary Explorer</h4>
-    <p class="plot-desc muted">
-      Shows how a <strong>{{ training.model_label }}</strong> (trained on only
-      <strong>{{ boundary_x }}</strong> and <strong>{{ boundary_y }}</strong>, with the tuned
-      hyperparameters) divides the feature space.
-      Circles = training points, diamonds = test points,
-      {% if problem_type == 'classification' %}red ✕ = misclassified test points.
-      Hover any point to see its feature values, its true class and what the model
-      predicted — hovering an empty area shows what the model would predict there.{% else %}the surface shows the predicted value.
-      Hover any point to see its actual value, the model's prediction and the error.{% endif %}
-      Pick different features in the Boundary X/Y dropdowns above and retrain to compare.
-    </p>
-    <div class="plot-box" id="boundary-plot" style="margin-top: var(--space-3);"></div>
-    {% endif %}
-
-    <h4 class="results-table-heading">Full Results</h4>
-    <div class="table-wrap">
-      <table class="table data-table">
-        <thead>
-          <tr>
-            <th>{{ training.param_label }}</th>
-            <th>Train {{ training.score_label }}</th>
-            <th>Test {{ training.score_label }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for row in training.results_table %}
-          <tr {% if row.param == training.best_param %}class="best-row"{% endif %}>
-            <td>{{ row.param }}</td>
-            <td>{{ row.train }}</td>
-            <td><strong>{{ row.test }}</strong></td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    {% endif %}
-  </div>
-</section>
-
-{{ viz_json|json_script:"viz-data" }}
-{% if training_json %}{{ training_json|json_script:"training-data" }}{% endif %}
-
-{% endif %}
-
-<script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
+{% block script %}
 <script>
 (function () {
   'use strict';
 
-  /* ============================================================
-     Table stuff (unchanged from before, still swaps via fetch)
-     ============================================================ */
+  // ── Wizard panel switching ─────────────────────────────────────────────
+  function showPanel(panelId) {
+    document.querySelectorAll('.wizard-panel').forEach(function(p) {
+      p.classList.remove('active');
+    });
+    document.querySelectorAll('.project-sidebar .sidebar-link[data-panel]').forEach(function(l) {
+      l.classList.remove('active');
+    });
+    var panel = document.getElementById(panelId);
+    if (panel) panel.classList.add('active');
+    var link = document.querySelector('[data-panel="' + panelId + '"]');
+    if (link) link.classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
 
+  window.showPanel = showPanel;
+
+  document.querySelectorAll('.project-sidebar .sidebar-link[data-panel]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      if (!this.classList.contains('step-future')) {
+        showPanel(this.dataset.panel);
+      }
+    });
+  });
+
+  // ── Always hide overlay on page show (handles bfcache restore) ─────────
+  window.addEventListener('pageshow', function () {
+    var ov = document.getElementById('upload-overlay');
+    if (ov) ov.style.display = 'none';
+  });
+
+  // ── Auto-submit on file select ─────────────────────────────────────────
+  var fileInput = document.getElementById('csv-file-input');
+  if (fileInput) {
+    fileInput.addEventListener('change', function () {
+      var nameEl = document.getElementById('upload-filename');
+      if (nameEl && this.files.length) nameEl.textContent = this.files[0].name;
+      var overlay = document.getElementById('upload-overlay');
+      if (overlay) overlay.style.display = 'flex';
+      document.getElementById('upload-form').submit();
+    });
+  }
+
+  // ── Table AJAX ───────────────────────────────────────────────────────
   function submitTable() {
-    const form  = document.getElementById('table-form');
-    const inner = document.getElementById('table-inner');
-    const desc  = document.querySelector('#table-section .plot-desc');
+    var form  = document.getElementById('table-form');
+    var inner = document.getElementById('table-inner');
+    var desc  = document.querySelector('#sec-preview .plot-desc');
     if (!form || !inner) return;
 
-    const visibleSearch = document.getElementById('table-search');
-    if (visibleSearch) {
-      document.getElementById('search_hidden').value = visibleSearch.value;
-    }
+    var visibleSearch = document.getElementById('table-search');
+    if (visibleSearch) document.getElementById('search_hidden').value = visibleSearch.value;
 
-    inner.style.opacity      = '0.45';
+    inner.style.opacity       = '0.45';
     inner.style.pointerEvents = 'none';
 
     fetch(window.location.href, { method: 'POST', body: new FormData(form) })
-      .then(r => r.text())
-      .then(html => {
-        const doc      = new DOMParser().parseFromString(html, 'text/html');
-        const newInner = doc.getElementById('table-inner');
-        const newDesc  = doc.querySelector('#table-section .plot-desc');
+      .then(function (r) { return r.text(); })
+      .then(function (html) {
+        var doc      = new DOMParser().parseFromString(html, 'text/html');
+        var newInner = doc.getElementById('table-inner');
+        var newDesc  = doc.querySelector('#sec-preview .plot-desc');
         if (newInner) {
           inner.outerHTML = newInner.outerHTML;
           if (desc && newDesc) desc.innerHTML = newDesc.innerHTML;
-          const activeSize = document.getElementById('psize_input').value;
-          document.querySelectorAll('.psize-btn').forEach(b => {
-            const isActive = b.dataset.size === activeSize;
+          var activeSize = document.getElementById('psize_input').value;
+          document.querySelectorAll('.psize-btn').forEach(function (b) {
+            var isActive = b.dataset.size === activeSize;
             b.classList.toggle('psize-active', isActive);
             b.classList.toggle('active', isActive);
           });
           bindInner();
         }
       })
-      .catch(() => { form.submit(); });
+      .catch(function () { form.submit(); });
   }
 
   function bindStable() {
-    const searchEl = document.getElementById('table-search');
+    var searchEl = document.getElementById('table-search');
     if (searchEl) {
-      let timer;
+      var timer;
       searchEl.addEventListener('input', function () {
         clearTimeout(timer);
-        timer = setTimeout(() => {
+        timer = setTimeout(function () {
           document.getElementById('page_input').value = '1';
           submitTable();
         }, 400);
       });
     }
 
-    document.querySelectorAll('.psize-btn').forEach(btn => {
+    document.querySelectorAll('.psize-btn').forEach(function (btn) {
       btn.addEventListener('click', function () {
         document.getElementById('psize_input').value = this.dataset.size;
         document.getElementById('page_input').value  = '1';
@@ -603,18 +718,18 @@
   }
 
   function bindInner() {
-    const inner = document.getElementById('table-inner');
-    const form  = document.getElementById('table-form');
+    var inner = document.getElementById('table-inner');
+    var form  = document.getElementById('table-form');
     if (!inner || !form) return;
 
-    inner.querySelectorAll('.col-toggle-btn').forEach(btn => {
+    inner.querySelectorAll('.col-toggle-btn').forEach(function (btn) {
       btn.addEventListener('click', function () {
-        const col = this.dataset.col;
-        form.querySelectorAll('.hidden-col-inp').forEach(inp => {
+        var col = this.dataset.col;
+        form.querySelectorAll('.hidden-col-inp').forEach(function (inp) {
           if (inp.value === col) inp.remove();
         });
         if (this.classList.contains('col-visible')) {
-          const inp = document.createElement('input');
+          var inp = document.createElement('input');
           inp.type = 'hidden'; inp.name = 'hidden_cols';
           inp.value = col; inp.className = 'hidden-col-inp';
           form.appendChild(inp);
@@ -624,7 +739,7 @@
       });
     });
 
-    inner.querySelectorAll('.sort-btn').forEach(btn => {
+    inner.querySelectorAll('.sort-btn').forEach(function (btn) {
       btn.addEventListener('click', function () {
         document.getElementById('sort_col_input').value = this.dataset.col;
         document.getElementById('sort_dir_input').value = this.dataset.dir;
@@ -633,7 +748,7 @@
       });
     });
 
-    inner.querySelectorAll('.page-btn:not([disabled])').forEach(btn => {
+    inner.querySelectorAll('.page-btn:not([disabled])').forEach(function (btn) {
       btn.addEventListener('click', function () {
         document.getElementById('page_input').value = this.dataset.page;
         submitTable();
@@ -641,370 +756,51 @@
     });
   }
 
-  /* 
-     Plotly charts 
- */
+  function bindViz() {
+    var form = document.getElementById('viz-form');
+    if (!form) return;
 
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
 
-  const PALETTE = ['#4a7fe5', '#f5a623', '#3dba6e', '#ff4d6d',
-                   '#9b6ef3', '#39c2c9', '#e57ab8', '#a3b18a',
-                   '#f4845f', '#7f8fa6'];
-  const PLOT_BG = '#1a1d2e';
-  const GRID    = 'rgba(255,255,255,0.08)';
-  const FONT_C  = '#c9cde0';
+      var btn = document.getElementById('update-plots-btn');
+      if (btn) { btn.disabled = true; btn.textContent = 'Updating…'; }
 
-  const vizEl = document.getElementById('viz-data');
-  const viz = vizEl ? JSON.parse(vizEl.textContent) : null;
-
-  function baseLayout(extra) {
-    const layout = {
-      plot_bgcolor: PLOT_BG,
-      paper_bgcolor: 'rgba(0,0,0,0)',
-      font: { color: FONT_C, size: 12 },
-      margin: { l: 55, r: 20, t: 20, b: 50 },
-      xaxis: { gridcolor: GRID, zerolinecolor: GRID },
-      yaxis: { gridcolor: GRID, zerolinecolor: GRID },
-      legend: { orientation: 'h', y: -0.22, bgcolor: 'rgba(0,0,0,0)' },
-    };
-    // shallow merge is fine here, we only override top level keys
-    return Object.assign(layout, extra || {});
-  }
-
-  const PLOTLY_CFG = { responsive: true, displaylogo: false,
-                       modeBarButtonsToRemove: ['lasso2d', 'select2d'] };
-
-
-  function draw(id, traces, layout) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    try {
-      Plotly.purge(el);
-      Plotly.newPlot(el, traces, layout, PLOTLY_CFG);
-    } catch(e) {
-      el.innerHTML = '<p style="color:#ff4d6d;padding:1rem;font-size:13px">Plot error: ' + e.message + '</p>';
-      console.error('Plotly error on #' + id, e);
-    }
-  }
-
-  function classColor(cls) {
-    const idx = viz.classes.indexOf(cls);
-    return PALETTE[idx % PALETTE.length];
-  }
-
-  function drawScatter() {
-    if (!viz) return;
-    const fx = document.getElementById('scatter_x').value;
-    const fy = document.getElementById('scatter_y').value;
-    const traces = [];
-
-    if (viz.problem_type === 'classification') {
-      // one trace per class. no checkbox filter anymore, the Plotly legend
-      // already does hide (click) and isolate (double click) out of the box
-      viz.classes.forEach(cls => {
-        const xs = [], ys = [];
-        for (let i = 0; i < viz.target.length; i++) {
-          if (viz.target[i] === cls) {
-            xs.push(viz.features[fx][i]);
-            ys.push(viz.features[fy][i]);
-          }
-        }
-        traces.push({
-          x: xs, y: ys, mode: 'markers', type: 'scatter', name: cls,
-          marker: { color: classColor(cls), size: 7, opacity: 0.85,
-                    line: { color: 'rgba(255,255,255,0.4)', width: 0.5 } },
-          hovertemplate: fx + ': %{x}<br>' + fy + ': %{y}<br>' + cls + '<extra></extra>',
-        });
+      ['scatter-img','hist-img','corr-img'].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) el.style.opacity = '0.4';
       });
-    } else {
-      traces.push({
-        x: viz.features[fx], y: viz.features[fy], mode: 'markers', type: 'scatter',
-        marker: { color: viz.target, colorscale: 'Viridis', size: 7, opacity: 0.85,
-                  colorbar: { title: { text: viz.target_col }, outlinewidth: 0 },
-                  line: { color: 'rgba(255,255,255,0.4)', width: 0.5 } },
-        hovertemplate: fx + ': %{x}<br>' + fy + ': %{y}<br>' +
-                       viz.target_col + ': %{marker.color}<extra></extra>',
-      });
-    }
 
-    draw('scatter-plot', traces, baseLayout({
-      xaxis: { title: { text: fx }, gridcolor: GRID, zerolinecolor: GRID },
-      yaxis: { title: { text: fy }, gridcolor: GRID, zerolinecolor: GRID },
-      height: 380,
-    }));
-  }
-
-  function drawHist() {
-    if (!viz) return;
-    const f = document.getElementById('hist_feature').value;
-    const traces = [];
-
-    if (viz.problem_type === 'classification') {
-      viz.classes.forEach(cls => {
-        const xs = [];
-        for (let i = 0; i < viz.target.length; i++) {
-          if (viz.target[i] === cls) xs.push(viz.features[f][i]);
-        }
-        traces.push({
-          x: xs, type: 'histogram', name: cls, opacity: 0.6,
-          nbinsx: 20, marker: { color: classColor(cls) },
-        });
-      });
-    } else {
-      traces.push({
-        x: viz.features[f], type: 'histogram', nbinsx: 25,
-        marker: { color: '#4a7fe5', line: { color: 'rgba(255,255,255,0.25)', width: 0.5 } },
-      });
-    }
-
-    draw('hist-plot', traces, baseLayout({
-      barmode: 'overlay',
-      xaxis: { title: { text: f }, gridcolor: GRID, zerolinecolor: GRID },
-      yaxis: { title: { text: 'Count' }, gridcolor: GRID, zerolinecolor: GRID },
-      height: 380,
-    }));
-  }
-
-  function drawCorr() {
-    if (!viz) return;
-    const trace = {
-      x: viz.corr.cols, y: viz.corr.cols, z: viz.corr.z,
-      type: 'heatmap', colorscale: 'RdBu', reversescale: true,
-      zmin: -1, zmax: 1, zmid: 0,
-      texttemplate: '%{z:.2f}', textfont: { size: 11 },
-      colorbar: { outlinewidth: 0 },
-      hovertemplate: '%{x} vs %{y}: %{z:.3f}<extra></extra>',
-    };
-    draw('corr-plot', [trace], baseLayout({
-      height: 420,
-      margin: { l: 110, r: 20, t: 20, b: 90 },
-      yaxis: { autorange: 'reversed', gridcolor: GRID },
-    }));
-  }
-
-  function drawAllDataPlots() {
-    drawScatter();
-    drawHist();
-    drawCorr();
-  }
-
-  /* ---- training curve + decision boundary ---- */
-
-  function drawTraining() {
-    const el = document.getElementById('training-data');
-    if (!el) return;
-    const data = JSON.parse(el.textContent);
-    const curve = data.curve;
-
-    if (curve && document.getElementById('curve-plot')) {
-      const traces = [
-        { x: curve.params, y: curve.train, mode: 'lines+markers', name: 'Train',
-          line: { color: '#4a7fe5', width: 2 }, marker: { size: 7 } },
-        { x: curve.params, y: curve.test, mode: 'lines+markers', name: 'Test',
-          line: { color: '#f5a623', width: 2, dash: 'dash' }, marker: { size: 7, symbol: 'square' } },
-        { x: [curve.best_param], y: [curve.test[curve.best_idx]],
-          mode: 'markers', name: 'Best: ' + curve.best_param,
-          marker: { color: '#3dba6e', size: 14, symbol: 'star',
-                    line: { color: '#fff', width: 1 } } },
-      ];
-      const layout = baseLayout({
-        height: 400,
-        xaxis: { title: { text: curve.param_label }, type: 'category', gridcolor: GRID },
-        yaxis: { title: { text: curve.score_label }, gridcolor: GRID },
-      });
-      // for accuracy a fixed 0-1 axis reads better, r2 can go negative though
-      if (curve.score_label === 'Accuracy') layout.yaxis.range = [-0.02, 1.05];
-      draw('curve-plot', traces, layout);
-    }
-
-    const b = data.boundary;
-    const bEl = document.getElementById('boundary-plot');
-
-    if (b && bEl) {
-      const traces = [];
-
-      if (b.problem_type === 'classification') {
-        const k = b.class_names.length;
-        // step colorscale — each class gets one solid colour band.
-        const eps = 0.0001;
-        const scale = [];
-        for (let i = 0; i < k; i++) {
-          const col = PALETTE[i % PALETTE.length];
-          scale.push([i / k, col]);
-          scale.push([(i + 1) / k - eps, col]);
-        }
-
-        // customdata instead (2d array matching z shape)
-        const regionCd = b.z.map(row => row.map(v => [b.class_names[v] || '?']));
-        traces.push({
-          x: b.x, y: b.y, z: b.z, type: 'heatmap',
-          colorscale: scale, zmin: -0.5, zmax: k - 0.5,
-          opacity: 0.3, showscale: false,
-          customdata: regionCd,
-          hovertemplate: b.feature_x + ': %{x:.3f}<br>' + b.feature_y + ': %{y:.3f}' +
-                         '<br>model would predict: <b>%{customdata[0]}</b><extra></extra>',
-        });
-
-        const cls_name = idx => b.class_names[idx] !== undefined ? b.class_names[idx] : '?(' + idx + ')';
-
-        const hoverPoint = kind =>
-          b.feature_x + ': %{x}<br>' + b.feature_y + ': %{y}' +
-          '<br>true: <b>%{customdata[0]}</b><br>predicted: <b>%{customdata[1]}</b>' +
-          '<extra>' + kind + '</extra>';
-
-        b.class_names.forEach((cls, ci) => {
-          const trX = [], trY = [], trCd = [], teX = [], teY = [], teCd = [];
-          b.points.train_label.forEach((l, i) => {
-            if (l === ci) {
-              trX.push(b.points.train_x[i]); trY.push(b.points.train_y[i]);
-              trCd.push([cls, cls_name(b.points.train_pred[i])]);
-            }
+      fetch(window.location.href, { method: 'POST', body: new FormData(form) })
+        .then(function (r) { return r.text(); })
+        .then(function (html) {
+          var doc = new DOMParser().parseFromString(html, 'text/html');
+          ['scatter-img','hist-img','corr-img'].forEach(function (id) {
+            var newEl = doc.getElementById(id);
+            var curEl = document.getElementById(id);
+            if (newEl && curEl) { curEl.src = newEl.src; curEl.style.opacity = '1'; }
           });
-          b.points.test_label.forEach((l, i) => {
-            if (l === ci) {
-              teX.push(b.points.test_x[i]); teY.push(b.points.test_y[i]);
-              teCd.push([cls, cls_name(b.points.test_pred[i])]);
-            }
-          });
-          traces.push({
-            x: trX, y: trY, mode: 'markers', name: cls + ' (train)',
-            legendgroup: cls, customdata: trCd,
-            marker: { color: PALETTE[ci % PALETTE.length], size: 7, opacity: 0.9,
-                      line: { color: 'rgba(0,0,0,0.4)', width: 0.5 } },
-            hovertemplate: hoverPoint('train'),
-          });
-          traces.push({
-            x: teX, y: teY, mode: 'markers', name: cls + ' (test)',
-            legendgroup: cls, customdata: teCd,
-            marker: { color: PALETTE[ci % PALETTE.length], size: 9, symbol: 'diamond',
-                      line: { color: '#ffffff', width: 1.2 } },
-            hovertemplate: hoverPoint('test'),
-          });
-        });
-
-        // red X on top of every wrongly predicted test point
-        const wx = [], wy = [], wcd = [];
-        b.points.test_wrong.forEach((w, i) => {
-          if (w) {
-            wx.push(b.points.test_x[i]); wy.push(b.points.test_y[i]);
-            wcd.push([cls_name(b.points.test_label[i]),
-                      cls_name(b.points.test_pred[i])]);
-          }
-        });
-        if (wx.length) {
-          traces.push({
-            x: wx, y: wy, mode: 'markers', name: 'misclassified',
-            customdata: wcd,
-            marker: { color: '#ff4d6d', size: 13, symbol: 'x-thin',
-                      line: { color: '#ff4d6d', width: 2.5 } },
-            hovertemplate: b.feature_x + ': %{x}<br>' + b.feature_y + ': %{y}' +
-                           '<br>true: <b>%{customdata[0]}</b>' +
-                           '<br>predicted: <b>%{customdata[1]}</b> ← wrong side' +
-                           '<extra>misclassified</extra>',
-          });
-        }
-      } else {
-        // regression: continuous prediction surface instead of class regions
-        traces.push({
-          x: b.x, y: b.y, z: b.z, type: 'contour',
-          colorscale: 'Viridis', opacity: 0.85,
-          colorbar: { title: { text: 'prediction' }, outlinewidth: 0 },
-          contours: { coloring: 'heatmap' },
-          hovertemplate: 'predicted: %{z:.3f}<extra></extra>',
-        });
-        // hover shows the models prediction next to the actual value plus the
-        // gap between them, so every dot explains itself
-        const regHover = kind =>
-          b.feature_x + ': %{x}<br>' + b.feature_y + ': %{y}' +
-          '<br>actual: <b>%{customdata[0]}</b><br>predicted: <b>%{customdata[1]}</b>' +
-          '<br>error: %{customdata[2]}' +
-          '<extra>' + kind + '</extra>';
-
-        const cdFor = (labels, preds) => labels.map((a, i) =>
-          [a, preds[i], Math.round((preds[i] - a) * 1000) / 1000]);
-
-        traces.push({
-          x: b.points.train_x, y: b.points.train_y, mode: 'markers', name: 'train',
-          customdata: cdFor(b.points.train_label, b.points.train_pred),
-          marker: { color: b.points.train_label, colorscale: 'Viridis', showscale: false,
-                    size: 7, line: { color: 'rgba(255,255,255,0.7)', width: 0.8 } },
-          hovertemplate: regHover('train'),
-        });
-        traces.push({
-          x: b.points.test_x, y: b.points.test_y, mode: 'markers', name: 'test',
-          customdata: cdFor(b.points.test_label, b.points.test_pred),
-          marker: { color: b.points.test_label, colorscale: 'Viridis', showscale: false,
-                    size: 9, symbol: 'diamond',
-                    line: { color: '#ffffff', width: 1.2 } },
-          hovertemplate: regHover('test'),
-        });
-      }
-
-      const scoreLabel = b.problem_type === 'classification'
-        ? '2-feature accuracy: ' + b.score_2d
-        : '2-feature R²: ' + b.score_2d;
-
-      draw('boundary-plot', traces, baseLayout({
-        height: 480,
-        xaxis: { title: { text: b.feature_x }, gridcolor: GRID, zerolinecolor: GRID },
-        yaxis: { title: { text: b.feature_y }, gridcolor: GRID, zerolinecolor: GRID },
-        annotations: [{
-          text: scoreLabel, showarrow: false, xref: 'paper', yref: 'paper',
-          x: 0.99, y: 0.99, xanchor: 'right',
-          font: { size: 12, color: FONT_C },
-          bgcolor: 'rgba(0,0,0,0.45)', borderpad: 5,
-        }],
-      }));
-    }
-  }
-
-  function bindVizControls() {
-    if (!viz) return;
-    const sx = document.getElementById('scatter_x');
-    const sy = document.getElementById('scatter_y');
-    const hf = document.getElementById('hist_feature');
-
-    // redraw immediately + keep the hidden train-form inputs in sync so the
-    // selection survives the full page reload after training
-    if (sx) sx.addEventListener('change', function () {
-      document.getElementById('hidden_scatter_x').value = this.value;
-      drawScatter();
-    });
-    if (sy) sy.addEventListener('change', function () {
-      document.getElementById('hidden_scatter_y').value = this.value;
-      drawScatter();
-    });
-    if (hf) hf.addEventListener('change', function () {
-      document.getElementById('hidden_hist_feature').value = this.value;
-      drawHist();
+          if (btn) { btn.disabled = false; btn.textContent = 'Update Plots'; }
+        })
+        .catch(function () { form.submit(); });
     });
   }
 
   function bindModelControls() {
-    const modelSelect = document.getElementById('model_key');
+    var modelSelect = document.getElementById('model_key');
     if (!modelSelect) return;
 
     function updateHyperParams() {
-      const selectedModel = modelSelect.value;
-
-      document.querySelectorAll('.hyper-param').forEach(el => {
-        el.style.display = 'none';
-      });
-
-      if (selectedModel === 'KNN') {
-        document.querySelectorAll('.hp-knn').forEach(el => el.style.display = 'flex');
-      }
-
-      if (selectedModel === 'DecisionTree') {
-        document.querySelectorAll('.hp-tree').forEach(el => el.style.display = 'flex');
-      }
-
-      if (selectedModel === 'LogisticRegression') {
-        document.querySelectorAll('.hp-logistic').forEach(el => el.style.display = 'flex');
-      }
-
-      if (selectedModel === 'Ridge') {
-        document.querySelectorAll('.hp-ridge').forEach(el => el.style.display = 'flex');
-      }
+      var selectedModel = modelSelect.value;
+      document.querySelectorAll('.hyper-param').forEach(function (el) { el.style.display = 'none'; });
+      if (selectedModel === 'KNN')
+        document.querySelectorAll('.hp-knn').forEach(function (el) { el.style.display = 'flex'; });
+      if (selectedModel === 'DecisionTree')
+        document.querySelectorAll('.hp-tree').forEach(function (el) { el.style.display = 'flex'; });
+      if (selectedModel === 'LogisticRegression')
+        document.querySelectorAll('.hp-logistic').forEach(function (el) { el.style.display = 'flex'; });
+      if (selectedModel === 'Ridge')
+        document.querySelectorAll('.hp-ridge').forEach(function (el) { el.style.display = 'flex'; });
     }
 
     modelSelect.addEventListener('change', updateHyperParams);
@@ -1013,21 +809,8 @@
 
   bindStable();
   bindInner();
-  bindVizControls();
+  bindViz();
   bindModelControls();
-
-
-  // before trying to draw anything — fixes blank plots on some base.html setups
-  if (document.readyState === 'complete') {
-    drawAllDataPlots();
-    drawTraining();
-  } else {
-    window.addEventListener('load', function () {
-      drawAllDataPlots();
-      drawTraining();
-    });
-  }
 })();
 </script>
-
-{% endblock %}
+{% endblock script %}

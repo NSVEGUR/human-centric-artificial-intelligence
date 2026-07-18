@@ -4,7 +4,7 @@
 {% block title %}HCAI · Project Hub{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'home/style.css' %}" />
+<link rel="stylesheet" href="{% static 'home/style.css' %}?v=3" />
 {% endblock %}
 
 {% block content %}
@@ -25,12 +25,12 @@
         </div>
         <ul class="student-list">
             {% for student in students %}
-            <li class="student-item">
+            <li class="card student-item">
                 <span class="student-name">{{ student.name }}</span>
                 <span class="kbd">{{ student.matriculation }}</span>
             </li>
             {% empty %}
-            <li class="student-item muted">No students found.</li>
+            <li class="card student-item muted">No students found.</li>
             {% endfor %}
         </ul>
     </div>

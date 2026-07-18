@@ -139,56 +139,72 @@ def compute_mad_distance(x_original, x_counterfactual):
 
 def generate_counterfactuals(model_info, sample_idx, target_class, model_type,
                               k=5, initial_n=2000, max_iterations=5):
-    # LR no longer uses a scaler - it trains on raw features same as the tree
     model = model_info['model']
     x_original = test_X.iloc[sample_idx]
     original_species = test_y.iloc[sample_idx]
     feature_names = list(train_X.columns)
 
-    # both model types now predict on the raw feature DataFrame
     x_for_pred = x_original.to_frame().T
-
     original_pred = model.predict(x_for_pred)[0]
     original_proba = model.predict_proba(x_for_pred)[0]
-
-    # If target is same as original prediction, warn but continue
-    if original_pred == target_class:
-        same_as_original = True
-    else:
-        same_as_original = False
+    same_as_original = (original_pred == target_class)
 
     all_counterfactuals = []
-    noise_scale = 0.2
+    x_orig_arr = x_original.values.astype(float)
 
-    for iteration in range(max_iterations):
-        n_samples = initial_n * (iteration + 1)
-        samples = sample_around_point(x_original, n_samples=n_samples, noise_scale=noise_scale)
+    # ── Strategy 1: interpolate toward target-class training points ───────────
+    # For each target-class training sample, linearly interpolate from the
+    # original point toward that sample. The model must predict target_class at
+    # alpha=1.0, so we always cross the decision boundary somewhere along the
+    # path. Taking the first crossing gives the closest valid counterfactual.
+    target_train_mask = train_y == target_class
+    target_train_X = train_X[target_train_mask]
 
-        samples_df = pd.DataFrame(samples, columns=feature_names)
-        # no scaler needed - LR and tree both trained on raw features
-        samples_for_pred = samples_df
-
-        predictions = model.predict(samples_for_pred)
-        probabilities = model.predict_proba(samples_for_pred)
-
-        target_mask = predictions == target_class
-        target_samples = samples[target_mask]
-        target_probas = probabilities[target_mask]
-
-        if len(target_samples) > 0:
-            for i in range(len(target_samples)):
-                dist, feat_dists = compute_mad_distance(x_original, target_samples[i])
+    for _, tgt_row in target_train_X.iterrows():
+        tgt_arr = tgt_row.values.astype(float)
+        for alpha in np.linspace(0.05, 1.0, 30):
+            interp = (1 - alpha) * x_orig_arr + alpha * tgt_arr
+            interp_df = pd.DataFrame([interp], columns=feature_names)
+            pred = model.predict(interp_df)[0]
+            proba = model.predict_proba(interp_df)[0]
+            if pred == target_class:
+                dist, feat_dists = compute_mad_distance(x_original, interp)
                 all_counterfactuals.append({
-                    'sample': target_samples[i],
+                    'sample': interp,
                     'distance': dist,
                     'feature_distances': feat_dists,
-                    'probability': target_probas[i],
+                    'probability': proba,
                     'predicted_class': target_class,
                 })
+                break  # keep only the closest crossing per training anchor
 
-        if len(all_counterfactuals) >= k:
+        if len(all_counterfactuals) >= k * 3:
             break
 
+    # ── Strategy 2: random sampling for additional diversity ─────────────────
+    noise_scale = 0.3
+    for iteration in range(max_iterations):
+        if len(all_counterfactuals) >= k * 3:
+            break
+        n_samples = initial_n * (iteration + 1)
+        samples = sample_around_point(x_original, n_samples=n_samples, noise_scale=noise_scale)
+        samples_df = pd.DataFrame(samples, columns=feature_names)
+        predictions = model.predict(samples_df)
+        probabilities = model.predict_proba(samples_df)
+
+        target_mask_arr = predictions == target_class
+        target_samples = samples[target_mask_arr]
+        target_probas = probabilities[target_mask_arr]
+
+        for i in range(len(target_samples)):
+            dist, feat_dists = compute_mad_distance(x_original, target_samples[i])
+            all_counterfactuals.append({
+                'sample': target_samples[i],
+                'distance': dist,
+                'feature_distances': feat_dists,
+                'probability': target_probas[i],
+                'predicted_class': target_class,
+            })
         noise_scale += 0.15
 
     all_counterfactuals.sort(key=lambda x: x['distance'])
