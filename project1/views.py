@@ -1,14 +1,8 @@
 import io
-import base64
 import math
-from urllib import request
 import numpy as np
 import pandas as pd
 
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-import matplotlib.cm as cm
 
 from django.shortcuts import render, redirect
 
@@ -16,22 +10,11 @@ from .models import (
     CLASSIFICATION_MODELS,
     REGRESSION_MODELS,
     run_training,
+    make_boundary,
     get_default_params,
     PROBLEM_EXPLANATIONS,
     MODEL_EXPLANATIONS,
 )
-
-
-# Helper function to convert matplotlib figure to base64 string
-def fig_to_base64(fig):
-    buffer = io.BytesIO()
-    fig.savefig(buffer, format='png', bbox_inches='tight', dpi=100,
-                facecolor='white', edgecolor='none')
-    buffer.seek(0)
-    image_data = base64.b64encode(buffer.read()).decode('utf-8')
-    buffer.close()
-    plt.close(fig)
-    return image_data
 
 
 def detect_problem_type(target_series):
@@ -47,113 +30,47 @@ def detect_problem_type(target_series):
     return 'regression'
 
 
-def create_scatter_plot(df, x_feature, y_feature, target_col, problem_type, selected_classes):
-    """Create a scatter plot comparing two features"""
-    fig, ax = plt.subplots(figsize=(5, 4))
-    
+def _col_as_list(series):
+    out = []
+    for v in series:
+        if pd.isna(v):
+            out.append(None)
+        elif isinstance(v, (int, float, np.integer, np.floating)):
+            out.append(round(float(v), 4))
+        else:
+            out.append(str(v))
+    return out
+
+# frontend - packing 
+def build_viz_payload(df, feature_cols, target_col, problem_type):
+
+
+    features = {}
+    for c in feature_cols:
+        features[c] = _col_as_list(df[c])
+
     if problem_type == 'classification':
-        # Get all unique classes and create color mapping
-        all_classes = sorted(df[target_col].unique())
-        cmap = cm.get_cmap('tab10', len(all_classes))
-        class_to_color = {}
-        for i, c in enumerate(all_classes):
-            class_to_color[str(c)] = cmap(i)
-        
-        # Plot each selected class
-        for cls in selected_classes:
-            subset = df[df[target_col].astype(str) == cls]
-            if not subset.empty:
-                ax.scatter(subset[x_feature], subset[y_feature],
-                          label=cls, color=class_to_color.get(cls),
-                          alpha=0.7, s=35, edgecolors='white', linewidths=0.3)
-        
-        if selected_classes:
-            ax.legend(title=target_col, fontsize=8, title_fontsize=8)
+        target = [str(v) for v in df[target_col]]
+        classes = sorted(set(target))
     else:
-        # For regression, use continuous color scale
-        sc = ax.scatter(df[x_feature], df[y_feature], c=df[target_col],
-                       cmap='viridis', alpha=0.7, s=35, 
-                       edgecolors='white', linewidths=0.3)
-        fig.colorbar(sc, ax=ax, label=target_col)
-    
-    ax.set_xlabel(x_feature, fontsize=9)
-    ax.set_ylabel(y_feature, fontsize=9)
-    ax.set_title(f'{x_feature} vs {y_feature}', fontsize=10, fontweight='bold')
-    ax.grid(True, linestyle='--', alpha=0.3)
-    fig.tight_layout()
-    
-    return fig_to_base64(fig)
+        target = _col_as_list(df[target_col])
+        classes = []
 
-
-def create_histogram(df, feature, target_col, problem_type, selected_classes):
-    """Generate histogram for feature distribution"""
-    fig, ax = plt.subplots(figsize=(5, 4))
-    
-    if problem_type == 'classification':
-        all_classes = sorted(df[target_col].unique())
-        cmap = cm.get_cmap('tab10', len(all_classes))
-        
-        # Create color mapping
-        class_to_color = {}
-        for i, c in enumerate(all_classes):
-            class_to_color[str(c)] = cmap(i)
-        
-        # Plot histogram for each class
-        for cls in selected_classes:
-            subset = df[df[target_col].astype(str) == cls]
-            if not subset.empty:
-                ax.hist(subset[feature], bins=20, alpha=0.6, 
-                       label=cls, color=class_to_color.get(cls))
-        
-        if selected_classes:
-            ax.legend(title=target_col, fontsize=8, title_fontsize=8)
-    else:
-        # Simple histogram for regression
-        ax.hist(df[feature], bins=25, alpha=0.75, 
-               color='steelblue', edgecolor='white')
-    
-    ax.set_xlabel(feature, fontsize=9)
-    ax.set_ylabel('Count', fontsize=9)
-    ax.set_title(f'Distribution of {feature}', fontsize=10, fontweight='bold')
-    ax.grid(True, linestyle='--', alpha=0.3)
-    fig.tight_layout()
-    
-    return fig_to_base64(fig)
-
-
-def create_correlation_heatmap(df, feature_cols):
-    """Create correlation heatmap for numeric features"""
-    fig, ax = plt.subplots(figsize=(5, 4))
-    
-    # Calculate correlation matrix
+    # correlation matrix (pandas skips NaN by itself which is convenient)
     corr = df[feature_cols].corr()
-    
-    # Display heatmap
-    im = ax.imshow(corr.values, cmap='RdBu_r', vmin=-1, vmax=1, aspect='auto')
-    
-    # Set ticks and labels
-    ax.set_xticks(range(len(feature_cols)))
-    ax.set_yticks(range(len(feature_cols)))
-    ax.set_xticklabels(feature_cols, rotation=45, ha='right', fontsize=7)
-    ax.set_yticklabels(feature_cols, fontsize=7)
-    
-    # Add correlation values as text
-    for i in range(len(feature_cols)):
-        for j in range(len(feature_cols)):
-            val = corr.values[i, j]
-            # Use white text for high correlation, black for low
-            if abs(val) > 0.6:
-                color = 'white'
-            else:
-                color = 'black'
-            ax.text(j, i, f'{val:.2f}', ha='center', va='center', 
-                   fontsize=8, color=color)
-    
-    fig.colorbar(im, ax=ax, fraction=0.046)
-    ax.set_title('Feature Correlation Matrix', fontsize=10, fontweight='bold')
-    fig.tight_layout()
-    
-    return fig_to_base64(fig)
+    corr_z = []
+    for row in corr.values:
+        corr_z.append([None if pd.isna(v) else round(float(v), 3) for v in row])
+
+    return {
+        'features': features,
+        'target': target,
+        'classes': classes,
+        'feature_cols': feature_cols,
+        'target_col': target_col,
+        'problem_type': problem_type,
+        'corr': {'cols': feature_cols, 'z': corr_z},
+    }
 
 
 # Page size options for table pagination
@@ -276,8 +193,8 @@ def index(request):
 
     # Handle clear action - remove all session data
     if request.method == 'POST' and request.POST.get('action') == 'clear':
-        session_keys = ['csv_data', 'csv_filename', 'scatter_plot',
-                       'hist_plot', 'corr_plot', 'plot_meta']
+        # only the csv lives in the session now, plots are drawn client side
+        session_keys = ['csv_data', 'csv_filename']
         for key in session_keys:
             if key in request.session:
                 del request.session[key]
@@ -304,13 +221,8 @@ def index(request):
             # Save to session
             request.session['csv_data'] = csv_text
             request.session['csv_filename'] = filename
-            
-            # Clear old plots from session
-            plot_keys = ['scatter_plot', 'hist_plot', 'corr_plot', 'plot_meta']
-            for key in plot_keys:
-                if key in request.session:
-                    del request.session[key]
-                    
+
+
         elif 'csv_data' in request.session:
             # Load from session
             csv_text = request.session['csv_data']
@@ -350,19 +262,10 @@ def index(request):
             else:
                 problem_type = detected_problem_type
 
-            # Handle class selection for classification problems
-            unique_classes = []
-            selected_classes = []
-            
-            if problem_type == 'classification':
-                unique_classes = sorted([str(c) for c in df[target_col].unique()])
-                
-                if new_file:
-                    # Select all classes by default for new file
-                    selected_classes = unique_classes
-                else:
-                    # Get selected classes from POST
-                    selected_classes = request.POST.getlist('selected_classes')
+            # note: the old "filter categories" checkboxes are gone. Plotly's
+            # legend does the same job for free (click = hide a class,
+            # double click = show only that class) so keeping our own
+            # checkbox state around was just duplicate bookkeeping
 
             # Get plot axis selections from POST or use defaults
             if len(feature_cols) > 0:
@@ -388,47 +291,9 @@ def index(request):
             if hist_feature not in feature_cols:
                 hist_feature = feature_cols[0]
 
-            # Decide whether to regenerate plots
-            # Only regenerate on: new file upload, explicit update, or no cached plots
-            # Table interactions should NOT trigger plot regeneration
-            need_plots = False
-            if not table_action:
-                if new_file or update_plots:
-                    need_plots = True
-                elif 'scatter_plot' not in request.session:
-                    need_plots = True
-
-            if need_plots:
-                # Generate new plots
-                scatter_plot = create_scatter_plot(
-                    df, scatter_x, scatter_y, target_col, problem_type, selected_classes)
-                hist_plot = create_histogram(
-                    df, hist_feature, target_col, problem_type, selected_classes)
-                corr_plot = create_correlation_heatmap(df, feature_cols)
-                
-                # Save plots to session
-                request.session['scatter_plot'] = scatter_plot
-                request.session['hist_plot'] = hist_plot
-                request.session['corr_plot'] = corr_plot
-                request.session['plot_meta'] = {
-                    'scatter_x': scatter_x,
-                    'scatter_y': scatter_y,
-                    'hist_feature': hist_feature,
-                    'selected_classes': selected_classes,
-                }
-            else:
-                # Load plots from session
-                scatter_plot = request.session.get('scatter_plot', '')
-                hist_plot = request.session.get('hist_plot', '')
-                corr_plot = request.session.get('corr_plot', '')
-                meta = request.session.get('plot_meta', {})
-                
-                # Restore plot selections from cache to keep dropdowns in sync
-                if not update_plots and not new_file:
-                    scatter_x = meta.get('scatter_x', scatter_x)
-                    scatter_y = meta.get('scatter_y', scatter_y)
-                    hist_feature = meta.get('hist_feature', hist_feature)
-                    selected_classes = meta.get('selected_classes', selected_classes)
+            # Build the data payload for the client side plots. This is cheap
+            # so we just always do it (the old image caching stuff is gone)
+            viz_payload = build_viz_payload(df, feature_cols, target_col, problem_type)
 
             # Get available models based on problem type
             if problem_type == 'classification':
@@ -445,14 +310,11 @@ def index(request):
 
             # Update main context
             context.update({
-                'scatter_plot': scatter_plot,
-                'hist_plot': hist_plot,
-                'corr_plot': corr_plot,
+                'has_data': True,
+                'viz_json': viz_payload,  # json_script in the template handles the encoding
                 'feature_cols': feature_cols,
                 'target_col': target_col,
                 'problem_type': problem_type,
-                'unique_classes': unique_classes,
-                'selected_classes': selected_classes,
                 'scatter_x': scatter_x,
                 'scatter_y': scatter_y,
                 'hist_feature': hist_feature,
@@ -517,7 +379,35 @@ def index(request):
                     model_params
                 )
 
+                # decision boundary on 2 user-picked features. defaults to the
+                # first two if nothing was picked yet
+                boundary_x = request.POST.get('boundary_x', feature_cols[0])
+                boundary_y = request.POST.get('boundary_y',
+                                              feature_cols[1] if len(feature_cols) > 1 else feature_cols[0])
+                if boundary_x not in feature_cols:
+                    boundary_x = feature_cols[0]
+                if boundary_y not in feature_cols or boundary_y == boundary_x:
+                    # fall back to any other feature thats not boundary_x
+                    others = [c for c in feature_cols if c != boundary_x]
+                    boundary_y = others[0] if others else boundary_x
+
+                boundary = None
+                if len(feature_cols) > 1:
+                    boundary = make_boundary(
+                        df, feature_cols, target_col, problem_type,
+                        model_key, training_results['model_params'],
+                        boundary_x, boundary_y, test_size
+                    )
+
                 context['training'] = training_results
+                context['boundary_x'] = boundary_x
+                context['boundary_y'] = boundary_y
+                # curve + boundary go to the template as one blob,
+                # json_script turns it into json for us
+                context['training_json'] = {
+                    'curve': training_results['curve'],
+                    'boundary': boundary,
+                }
 
         except Exception as e:
             # Handle any errors

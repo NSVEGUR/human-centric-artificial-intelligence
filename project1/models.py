@@ -1,10 +1,4 @@
-import io
-import base64
 import numpy as np
-
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
 
 from django.db import models
 
@@ -154,18 +148,6 @@ MODEL_EXPLANATIONS = {
 
 
 
-#Helper function
-def _fig_to_base64(fig):
-    buf = io.BytesIO()
-    fig.savefig(buf, format='png', bbox_inches='tight', dpi=100,
-                facecolor='white', edgecolor='none')
-    buf.seek(0)
-    b64 = base64.b64encode(buf.read()).decode('utf-8')
-    buf.close()
-    plt.close(fig)
-    return b64
-
-
 #Default parameters for each model
 
 def get_default_params(model_key, problem_type):
@@ -204,8 +186,12 @@ def run_training(df, feature_cols, target_col, problem_type, model_key, test_siz
     if model_params is None:
         model_params = get_default_params(model_key, problem_type)
 
-    X = df[feature_cols].values
-    y = df[target_col].values
+    # sklearn refuses NaN so we just drop those rows. an imputer would be
+    # fancier but dropping is honest and easy to explain to the user
+    clean = df[feature_cols + [target_col]].dropna()
+
+    X = clean[feature_cols].values
+    y = clean[target_col].values
 
     if problem_type == 'classification':
         y = LabelEncoder().fit_transform(y.astype(str))
@@ -298,31 +284,20 @@ def run_training(df, feature_cols, target_col, problem_type, model_key, test_siz
         }
         score_label = 'R² Score'
 
-    fig, ax = plt.subplots(figsize=(7, 4))
-    x_pos = range(len(param_range))
-    x_labels = [str(p) for p in param_range]
-
-    ax.plot(x_pos, train_scores, 'o-', color='#275cb2', label='Train Score', linewidth=2, markersize=5)
-    ax.plot(x_pos, test_scores, 's--', color='#e05c2d', label='Test Score', linewidth=2, markersize=5)
-    ax.axvline(best_idx, color='#27ae60', linestyle=':', linewidth=1.5,
-               alpha=0.8, label=f'Best: {best_param}')
-
-    ax.set_xticks(list(x_pos))
-    ax.set_xticklabels(x_labels, rotation=45, fontsize=8)
-    ax.set_xlabel(config['param_label'], fontsize=9)
-    ax.set_ylabel(score_label, fontsize=9)
-    ax.set_title(f'{config["label"]} — {score_label} vs {config["param_label"]}',
-                 fontsize=10, fontweight='bold')
-    ax.legend(fontsize=8)
-    ax.grid(True, linestyle='--', alpha=0.3)
-
-    if problem_type == 'classification':
-        ax.set_ylim(-0.05, 1.1)
-
-    fig.tight_layout()
+    # using plotly
+    curve = {
+        'params': [str(p) for p in param_range],
+        'train': [round(float(t), 4) for t in train_scores],
+        'test': [round(float(t), 4) for t in test_scores],
+        'best_idx': best_idx,
+        'best_param': str(best_param),
+        'param_label': config['param_label'],
+        'score_label': score_label,
+        'model_label': config['label'],
+    }
 
     return {
-        'training_plot': _fig_to_base64(fig),
+        'curve': curve,
         'results_table': [
             {'param': p, 'train': round(tr, 4), 'test': round(te, 4)}
             for p, tr, te in zip(param_range, train_scores, test_scores)
@@ -343,3 +318,101 @@ def run_training(df, feature_cols, target_col, problem_type, model_key, test_siz
         'overfit_message': overfit_message,
     }
 
+# 2D decision boundary (or prediction surface for regression)
+def make_boundary(df, feature_cols, target_col, problem_type, model_key,
+                  model_params, bx, by, test_size, grid_n=40):
+
+    if bx not in feature_cols or by not in feature_cols or bx == by:
+        return None
+
+    X2 = df[[bx, by]].values.astype(float)
+    y = df[target_col].values
+
+    # drop rows with missing values in the 2 features, model cant handle them
+    ok = ~np.isnan(X2).any(axis=1)
+    X2 = X2[ok]
+    y = y[ok]
+
+    class_names = []
+    if problem_type == 'classification':
+        enc = LabelEncoder()
+        y = enc.fit_transform(y.astype(str))
+        class_names = [str(c) for c in enc.classes_]
+
+    scaler = StandardScaler().fit(X2)
+    X2s = scaler.transform(X2)
+
+    stratify = y if problem_type == 'classification' and len(np.unique(y)) > 1 else None
+
+    # same random_state as run_training so the split matches what got trained
+    X_train, X_test, y_train, y_test = train_test_split(
+        X2s, y, test_size=test_size, random_state=42, stratify=stratify
+    )
+
+    registry = CLASSIFICATION_MODELS if problem_type == 'classification' else REGRESSION_MODELS
+    config = registry[model_key]
+    model = config['build'](model_params)
+    model.fit(X_train, y_train)
+
+    # build the grid in original units (nicer axis labels), then scale it
+    # before predicting. 60x60 felt like a good tradeoff, 100 was slow-ish
+    pad_x = (X2[:, 0].max() - X2[:, 0].min()) * 0.05 or 0.5
+    pad_y = (X2[:, 1].max() - X2[:, 1].min()) * 0.05 or 0.5
+    gx = np.linspace(X2[:, 0].min() - pad_x, X2[:, 0].max() + pad_x, grid_n)
+    gy = np.linspace(X2[:, 1].min() - pad_y, X2[:, 1].max() + pad_y, grid_n)
+    xx, yy = np.meshgrid(gx, gy)
+    mesh = np.c_[xx.ravel(), yy.ravel()]
+    zz = model.predict(scaler.transform(mesh)).reshape(xx.shape)
+
+    # un-scale the train/test points back to original units for plotting
+    tr_orig = scaler.inverse_transform(X_train)
+    te_orig = scaler.inverse_transform(X_test)
+
+    te_pred = model.predict(X_test)
+
+    if problem_type == 'classification':
+        wrong = (te_pred != y_test)
+        # also predict the train points so hover can show pred vs true there too
+        tr_pred = model.predict(X_train)
+        points = {
+            'train_x': [round(float(v), 4) for v in tr_orig[:, 0]],
+            'train_y': [round(float(v), 4) for v in tr_orig[:, 1]],
+            'train_label': [int(v) for v in y_train],
+            'train_pred': [int(v) for v in tr_pred],
+            'test_x': [round(float(v), 4) for v in te_orig[:, 0]],
+            'test_y': [round(float(v), 4) for v in te_orig[:, 1]],
+            'test_label': [int(v) for v in y_test],
+            'test_pred': [int(v) for v in te_pred],
+            'test_wrong': [bool(w) for w in wrong],
+        }
+        z_out = [[int(v) for v in row] for row in zz]
+        acc_2d = round(float(np.mean(~wrong)), 4)
+    else:
+        tr_pred = model.predict(X_train)
+        points = {
+            'train_x': [round(float(v), 4) for v in tr_orig[:, 0]],
+            'train_y': [round(float(v), 4) for v in tr_orig[:, 1]],
+            'train_label': [round(float(v), 4) for v in y_train],
+            'train_pred': [round(float(v), 4) for v in tr_pred],
+            'test_x': [round(float(v), 4) for v in te_orig[:, 0]],
+            'test_y': [round(float(v), 4) for v in te_orig[:, 1]],
+            'test_label': [round(float(v), 4) for v in y_test],
+            'test_pred': [round(float(v), 4) for v in te_pred],
+            'test_wrong': [],
+        }
+        z_out = [[round(float(v), 4) for v in row] for row in zz]
+        # r2 of the 2-feature shadow model, so user sees how much the 2
+        # features alone can explain
+        acc_2d = round(float(r2_score(y_test, te_pred)), 4)
+
+    return {
+        'x': [round(float(v), 4) for v in gx],
+        'y': [round(float(v), 4) for v in gy],
+        'z': z_out,
+        'points': points,
+        'class_names': class_names,
+        'feature_x': bx,
+        'feature_y': by,
+        'problem_type': problem_type,
+        'score_2d': acc_2d,
+    }

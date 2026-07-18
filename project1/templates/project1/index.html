@@ -16,7 +16,7 @@
       <h1>Automated Machine Learning</h1>
       <p class="page-subtitle">{{ description }}</p>
     </div>
-    {% if scatter_plot %}
+    {% if has_data %}
     <form method="post">
       {% csrf_token %}
       <input type="hidden" name="action" value="clear">
@@ -55,7 +55,7 @@
 </div>
 {% endif %}
 
-{% if scatter_plot %}
+{% if has_data %}
 
 <div class="dataset-info">
   <span class="badge badge-secondary">File: <strong>{{ filename }}</strong></span>
@@ -63,6 +63,57 @@
   <span class="badge badge-secondary">Columns: <strong>{{ n_cols }}</strong></span>
   <span class="badge badge-secondary">Target: <strong>{{ target_col }}</strong></span>
   <span class="badge badge-secondary">Type: <strong>{{ problem_type }}</strong></span>
+</div>
+
+<div class="alert alert-info guide-card" style="margin-bottom: var(--space-5);">
+  <p class="alert-title">Welcome — here is what this tool does and how to use it</p>
+  <p>
+    This page walks you through a complete machine learning workflow from start to finish.
+    You start by uploading a CSV file, the tool figures out whether it is a
+    classification or regression problem, and then you can explore your data visually,
+    train several different models, and compare how well they perform. Everything you
+    see is interactive — there are no static images anywhere on this page.
+  </p>
+  <p>
+    Once your data is loaded you will see three charts. The <strong>scatter plot</strong>
+    lets you pick any two features and see how your data points spread out, coloured by
+    their class or value. The <strong>histogram</strong> shows you the distribution of a
+    single feature so you can spot skew, outliers, or overlap between classes. The
+    <strong>correlation matrix</strong> is the best place to start — it shows at a glance
+    which features are strongly related to each other and which are independent, which
+    helps you pick the most informative pair to look at in the scatter plot.
+  </p>
+  <p>
+    You can interact with every chart by hovering over any point or cell to see its
+    exact values. Drag a rectangle on a chart to zoom into a busy area, and
+    double-click anywhere to zoom back out.
+    {% if problem_type == 'classification' %}
+    Each class appears separately in the chart legend — click a class name once to hide
+    it, and double-click it to show only that class. This is really useful when classes
+    overlap and you want to focus on just one or two of them.
+    {% endif %}
+    The dropdowns above each chart let you switch which features you are looking at and
+    the chart redraws instantly without any page reload.
+  </p>
+  <p>
+    Once you have a feel for the data, head down to the <strong>Model Training</strong>
+    section. Choose an algorithm, set how much of your data to hold back for testing,
+    tune the hyperparameters, and hit Train. The tool will sweep through a range of
+    hyperparameter values automatically and show you a <strong>hyperparameter sweep
+    chart</strong> so you can see exactly where performance peaks and where the model
+    starts to overfit. Below that is the <strong>Decision Boundary Explorer</strong>,
+    which is the most visual part of this tool. It draws the regions of the feature
+    space where the model would predict each class, overlaid with your actual data points,
+    so you can see not just how accurate the model is but exactly where and why it gets
+    things wrong. Hover any point on that chart to see its true label, what the model
+    predicted, and the feature values that led to that decision.
+  </p>
+  <p>
+    A good workflow to follow is to open the correlation matrix first, find a feature
+    pair with low correlation to each other but strong separation between classes, plot
+    them in the scatter plot to confirm, then train a model and open the boundary
+    explorer on that same pair to see how the model carves up that space.
+  </p>
 </div>
 
 {% if problem_explanation %}
@@ -178,93 +229,56 @@
   </div>
 </section>
 
-{# Plots form #}
-<form method="post" id="viz-form">
-  {% csrf_token %}
-  <input type="hidden" name="action" value="update_plots">
-  <input type="hidden" name="problem_type" value="{{ problem_type }}">
 
-  {% if problem_type == 'classification' %}
+<div class="plots-grid">
   <section class="card plot-block">
     <div class="card-header">
-      <p class="card-title">Filter Categories</p>
-      <p class="card-description plot-desc">Select which categories to display in the plots.</p>
+      <p class="card-title">Scatter Plot</p>
+      <p class="card-description plot-desc">Visualize the relationship between two numeric features. Points are colored by the target variable. Hover for exact values, drag to zoom, double-click to reset.</p>
     </div>
     <div class="card-content">
       <div class="controls-row">
-        {% for cls in unique_classes %}
         <div class="control-item">
-          <input type="checkbox" name="selected_classes" value="{{ cls }}"
-                 id="check_{{ cls }}"
-                 {% if cls in selected_classes %}checked{% endif %}>
-          <label for="check_{{ cls }}">{{ cls }}</label>
+          <label for="scatter_x">X Axis</label>
+          <select id="scatter_x" class="select">
+            {% for f in feature_cols %}
+            <option value="{{ f }}" {% if f == scatter_x %}selected{% endif %}>{{ f }}</option>
+            {% endfor %}
+          </select>
         </div>
-        {% endfor %}
+        <div class="control-item">
+          <label for="scatter_y">Y Axis</label>
+          <select id="scatter_y" class="select">
+            {% for f in feature_cols %}
+            <option value="{{ f }}" {% if f == scatter_y %}selected{% endif %}>{{ f }}</option>
+            {% endfor %}
+          </select>
+        </div>
       </div>
+      <div class="plot-box" id="scatter-plot"></div>
     </div>
   </section>
-  {% endif %}
 
-  <div id="plots-inner">
-    <div class="plots-grid">
-      <section class="card plot-block">
-        <div class="card-header">
-          <p class="card-title">Scatter Plot</p>
-          <p class="card-description plot-desc">Visualize the relationship between two numeric features. Points are colored by the target variable to reveal patterns and correlations.</p>
-        </div>
-        <div class="card-content">
-          <div class="controls-row">
-            <div class="control-item">
-              <label for="scatter_x">X Axis</label>
-              <select name="scatter_x" id="scatter_x" class="select">
-                {% for f in feature_cols %}
-                <option value="{{ f }}" {% if f == scatter_x %}selected{% endif %}>{{ f }}</option>
-                {% endfor %}
-              </select>
-            </div>
-            <div class="control-item">
-              <label for="scatter_y">Y Axis</label>
-              <select name="scatter_y" id="scatter_y" class="select">
-                {% for f in feature_cols %}
-                <option value="{{ f }}" {% if f == scatter_y %}selected{% endif %}>{{ f }}</option>
-                {% endfor %}
-              </select>
-            </div>
-          </div>
-          <div class="plot-img-box">
-            <img id="scatter-img" src="data:image/png;base64,{{ scatter_plot }}" alt="Scatter plot" />
-          </div>
-        </div>
-      </section>
-
-      <section class="card plot-block">
-        <div class="card-header">
-          <p class="card-title">Histogram</p>
-          <p class="card-description plot-desc">Explore the distribution of values for a single feature. Overlapping histograms show how different target categories are distributed across feature ranges.</p>
-        </div>
-        <div class="card-content">
-          <div class="controls-row">
-            <div class="control-item">
-              <label for="hist_feature">Feature</label>
-              <select name="hist_feature" id="hist_feature" class="select">
-                {% for f in feature_cols %}
-                <option value="{{ f }}" {% if f == hist_feature %}selected{% endif %}>{{ f }}</option>
-                {% endfor %}
-              </select>
-            </div>
-          </div>
-          <div class="plot-img-box">
-            <img id="hist-img" src="data:image/png;base64,{{ hist_plot }}" alt="Histogram" />
-          </div>
-        </div>
-      </section>
+  <section class="card plot-block">
+    <div class="card-header">
+      <p class="card-title">Histogram</p>
+      <p class="card-description plot-desc">Explore the distribution of values for a single feature. Overlapping histograms show how different target categories are distributed across feature ranges.</p>
     </div>
-  </div>
-
-  <div class="update-row">
-    <button type="submit" class="btn btn-primary" id="update-plots-btn">Update Plots</button>
-  </div>
-</form>
+    <div class="card-content">
+      <div class="controls-row">
+        <div class="control-item">
+          <label for="hist_feature">Feature</label>
+          <select id="hist_feature" class="select">
+            {% for f in feature_cols %}
+            <option value="{{ f }}" {% if f == hist_feature %}selected{% endif %}>{{ f }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="plot-box" id="hist-plot"></div>
+    </div>
+  </section>
+</div>
 
 <section class="card plot-block">
   <div class="card-header">
@@ -272,9 +286,7 @@
     <p class="card-description plot-desc">Understand feature relationships through Pearson correlation coefficients. Values range from -1 (strong negative) to +1 (strong positive), helping identify redundant or complementary features.</p>
   </div>
   <div class="card-content">
-    <div class="plot-img-box">
-      <img id="corr-img" src="data:image/png;base64,{{ corr_plot }}" alt="Correlation heatmap" />
-    </div>
+    <div class="plot-box" id="corr-plot"></div>
   </div>
 </section>
 
@@ -310,17 +322,14 @@
       <p><strong>Logistic/Ridge:</strong> Regularisation controls model complexity. Stronger regularisation usually gives a simpler model.</p>
     </div>
 
-    <form method="post">
+    <form method="post" id="train-form">
       {% csrf_token %}
       <input type="hidden" name="action" value="train">
 
-      {% for cls in selected_classes %}
-        <input type="hidden" name="selected_classes" value="{{ cls }}">
-      {% endfor %}
-
-      <input type="hidden" name="scatter_x" value="{{ scatter_x }}">
-      <input type="hidden" name="scatter_y" value="{{ scatter_y }}">
-      <input type="hidden" name="hist_feature" value="{{ hist_feature }}">
+      {# these get synced by JS on change so the plot state survives training #}
+      <input type="hidden" name="scatter_x" id="hidden_scatter_x" value="{{ scatter_x }}">
+      <input type="hidden" name="scatter_y" id="hidden_scatter_y" value="{{ scatter_y }}">
+      <input type="hidden" name="hist_feature" id="hidden_hist_feature" value="{{ hist_feature }}">
 
       <div class="controls-row">
 
@@ -353,6 +362,25 @@
             <option value="0.5"  {% if training.test_size == 0.5 %}selected{% endif %}>50%</option>
           </select>
         </div>
+
+        {% if feature_cols|length > 1 %}
+        <div class="control-item">
+          <label for="boundary_x">Boundary X</label>
+          <select name="boundary_x" id="boundary_x" class="select">
+            {% for f in feature_cols %}
+            <option value="{{ f }}" {% if f == boundary_x|default:scatter_x %}selected{% endif %}>{{ f }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="control-item">
+          <label for="boundary_y">Boundary Y</label>
+          <select name="boundary_y" id="boundary_y" class="select">
+            {% for f in feature_cols %}
+            <option value="{{ f }}" {% if f == boundary_y|default:scatter_y %}selected{% endif %}>{{ f }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        {% endif %}
 
         <div class="control-item hyper-param hp-knn">
           <label for="k">K</label>
@@ -458,9 +486,25 @@
       <p class="text-xs muted">Train-test gap: {{ training.overfit_gap }}</p>
     </div>
 
-    <div class="plot-img-box" style="margin-top: var(--space-5);">
-      <img src="data:image/png;base64,{{ training.training_plot }}" alt="Training curve" />
-    </div>
+    <h4 class="results-table-heading">Hyperparameter Sweep</h4>
+    <p class="plot-desc muted">Train vs test score for every value of {{ training.param_label }}. Hover any point for the exact score — the highlighted point is the best test score.</p>
+    <div class="plot-box" id="curve-plot" style="margin-top: var(--space-3);"></div>
+
+    {% if training_json %}
+    <h4 class="results-table-heading">Decision Boundary Explorer</h4>
+    <p class="plot-desc muted">
+      Shows how a <strong>{{ training.model_label }}</strong> (trained on only
+      <strong>{{ boundary_x }}</strong> and <strong>{{ boundary_y }}</strong>, with the tuned
+      hyperparameters) divides the feature space.
+      Circles = training points, diamonds = test points,
+      {% if problem_type == 'classification' %}red ✕ = misclassified test points.
+      Hover any point to see its feature values, its true class and what the model
+      predicted — hovering an empty area shows what the model would predict there.{% else %}the surface shows the predicted value.
+      Hover any point to see its actual value, the model's prediction and the error.{% endif %}
+      Pick different features in the Boundary X/Y dropdowns above and retrain to compare.
+    </p>
+    <div class="plot-box" id="boundary-plot" style="margin-top: var(--space-3);"></div>
+    {% endif %}
 
     <h4 class="results-table-heading">Full Results</h4>
     <div class="table-wrap">
@@ -486,14 +530,20 @@
     {% endif %}
   </div>
 </section>
+
+{{ viz_json|json_script:"viz-data" }}
+{% if training_json %}{{ training_json|json_script:"training-data" }}{% endif %}
+
 {% endif %}
 
-{% endblock %}
-
-{% block script %}
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
 <script>
 (function () {
   'use strict';
+
+  /* ============================================================
+     Table stuff (unchanged from before, still swaps via fetch)
+     ============================================================ */
 
   function submitTable() {
     const form  = document.getElementById('table-form');
@@ -591,38 +641,341 @@
     });
   }
 
-  function bindViz() {
-    const form = document.getElementById('viz-form');
-    if (!form) return;
+  /* 
+     Plotly charts 
+ */
 
-    form.addEventListener('submit', function (e) {
-      e.preventDefault();
 
-      const btn = document.getElementById('update-plots-btn');
-      if (btn) { btn.disabled = true; btn.textContent = 'Updating…'; }
+  const PALETTE = ['#4a7fe5', '#f5a623', '#3dba6e', '#ff4d6d',
+                   '#9b6ef3', '#39c2c9', '#e57ab8', '#a3b18a',
+                   '#f4845f', '#7f8fa6'];
+  const PLOT_BG = '#1a1d2e';
+  const GRID    = 'rgba(255,255,255,0.08)';
+  const FONT_C  = '#c9cde0';
 
-      ['scatter-img','hist-img','corr-img'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.style.opacity = '0.4';
+  const vizEl = document.getElementById('viz-data');
+  const viz = vizEl ? JSON.parse(vizEl.textContent) : null;
+
+  function baseLayout(extra) {
+    const layout = {
+      plot_bgcolor: PLOT_BG,
+      paper_bgcolor: 'rgba(0,0,0,0)',
+      font: { color: FONT_C, size: 12 },
+      margin: { l: 55, r: 20, t: 20, b: 50 },
+      xaxis: { gridcolor: GRID, zerolinecolor: GRID },
+      yaxis: { gridcolor: GRID, zerolinecolor: GRID },
+      legend: { orientation: 'h', y: -0.22, bgcolor: 'rgba(0,0,0,0)' },
+    };
+    // shallow merge is fine here, we only override top level keys
+    return Object.assign(layout, extra || {});
+  }
+
+  const PLOTLY_CFG = { responsive: true, displaylogo: false,
+                       modeBarButtonsToRemove: ['lasso2d', 'select2d'] };
+
+
+  function draw(id, traces, layout) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    try {
+      Plotly.purge(el);
+      Plotly.newPlot(el, traces, layout, PLOTLY_CFG);
+    } catch(e) {
+      el.innerHTML = '<p style="color:#ff4d6d;padding:1rem;font-size:13px">Plot error: ' + e.message + '</p>';
+      console.error('Plotly error on #' + id, e);
+    }
+  }
+
+  function classColor(cls) {
+    const idx = viz.classes.indexOf(cls);
+    return PALETTE[idx % PALETTE.length];
+  }
+
+  function drawScatter() {
+    if (!viz) return;
+    const fx = document.getElementById('scatter_x').value;
+    const fy = document.getElementById('scatter_y').value;
+    const traces = [];
+
+    if (viz.problem_type === 'classification') {
+      // one trace per class. no checkbox filter anymore, the Plotly legend
+      // already does hide (click) and isolate (double click) out of the box
+      viz.classes.forEach(cls => {
+        const xs = [], ys = [];
+        for (let i = 0; i < viz.target.length; i++) {
+          if (viz.target[i] === cls) {
+            xs.push(viz.features[fx][i]);
+            ys.push(viz.features[fy][i]);
+          }
+        }
+        traces.push({
+          x: xs, y: ys, mode: 'markers', type: 'scatter', name: cls,
+          marker: { color: classColor(cls), size: 7, opacity: 0.85,
+                    line: { color: 'rgba(255,255,255,0.4)', width: 0.5 } },
+          hovertemplate: fx + ': %{x}<br>' + fy + ': %{y}<br>' + cls + '<extra></extra>',
+        });
       });
+    } else {
+      traces.push({
+        x: viz.features[fx], y: viz.features[fy], mode: 'markers', type: 'scatter',
+        marker: { color: viz.target, colorscale: 'Viridis', size: 7, opacity: 0.85,
+                  colorbar: { title: { text: viz.target_col }, outlinewidth: 0 },
+                  line: { color: 'rgba(255,255,255,0.4)', width: 0.5 } },
+        hovertemplate: fx + ': %{x}<br>' + fy + ': %{y}<br>' +
+                       viz.target_col + ': %{marker.color}<extra></extra>',
+      });
+    }
 
-      fetch(window.location.href, { method: 'POST', body: new FormData(form) })
-        .then(r => r.text())
-        .then(html => {
-          const doc = new DOMParser().parseFromString(html, 'text/html');
+    draw('scatter-plot', traces, baseLayout({
+      xaxis: { title: { text: fx }, gridcolor: GRID, zerolinecolor: GRID },
+      yaxis: { title: { text: fy }, gridcolor: GRID, zerolinecolor: GRID },
+      height: 380,
+    }));
+  }
 
-          ['scatter-img','hist-img','corr-img'].forEach(id => {
-            const newEl = doc.getElementById(id);
-            const curEl = document.getElementById(id);
-            if (newEl && curEl) {
-              curEl.src     = newEl.src;
-              curEl.style.opacity = '1';
+  function drawHist() {
+    if (!viz) return;
+    const f = document.getElementById('hist_feature').value;
+    const traces = [];
+
+    if (viz.problem_type === 'classification') {
+      viz.classes.forEach(cls => {
+        const xs = [];
+        for (let i = 0; i < viz.target.length; i++) {
+          if (viz.target[i] === cls) xs.push(viz.features[f][i]);
+        }
+        traces.push({
+          x: xs, type: 'histogram', name: cls, opacity: 0.6,
+          nbinsx: 20, marker: { color: classColor(cls) },
+        });
+      });
+    } else {
+      traces.push({
+        x: viz.features[f], type: 'histogram', nbinsx: 25,
+        marker: { color: '#4a7fe5', line: { color: 'rgba(255,255,255,0.25)', width: 0.5 } },
+      });
+    }
+
+    draw('hist-plot', traces, baseLayout({
+      barmode: 'overlay',
+      xaxis: { title: { text: f }, gridcolor: GRID, zerolinecolor: GRID },
+      yaxis: { title: { text: 'Count' }, gridcolor: GRID, zerolinecolor: GRID },
+      height: 380,
+    }));
+  }
+
+  function drawCorr() {
+    if (!viz) return;
+    const trace = {
+      x: viz.corr.cols, y: viz.corr.cols, z: viz.corr.z,
+      type: 'heatmap', colorscale: 'RdBu', reversescale: true,
+      zmin: -1, zmax: 1, zmid: 0,
+      texttemplate: '%{z:.2f}', textfont: { size: 11 },
+      colorbar: { outlinewidth: 0 },
+      hovertemplate: '%{x} vs %{y}: %{z:.3f}<extra></extra>',
+    };
+    draw('corr-plot', [trace], baseLayout({
+      height: 420,
+      margin: { l: 110, r: 20, t: 20, b: 90 },
+      yaxis: { autorange: 'reversed', gridcolor: GRID },
+    }));
+  }
+
+  function drawAllDataPlots() {
+    drawScatter();
+    drawHist();
+    drawCorr();
+  }
+
+  /* ---- training curve + decision boundary ---- */
+
+  function drawTraining() {
+    const el = document.getElementById('training-data');
+    if (!el) return;
+    const data = JSON.parse(el.textContent);
+    const curve = data.curve;
+
+    if (curve && document.getElementById('curve-plot')) {
+      const traces = [
+        { x: curve.params, y: curve.train, mode: 'lines+markers', name: 'Train',
+          line: { color: '#4a7fe5', width: 2 }, marker: { size: 7 } },
+        { x: curve.params, y: curve.test, mode: 'lines+markers', name: 'Test',
+          line: { color: '#f5a623', width: 2, dash: 'dash' }, marker: { size: 7, symbol: 'square' } },
+        { x: [curve.best_param], y: [curve.test[curve.best_idx]],
+          mode: 'markers', name: 'Best: ' + curve.best_param,
+          marker: { color: '#3dba6e', size: 14, symbol: 'star',
+                    line: { color: '#fff', width: 1 } } },
+      ];
+      const layout = baseLayout({
+        height: 400,
+        xaxis: { title: { text: curve.param_label }, type: 'category', gridcolor: GRID },
+        yaxis: { title: { text: curve.score_label }, gridcolor: GRID },
+      });
+      // for accuracy a fixed 0-1 axis reads better, r2 can go negative though
+      if (curve.score_label === 'Accuracy') layout.yaxis.range = [-0.02, 1.05];
+      draw('curve-plot', traces, layout);
+    }
+
+    const b = data.boundary;
+    const bEl = document.getElementById('boundary-plot');
+
+    if (b && bEl) {
+      const traces = [];
+
+      if (b.problem_type === 'classification') {
+        const k = b.class_names.length;
+        // step colorscale — each class gets one solid colour band.
+        const eps = 0.0001;
+        const scale = [];
+        for (let i = 0; i < k; i++) {
+          const col = PALETTE[i % PALETTE.length];
+          scale.push([i / k, col]);
+          scale.push([(i + 1) / k - eps, col]);
+        }
+
+        // customdata instead (2d array matching z shape)
+        const regionCd = b.z.map(row => row.map(v => [b.class_names[v] || '?']));
+        traces.push({
+          x: b.x, y: b.y, z: b.z, type: 'heatmap',
+          colorscale: scale, zmin: -0.5, zmax: k - 0.5,
+          opacity: 0.3, showscale: false,
+          customdata: regionCd,
+          hovertemplate: b.feature_x + ': %{x:.3f}<br>' + b.feature_y + ': %{y:.3f}' +
+                         '<br>model would predict: <b>%{customdata[0]}</b><extra></extra>',
+        });
+
+        const cls_name = idx => b.class_names[idx] !== undefined ? b.class_names[idx] : '?(' + idx + ')';
+
+        const hoverPoint = kind =>
+          b.feature_x + ': %{x}<br>' + b.feature_y + ': %{y}' +
+          '<br>true: <b>%{customdata[0]}</b><br>predicted: <b>%{customdata[1]}</b>' +
+          '<extra>' + kind + '</extra>';
+
+        b.class_names.forEach((cls, ci) => {
+          const trX = [], trY = [], trCd = [], teX = [], teY = [], teCd = [];
+          b.points.train_label.forEach((l, i) => {
+            if (l === ci) {
+              trX.push(b.points.train_x[i]); trY.push(b.points.train_y[i]);
+              trCd.push([cls, cls_name(b.points.train_pred[i])]);
             }
           });
+          b.points.test_label.forEach((l, i) => {
+            if (l === ci) {
+              teX.push(b.points.test_x[i]); teY.push(b.points.test_y[i]);
+              teCd.push([cls, cls_name(b.points.test_pred[i])]);
+            }
+          });
+          traces.push({
+            x: trX, y: trY, mode: 'markers', name: cls + ' (train)',
+            legendgroup: cls, customdata: trCd,
+            marker: { color: PALETTE[ci % PALETTE.length], size: 7, opacity: 0.9,
+                      line: { color: 'rgba(0,0,0,0.4)', width: 0.5 } },
+            hovertemplate: hoverPoint('train'),
+          });
+          traces.push({
+            x: teX, y: teY, mode: 'markers', name: cls + ' (test)',
+            legendgroup: cls, customdata: teCd,
+            marker: { color: PALETTE[ci % PALETTE.length], size: 9, symbol: 'diamond',
+                      line: { color: '#ffffff', width: 1.2 } },
+            hovertemplate: hoverPoint('test'),
+          });
+        });
 
-          if (btn) { btn.disabled = false; btn.textContent = 'Update Plots'; }
-        })
-        .catch(() => { form.submit(); });
+        // red X on top of every wrongly predicted test point
+        const wx = [], wy = [], wcd = [];
+        b.points.test_wrong.forEach((w, i) => {
+          if (w) {
+            wx.push(b.points.test_x[i]); wy.push(b.points.test_y[i]);
+            wcd.push([cls_name(b.points.test_label[i]),
+                      cls_name(b.points.test_pred[i])]);
+          }
+        });
+        if (wx.length) {
+          traces.push({
+            x: wx, y: wy, mode: 'markers', name: 'misclassified',
+            customdata: wcd,
+            marker: { color: '#ff4d6d', size: 13, symbol: 'x-thin',
+                      line: { color: '#ff4d6d', width: 2.5 } },
+            hovertemplate: b.feature_x + ': %{x}<br>' + b.feature_y + ': %{y}' +
+                           '<br>true: <b>%{customdata[0]}</b>' +
+                           '<br>predicted: <b>%{customdata[1]}</b> ← wrong side' +
+                           '<extra>misclassified</extra>',
+          });
+        }
+      } else {
+        // regression: continuous prediction surface instead of class regions
+        traces.push({
+          x: b.x, y: b.y, z: b.z, type: 'contour',
+          colorscale: 'Viridis', opacity: 0.85,
+          colorbar: { title: { text: 'prediction' }, outlinewidth: 0 },
+          contours: { coloring: 'heatmap' },
+          hovertemplate: 'predicted: %{z:.3f}<extra></extra>',
+        });
+        // hover shows the models prediction next to the actual value plus the
+        // gap between them, so every dot explains itself
+        const regHover = kind =>
+          b.feature_x + ': %{x}<br>' + b.feature_y + ': %{y}' +
+          '<br>actual: <b>%{customdata[0]}</b><br>predicted: <b>%{customdata[1]}</b>' +
+          '<br>error: %{customdata[2]}' +
+          '<extra>' + kind + '</extra>';
+
+        const cdFor = (labels, preds) => labels.map((a, i) =>
+          [a, preds[i], Math.round((preds[i] - a) * 1000) / 1000]);
+
+        traces.push({
+          x: b.points.train_x, y: b.points.train_y, mode: 'markers', name: 'train',
+          customdata: cdFor(b.points.train_label, b.points.train_pred),
+          marker: { color: b.points.train_label, colorscale: 'Viridis', showscale: false,
+                    size: 7, line: { color: 'rgba(255,255,255,0.7)', width: 0.8 } },
+          hovertemplate: regHover('train'),
+        });
+        traces.push({
+          x: b.points.test_x, y: b.points.test_y, mode: 'markers', name: 'test',
+          customdata: cdFor(b.points.test_label, b.points.test_pred),
+          marker: { color: b.points.test_label, colorscale: 'Viridis', showscale: false,
+                    size: 9, symbol: 'diamond',
+                    line: { color: '#ffffff', width: 1.2 } },
+          hovertemplate: regHover('test'),
+        });
+      }
+
+      const scoreLabel = b.problem_type === 'classification'
+        ? '2-feature accuracy: ' + b.score_2d
+        : '2-feature R²: ' + b.score_2d;
+
+      draw('boundary-plot', traces, baseLayout({
+        height: 480,
+        xaxis: { title: { text: b.feature_x }, gridcolor: GRID, zerolinecolor: GRID },
+        yaxis: { title: { text: b.feature_y }, gridcolor: GRID, zerolinecolor: GRID },
+        annotations: [{
+          text: scoreLabel, showarrow: false, xref: 'paper', yref: 'paper',
+          x: 0.99, y: 0.99, xanchor: 'right',
+          font: { size: 12, color: FONT_C },
+          bgcolor: 'rgba(0,0,0,0.45)', borderpad: 5,
+        }],
+      }));
+    }
+  }
+
+  function bindVizControls() {
+    if (!viz) return;
+    const sx = document.getElementById('scatter_x');
+    const sy = document.getElementById('scatter_y');
+    const hf = document.getElementById('hist_feature');
+
+    // redraw immediately + keep the hidden train-form inputs in sync so the
+    // selection survives the full page reload after training
+    if (sx) sx.addEventListener('change', function () {
+      document.getElementById('hidden_scatter_x').value = this.value;
+      drawScatter();
+    });
+    if (sy) sy.addEventListener('change', function () {
+      document.getElementById('hidden_scatter_y').value = this.value;
+      drawScatter();
+    });
+    if (hf) hf.addEventListener('change', function () {
+      document.getElementById('hidden_hist_feature').value = this.value;
+      drawHist();
     });
   }
 
@@ -660,8 +1013,21 @@
 
   bindStable();
   bindInner();
-  bindViz();
+  bindVizControls();
   bindModelControls();
+
+
+  // before trying to draw anything — fixes blank plots on some base.html setups
+  if (document.readyState === 'complete') {
+    drawAllDataPlots();
+    drawTraining();
+  } else {
+    window.addEventListener('load', function () {
+      drawAllDataPlots();
+      drawTraining();
+    });
+  }
 })();
 </script>
-{% endblock script %}
+
+{% endblock %}
