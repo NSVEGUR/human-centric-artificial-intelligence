@@ -102,33 +102,23 @@
 /* ---- plots grid (scatter + histogram) ---- */
 .plots-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
     gap: var(--space-4);
     margin-bottom: var(--space-4);
 }
 
-@media (max-width: 900px) {
-    .plots-grid {
-        grid-template-columns: 1fr;
-    }
-}
-
-/* ---- plot image container ---- */
-.plot-img-box {
+/* ---- plotly container ---- */
+.plot-box {
     border: 1px solid hsl(var(--border));
     border-radius: var(--radius);
-    background: #ffffff;
-    padding: var(--space-3);
+    background: #1a1d2e;
+    padding: var(--space-2);
     transition: border-color var(--transition);
+    overflow: visible;
+    min-height: 440px;
 }
-.plot-img-box:hover {
+.plot-box:hover {
     border-color: hsl(var(--border-strong));
-}
-.plot-img-box img {
-    width: 100%;
-    height: auto;
-    display: block;
-    border-radius: var(--radius-sm);
 }
 
 .update-row {
@@ -342,3 +332,5 @@
 .tuning-hints p {
     margin-top: var(--space-1);
 }
+
+

@@ -41,9 +41,8 @@ def _col_as_list(series):
             out.append(str(v))
     return out
 
-# frontend - packing 
-def build_viz_payload(df, feature_cols, target_col, problem_type):
 
+def build_viz_payload(df, feature_cols, target_col, problem_type):
 
     features = {}
     for c in feature_cols:
