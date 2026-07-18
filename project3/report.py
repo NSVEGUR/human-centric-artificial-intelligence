@@ -399,8 +399,8 @@ def generate_report_pdf() -> bytes:
     for name, curve in al_results.items():
         if curve:
             final_acc = curve[-1][1]
-            result_rows.append([name, f"{final_acc:.3f}%"])
-    result_rows.append([f'Oracle (true competence)', f"{oracle_acc:.2f}%"])
+            result_rows.append([name, f"{final_acc:.2f}%"])
+    result_rows.append(['Oracle (true competence)', f"{oracle_acc:.2f}%"])
     story += [
         _table(
             ['Strategy', 'Final Team Accuracy (after 200 queries)'],

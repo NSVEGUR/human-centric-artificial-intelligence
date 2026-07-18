@@ -12,7 +12,7 @@ from .experts import (
     test_texts, test_labels,
 )
 
-print("Computing Learning-to-Defer evaluation...")
+print("  [3/4] Computing Learning-to-Defer evaluation...")
 
 test_labels_arr = np.array(test_labels)
 clf_probas = predict_proba(test_texts)           # shape (N_test, 4)
@@ -70,10 +70,8 @@ tech_only_acc      = tech_acc * 100
 best_expert_only_acc = accuracy_score(test_labels_arr, best_expert_preds) * 100
 
 print(
-    f"L2D: AI-only={ai_only_acc:.2f}%  "
-    f"Team(α=1)={optimal_team_acc:.2f}%  "
-    f"Coverage={optimal_coverage:.2%}  "
-    f"Deferral={optimal_deferral_rate:.2%}"
+    f"         AI-only: {ai_only_acc:.2f}%   Team (α=1): {optimal_team_acc:.2f}%   "
+    f"Coverage: {optimal_coverage:.2%}   Deferral: {optimal_deferral_rate:.2%}"
 )
 
 

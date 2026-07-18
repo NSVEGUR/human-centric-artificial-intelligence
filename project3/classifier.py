@@ -8,7 +8,10 @@ import json
 
 from .data import load_ag_news, LABEL_NAMES
 
-print("Training AG News classifier...")
+print("─" * 52)
+print(" Project 3 · Active Learning / Learning to Defer")
+print("─" * 52)
+print("  [1/4] Training AG News text classifier...")
 train_texts, train_labels, test_texts, test_labels = load_ag_news()
 
 model = Pipeline([
@@ -22,7 +25,7 @@ test_preds = model.predict(test_texts)
 test_acc = accuracy_score(test_labels, test_preds)
 conf_matrix = confusion_matrix(test_labels, test_preds)
 
-print(f"Classifier test accuracy: {test_acc:.4f}")
+print(f"         Accuracy: {test_acc * 100:.2f}%")
 
 
 def get_classifier_stats():

@@ -295,6 +295,25 @@ def index(request):
             # so we just always do it (the old image caching stuff is gone)
             viz_payload = build_viz_payload(df, feature_cols, target_col, problem_type)
 
+            # Compute dataset health info
+            class_distribution = {}
+            target_stats = {}
+            imbalance_flag = False
+            if problem_type == 'classification':
+                counts = df[target_col].value_counts()
+                total = len(df)
+                for cls, cnt in counts.items():
+                    pct = round(100 * cnt / total, 1)
+                    class_distribution[str(cls)] = {'count': int(cnt), 'pct': pct}
+                imbalance_flag = any(v['pct'] < 10 for v in class_distribution.values())
+            else:
+                target_stats = {
+                    'min':    round(float(df[target_col].min()), 3),
+                    'max':    round(float(df[target_col].max()), 3),
+                    'mean':   round(float(df[target_col].mean()), 3),
+                    'median': round(float(df[target_col].median()), 3),
+                }
+
             # Get available models based on problem type
             if problem_type == 'classification':
                 registry = CLASSIFICATION_MODELS
@@ -325,6 +344,9 @@ def index(request):
                 'loaded_from_session': loaded_from_session,
                 'problem_explanation': PROBLEM_EXPLANATIONS.get(problem_type),
                 'model_explanations': MODEL_EXPLANATIONS.get(problem_type),
+                'class_distribution': class_distribution,
+                'target_stats': target_stats,
+                'imbalance_flag': imbalance_flag,
             })
             
             # Merge table context
