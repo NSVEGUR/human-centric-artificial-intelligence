@@ -1,5 +1,6 @@
 import numpy as np
 
+
 from django.db import models
 
 from sklearn.model_selection import train_test_split
@@ -298,7 +299,7 @@ def run_training(df, feature_cols, target_col, problem_type, model_key, test_siz
         }
         score_label = 'R² Score'
 
-    # using plotly
+    # plotly implementation
     curve = {
         'params': [str(p) for p in param_range],
         'train': [round(float(t), 4) for t in train_scores],
@@ -332,9 +333,10 @@ def run_training(df, feature_cols, target_col, problem_type, model_key, test_siz
         'overfit_message': overfit_message,
     }
 
-# 2D decision boundary (or prediction surface for regression)
+
 def make_boundary(df, feature_cols, target_col, problem_type, model_key,
                   model_params, bx, by, test_size, grid_n=40):
+    # 2D decison boundry
 
     if bx not in feature_cols or by not in feature_cols or bx == by:
         return None

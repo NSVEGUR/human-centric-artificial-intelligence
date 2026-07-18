@@ -4,7 +4,7 @@
 {% block title %}Project 1 · Automated ML{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'project1/style.css' %}?v=4" />
+<link rel="stylesheet" href="{% static 'project1/style.css' %}?v=5" />
 {% endblock %}
 
 {% block content %}
@@ -22,7 +22,7 @@
       <h1>Project 1 — Automated Machine Learning</h1>
       <p class="page-subtitle">Human-Centric AI · Upload your own CSV dataset</p>
     </div>
-    {% if scatter_plot %}
+    {% if has_data %}
     <form method="post">
       {% csrf_token %}
       <input type="hidden" name="action" value="clear">
@@ -34,10 +34,6 @@
     {% endif %}
   </div>
 </header>
-
-<div class="alert alert-info" style="margin-bottom: var(--space-5);">
-  <p>Upload any CSV file — the last column is treated as the target. The tool automatically detects whether it's a classification or regression problem and guides you through data exploration and model training.</p>
-</div>
 
 {% if loaded_from_session %}
 <div class="alert alert-warning" style="margin-bottom: var(--space-5);">
@@ -53,23 +49,23 @@
 <nav class="project-sidebar" aria-label="Page steps">
   <span class="sidebar-label">Steps</span>
 
-  <button class="sidebar-link {% if scatter_plot %}step-completed{% else %}active{% endif %}" data-panel="panel-upload">
+  <button class="sidebar-link {% if has_data %}step-completed{% else %}active{% endif %}" data-panel="panel-upload">
     <svg class="sidebar-icon" viewBox="0 0 24 24"><polyline points="16 16 12 12 8 16"></polyline><line x1="12" y1="12" x2="12" y2="21"></line><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"></path></svg>
     <span>Upload Data</span>
-    {% if scatter_plot %}<span style="margin-left:auto;font-size:var(--text-xs);color:hsl(var(--primary));">✓</span>{% endif %}
+    {% if has_data %}<span style="margin-left:auto;font-size:var(--text-xs);color:hsl(var(--primary));">✓</span>{% endif %}
   </button>
 
-  <button class="sidebar-link {% if not scatter_plot %}step-future{% elif not training %}active{% endif %}" data-panel="panel-preview">
+  <button class="sidebar-link {% if not has_data %}step-future{% elif not training %}active{% endif %}" data-panel="panel-preview">
     <svg class="sidebar-icon" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line><line x1="9" y1="3" x2="9" y2="21"></line></svg>
     <span>Data Preview</span>
   </button>
 
-  <button class="sidebar-link {% if not scatter_plot %}step-future{% endif %}" data-panel="panel-explore">
+  <button class="sidebar-link {% if not has_data %}step-future{% endif %}" data-panel="panel-explore">
     <svg class="sidebar-icon" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line><line x1="2" y1="20" x2="22" y2="20"></line></svg>
     <span>Explore Data</span>
   </button>
 
-  <button class="sidebar-link {% if not scatter_plot %}step-future{% elif training %}active{% endif %}" data-panel="panel-train">
+  <button class="sidebar-link {% if not has_data %}step-future{% elif training %}active{% endif %}" data-panel="panel-train">
     <svg class="sidebar-icon" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
     <span>Train a Model</span>
   </button>
@@ -85,7 +81,10 @@
 {% endif %}
 
 <!-- ── Panel 1: Upload ── -->
-<div id="panel-upload" class="wizard-panel {% if not scatter_plot %}active{% endif %}">
+<div id="panel-upload" class="wizard-panel {% if not has_data %}active{% endif %}">
+  <div class="alert alert-info" style="margin-bottom: var(--space-5);">
+    <p>Upload any CSV file — the last column is treated as the target. The tool automatically detects whether it is a classification or regression problem and guides you through data exploration and model training.</p>
+  </div>
   <section style="margin-bottom: var(--space-6);">
     <form method="post" enctype="multipart/form-data" id="upload-form">
       {% csrf_token %}
@@ -102,7 +101,7 @@
   </section>
 </div>
 
-{% if scatter_plot %}
+{% if has_data %}
 
 <!-- ── Panel 2: Data Preview ── -->
 <div id="panel-preview" class="wizard-panel {% if not training %}active{% endif %}">
@@ -113,6 +112,55 @@
     <span class="badge badge-secondary">Columns: <strong>{{ n_cols }}</strong></span>
     <span class="badge badge-secondary">Target: <strong>{{ target_col }}</strong></span>
     <span class="badge badge-secondary">Type: <strong>{{ problem_type }}</strong></span>
+  </div>
+
+  <div class="alert alert-info guide-card" style="margin-bottom: var(--space-5);">
+    <p class="alert-title">Welcome — here is what this tool does and how to use it</p>
+    <p>
+      This page walks you through a complete machine learning workflow from start to finish.
+      You start by uploading a CSV file, the tool figures out whether it is a
+      classification or regression problem, and then you can explore your data visually,
+      train several different models, and compare how well they perform. Everything you
+      see is interactive — there are no static images anywhere on this page.
+    </p>
+    <p>
+      Once your data is loaded you will see three charts. The <strong>scatter plot</strong>
+      lets you pick any two features and see how your data points spread out, coloured by
+      their class or value. The <strong>histogram</strong> shows you the distribution of a
+      single feature so you can spot skew, outliers, or overlap between classes. The
+      <strong>correlation matrix</strong> is the best place to start — it shows at a glance
+      which features are strongly related to each other and which are independent, which
+      helps you pick the most informative pair to look at in the scatter plot.
+    </p>
+    <p>
+      You can interact with every chart by hovering over any point or cell to see its
+      exact values. Drag a rectangle on a chart to zoom into a busy area, and
+      double-click anywhere to zoom back out.
+      {% if problem_type == 'classification' %}
+      Each class appears separately in the chart legend — click a class name once to hide
+      it, and double-click it to show only that class. This is really useful when classes
+      overlap and you want to focus on just one or two of them.
+      {% endif %}
+      The dropdowns above each chart let you switch which features you are looking at and
+      the chart redraws instantly without any page reload.
+    </p>
+    <p>
+      Once you have a feel for the data, head down to the <strong>Train a Model</strong>
+      panel. Choose an algorithm, set how much of your data to hold back for testing,
+      tune the hyperparameters, and hit Train. The tool will sweep through a range of
+      hyperparameter values automatically and show you a <strong>hyperparameter sweep
+      chart</strong> so you can see exactly where performance peaks and where the model
+      starts to overfit. Below that is the <strong>Decision Boundary Explorer</strong>,
+      which draws the regions of the feature space where the model would predict each class,
+      overlaid with your actual data points, so you can see not just how accurate the model
+      is but exactly where and why it gets things wrong. Hover any point to see its true
+      label, what the model predicted, and the feature values that led to that decision.
+    </p>
+    <p>
+      A good workflow is to open the correlation matrix first, find a feature pair that
+      separates the classes, confirm it in the scatter plot, then train a model and open
+      the boundary explorer on that same pair.
+    </p>
   </div>
 
   <section class="card" style="margin-bottom: var(--space-5);">
@@ -279,105 +327,65 @@
 
 <!-- ── Panel 3: Explore Data ── -->
 <div id="panel-explore" class="wizard-panel">
-  <section id="sec-explore" style="margin-bottom: var(--space-6);">
-    <form method="post" id="viz-form">
-      {% csrf_token %}
-      <input type="hidden" name="action" value="update_plots">
-      <input type="hidden" name="problem_type" value="{{ problem_type }}">
 
-      {% if problem_type == 'classification' %}
-      <section class="card plot-block" style="margin-bottom: var(--space-4);">
-        <div class="card-header">
-          <p class="card-title">Filter Categories</p>
-          <p class="card-description plot-desc">Select which categories to display in the plots.</p>
-        </div>
-        <div class="card-content">
-          <div class="controls-row">
-            {% for cls in unique_classes %}
-            <div class="control-item">
-              <input type="checkbox" name="selected_classes" value="{{ cls }}"
-                     id="check_{{ cls }}"
-                     {% if cls in selected_classes %}checked{% endif %}>
-              <label for="check_{{ cls }}">{{ cls }}</label>
-            </div>
-            {% endfor %}
-          </div>
-        </div>
-      </section>
-      {% endif %}
-
-      <div id="plots-inner">
-        <div class="plots-grid">
-          <section class="card plot-block">
-            <div class="card-header">
-              <p class="card-title">Scatter Plot</p>
-              <p class="card-description plot-desc">Visualize the relationship between two numeric features. Points are colored by the target variable to reveal patterns and correlations.</p>
-            </div>
-            <div class="card-content">
-              <div class="controls-row">
-                <div class="control-item">
-                  <label for="scatter_x">X Axis</label>
-                  <select name="scatter_x" id="scatter_x" class="select">
-                    {% for f in feature_cols %}
-                    <option value="{{ f }}" {% if f == scatter_x %}selected{% endif %}>{{ f }}</option>
-                    {% endfor %}
-                  </select>
-                </div>
-                <div class="control-item">
-                  <label for="scatter_y">Y Axis</label>
-                  <select name="scatter_y" id="scatter_y" class="select">
-                    {% for f in feature_cols %}
-                    <option value="{{ f }}" {% if f == scatter_y %}selected{% endif %}>{{ f }}</option>
-                    {% endfor %}
-                  </select>
-                </div>
-              </div>
-              <div class="plot-img-box">
-                <img id="scatter-img" src="data:image/png;base64,{{ scatter_plot }}" alt="Scatter plot" />
-              </div>
-            </div>
-          </section>
-
-          <section class="card plot-block">
-            <div class="card-header">
-              <p class="card-title">Histogram</p>
-              <p class="card-description plot-desc">Explore the distribution of values for a single feature. Overlapping histograms show how different target categories are distributed across feature ranges.</p>
-            </div>
-            <div class="card-content">
-              <div class="controls-row">
-                <div class="control-item">
-                  <label for="hist_feature">Feature</label>
-                  <select name="hist_feature" id="hist_feature" class="select">
-                    {% for f in feature_cols %}
-                    <option value="{{ f }}" {% if f == hist_feature %}selected{% endif %}>{{ f }}</option>
-                    {% endfor %}
-                  </select>
-                </div>
-              </div>
-              <div class="plot-img-box">
-                <img id="hist-img" src="data:image/png;base64,{{ hist_plot }}" alt="Histogram" />
-              </div>
-            </div>
-          </section>
-        </div>
-      </div>
-
-      <div class="update-row">
-        <button type="submit" class="btn btn-primary" id="update-plots-btn">Update Plots</button>
-      </div>
-    </form>
-
-    <section class="card plot-block" style="margin-top: var(--space-4);">
+  <div class="plots-grid">
+    <section class="card plot-block">
       <div class="card-header">
-        <p class="card-title">Correlation Matrix</p>
-        <p class="card-description plot-desc">Understand feature relationships through Pearson correlation coefficients. Values range from -1 (strong negative) to +1 (strong positive), helping identify redundant or complementary features.</p>
+        <p class="card-title">Scatter Plot</p>
+        <p class="card-description plot-desc">Visualize the relationship between two numeric features. Points are colored by the target variable. Hover for exact values, drag to zoom, double-click to reset.</p>
       </div>
       <div class="card-content">
-        <div class="plot-img-box">
-          <img id="corr-img" src="data:image/png;base64,{{ corr_plot }}" alt="Correlation heatmap" />
+        <div class="controls-row">
+          <div class="control-item">
+            <label for="scatter_x">X Axis</label>
+            <select id="scatter_x" class="select">
+              {% for f in feature_cols %}
+              <option value="{{ f }}" {% if f == scatter_x %}selected{% endif %}>{{ f }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="control-item">
+            <label for="scatter_y">Y Axis</label>
+            <select id="scatter_y" class="select">
+              {% for f in feature_cols %}
+              <option value="{{ f }}" {% if f == scatter_y %}selected{% endif %}>{{ f }}</option>
+              {% endfor %}
+            </select>
+          </div>
         </div>
+        <div class="plot-box" id="scatter-plot"></div>
       </div>
     </section>
+
+    <section class="card plot-block">
+      <div class="card-header">
+        <p class="card-title">Histogram</p>
+        <p class="card-description plot-desc">Explore the distribution of values for a single feature. Overlapping histograms show how different target categories are distributed across feature ranges.</p>
+      </div>
+      <div class="card-content">
+        <div class="controls-row">
+          <div class="control-item">
+            <label for="hist_feature">Feature</label>
+            <select id="hist_feature" class="select">
+              {% for f in feature_cols %}
+              <option value="{{ f }}" {% if f == hist_feature %}selected{% endif %}>{{ f }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="plot-box" id="hist-plot"></div>
+      </div>
+    </section>
+  </div>
+
+  <section class="card plot-block">
+    <div class="card-header">
+      <p class="card-title">Correlation Matrix</p>
+      <p class="card-description plot-desc">Understand feature relationships through Pearson correlation coefficients. Values range from -1 (strong negative) to +1 (strong positive), helping identify redundant or complementary features.</p>
+    </div>
+    <div class="card-content">
+      <div class="plot-box" id="corr-plot"></div>
+    </div>
   </section>
 
   <div class="wizard-next">
@@ -387,7 +395,7 @@
 
 <!-- ── Panel 4: Train a Model ── -->
 <div id="panel-train" class="wizard-panel {% if training %}active{% endif %}">
-  <section id="sec-train" class="card plot-block">
+  <section class="card plot-block">
     <div class="card-header">
       <p class="card-title">Model Training</p>
       <p class="card-description plot-desc">
@@ -428,17 +436,12 @@
         <p><strong>Logistic/Ridge:</strong> Regularisation controls model complexity. Stronger regularisation usually gives a simpler model.</p>
       </div>
 
-      <form method="post">
+      <form method="post" id="train-form">
         {% csrf_token %}
         <input type="hidden" name="action" value="train">
-
-        {% for cls in selected_classes %}
-          <input type="hidden" name="selected_classes" value="{{ cls }}">
-        {% endfor %}
-
-        <input type="hidden" name="scatter_x" value="{{ scatter_x }}">
-        <input type="hidden" name="scatter_y" value="{{ scatter_y }}">
-        <input type="hidden" name="hist_feature" value="{{ hist_feature }}">
+        <input type="hidden" name="scatter_x" id="hidden_scatter_x" value="{{ scatter_x }}">
+        <input type="hidden" name="scatter_y" id="hidden_scatter_y" value="{{ scatter_y }}">
+        <input type="hidden" name="hist_feature" id="hidden_hist_feature" value="{{ hist_feature }}">
 
         <div class="controls-row">
 
@@ -471,6 +474,25 @@
               <option value="0.5"  {% if training.test_size == 0.5 %}selected{% endif %}>50%</option>
             </select>
           </div>
+
+          {% if feature_cols|length > 1 %}
+          <div class="control-item">
+            <label for="boundary_x">Boundary X</label>
+            <select name="boundary_x" id="boundary_x" class="select">
+              {% for f in feature_cols %}
+              <option value="{{ f }}" {% if f == boundary_x|default:scatter_x %}selected{% endif %}>{{ f }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="control-item">
+            <label for="boundary_y">Boundary Y</label>
+            <select name="boundary_y" id="boundary_y" class="select">
+              {% for f in feature_cols %}
+              <option value="{{ f }}" {% if f == boundary_y|default:scatter_y %}selected{% endif %}>{{ f }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          {% endif %}
 
           <div class="control-item hyper-param hp-knn">
             <label for="k">K</label>
@@ -544,17 +566,14 @@
           <span class="summary-value">{{ training.best_test }}</span>
           <span class="summary-sub muted">at {{ training.param_label }} = {{ training.best_param }}</span>
         </div>
-
         <div class="card summary-card">
           <span class="summary-label">Model</span>
           <span class="summary-value-sm">{{ training.model_label }}</span>
         </div>
-
         <div class="card summary-card">
           <span class="summary-label">Train samples</span>
           <span class="summary-value">{{ training.n_train }}</span>
         </div>
-
         <div class="card summary-card">
           <span class="summary-label">Test samples</span>
           <span class="summary-value">{{ training.n_test }}</span>
@@ -576,9 +595,23 @@
         <p class="text-xs muted">Train-test gap: {{ training.overfit_gap }}</p>
       </div>
 
-      <div class="plot-img-box" style="margin-top: var(--space-5);">
-        <img src="data:image/png;base64,{{ training.training_plot }}" alt="Training curve" />
-      </div>
+      <h4 class="results-table-heading">Hyperparameter Sweep</h4>
+      <p class="plot-desc muted">Train vs test score for every value of {{ training.param_label }}. Hover any point for the exact score — the highlighted point is the best test score.</p>
+      <div class="plot-box" id="curve-plot" style="margin-top: var(--space-3);"></div>
+
+      {% if training_json %}
+      <h4 class="results-table-heading">Decision Boundary Explorer</h4>
+      <p class="plot-desc muted">
+        Shows how a <strong>{{ training.model_label }}</strong> (trained on only
+        <strong>{{ boundary_x }}</strong> and <strong>{{ boundary_y }}</strong>) divides the feature space.
+        Circles = training points, diamonds = test points,
+        {% if problem_type == 'classification' %}red ✕ = misclassified test points.
+        Hover any point to see its true class and what the model predicted. Hover an empty area to see what the model would predict there.{% else %}the surface shows the predicted value.
+        Hover any point to see actual vs predicted and the error.{% endif %}
+        Pick different features in the Boundary X/Y dropdowns above and retrain to compare.
+      </p>
+      <div class="plot-box" id="boundary-plot" style="margin-top: var(--space-3);"></div>
+      {% endif %}
 
       <h4 class="results-table-heading">Full Results</h4>
       <div class="table-wrap">
@@ -606,10 +639,15 @@
   </section>
 </div>
 
-{% endif %}{# end if scatter_plot #}
+{{ viz_json|json_script:"viz-data" }}
+{% if training_json %}{{ training_json|json_script:"training-data" }}{% endif %}
+
+{% endif %}{# end if has_data #}
 
 </div><!-- end main content -->
 </div><!-- end project-layout -->
+
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
 
 {% endblock %}
 
@@ -661,30 +699,27 @@
     });
   }
 
-  // ── Table AJAX ───────────────────────────────────────────────────────
+  // ── Table AJAX ────────────────────────────────────────────────────────
   function submitTable() {
     var form  = document.getElementById('table-form');
     var inner = document.getElementById('table-inner');
     var desc  = document.querySelector('#sec-preview .plot-desc');
     if (!form || !inner) return;
-
     var visibleSearch = document.getElementById('table-search');
     if (visibleSearch) document.getElementById('search_hidden').value = visibleSearch.value;
-
-    inner.style.opacity       = '0.45';
+    inner.style.opacity = '0.45';
     inner.style.pointerEvents = 'none';
-
     fetch(window.location.href, { method: 'POST', body: new FormData(form) })
-      .then(function (r) { return r.text(); })
-      .then(function (html) {
-        var doc      = new DOMParser().parseFromString(html, 'text/html');
+      .then(function(r) { return r.text(); })
+      .then(function(html) {
+        var doc = new DOMParser().parseFromString(html, 'text/html');
         var newInner = doc.getElementById('table-inner');
         var newDesc  = doc.querySelector('#sec-preview .plot-desc');
         if (newInner) {
           inner.outerHTML = newInner.outerHTML;
           if (desc && newDesc) desc.innerHTML = newDesc.innerHTML;
           var activeSize = document.getElementById('psize_input').value;
-          document.querySelectorAll('.psize-btn').forEach(function (b) {
+          document.querySelectorAll('.psize-btn').forEach(function(b) {
             var isActive = b.dataset.size === activeSize;
             b.classList.toggle('psize-active', isActive);
             b.classList.toggle('active', isActive);
@@ -692,26 +727,25 @@
           bindInner();
         }
       })
-      .catch(function () { form.submit(); });
+      .catch(function() { form.submit(); });
   }
 
   function bindStable() {
     var searchEl = document.getElementById('table-search');
     if (searchEl) {
       var timer;
-      searchEl.addEventListener('input', function () {
+      searchEl.addEventListener('input', function() {
         clearTimeout(timer);
-        timer = setTimeout(function () {
+        timer = setTimeout(function() {
           document.getElementById('page_input').value = '1';
           submitTable();
         }, 400);
       });
     }
-
-    document.querySelectorAll('.psize-btn').forEach(function (btn) {
-      btn.addEventListener('click', function () {
+    document.querySelectorAll('.psize-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
         document.getElementById('psize_input').value = this.dataset.size;
-        document.getElementById('page_input').value  = '1';
+        document.getElementById('page_input').value = '1';
         submitTable();
       });
     });
@@ -721,11 +755,10 @@
     var inner = document.getElementById('table-inner');
     var form  = document.getElementById('table-form');
     if (!inner || !form) return;
-
-    inner.querySelectorAll('.col-toggle-btn').forEach(function (btn) {
-      btn.addEventListener('click', function () {
+    inner.querySelectorAll('.col-toggle-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
         var col = this.dataset.col;
-        form.querySelectorAll('.hidden-col-inp').forEach(function (inp) {
+        form.querySelectorAll('.hidden-col-inp').forEach(function(inp) {
           if (inp.value === col) inp.remove();
         });
         if (this.classList.contains('col-visible')) {
@@ -738,79 +771,272 @@
         submitTable();
       });
     });
-
-    inner.querySelectorAll('.sort-btn').forEach(function (btn) {
-      btn.addEventListener('click', function () {
+    inner.querySelectorAll('.sort-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
         document.getElementById('sort_col_input').value = this.dataset.col;
         document.getElementById('sort_dir_input').value = this.dataset.dir;
-        document.getElementById('page_input').value     = '1';
+        document.getElementById('page_input').value = '1';
         submitTable();
       });
     });
-
-    inner.querySelectorAll('.page-btn:not([disabled])').forEach(function (btn) {
-      btn.addEventListener('click', function () {
+    inner.querySelectorAll('.page-btn:not([disabled])').forEach(function(btn) {
+      btn.addEventListener('click', function() {
         document.getElementById('page_input').value = this.dataset.page;
         submitTable();
       });
     });
   }
 
-  function bindViz() {
-    var form = document.getElementById('viz-form');
-    if (!form) return;
+  // ── Plotly charts ─────────────────────────────────────────────────────
+  const PALETTE = ['#4a7fe5','#f5a623','#3dba6e','#ff4d6d','#9b6ef3','#39c2c9','#e57ab8','#a3b18a','#f4845f','#7f8fa6'];
+  const PLOT_BG = '#1a1d2e';
+  const GRID    = 'rgba(255,255,255,0.08)';
+  const FONT_C  = '#c9cde0';
 
-    form.addEventListener('submit', function (e) {
-      e.preventDefault();
+  const vizEl = document.getElementById('viz-data');
+  const viz = vizEl ? JSON.parse(vizEl.textContent) : null;
 
-      var btn = document.getElementById('update-plots-btn');
-      if (btn) { btn.disabled = true; btn.textContent = 'Updating…'; }
+  function baseLayout(extra) {
+    var layout = {
+      plot_bgcolor: PLOT_BG,
+      paper_bgcolor: 'rgba(0,0,0,0)',
+      font: { color: FONT_C, size: 12 },
+      margin: { l: 55, r: 60, t: 40, b: 50 },
+      xaxis: { gridcolor: GRID, zerolinecolor: GRID },
+      yaxis: { gridcolor: GRID, zerolinecolor: GRID },
+      legend: { orientation: 'h', y: -0.22, bgcolor: 'rgba(0,0,0,0)' },
+    };
+    return Object.assign(layout, extra || {});
+  }
 
-      ['scatter-img','hist-img','corr-img'].forEach(function (id) {
-        var el = document.getElementById(id);
-        if (el) el.style.opacity = '0.4';
+  const PLOTLY_CFG = { responsive: true, displaylogo: false,
+                       modeBarButtonsToRemove: ['lasso2d','select2d'],
+                       displayModeBar: 'hover',
+                       toImageButtonOptions: { scale: 2 } };
+
+  function draw(id, traces, layout) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    try {
+      Plotly.purge(el);
+      Plotly.newPlot(el, traces, layout, PLOTLY_CFG);
+    } catch(e) {
+      el.innerHTML = '<p style="color:#ff4d6d;padding:1rem;font-size:13px">Plot error: ' + e.message + '</p>';
+      console.error('Plotly error on #' + id, e);
+    }
+  }
+
+  function classColor(cls) {
+    var idx = viz ? viz.classes.indexOf(cls) : 0;
+    return PALETTE[idx % PALETTE.length];
+  }
+
+  function drawScatter() {
+    if (!viz) return;
+    var fx = document.getElementById('scatter_x').value;
+    var fy = document.getElementById('scatter_y').value;
+    var traces = [];
+    if (viz.problem_type === 'classification') {
+      viz.classes.forEach(function(cls) {
+        var xs = [], ys = [];
+        for (var i = 0; i < viz.target.length; i++) {
+          if (viz.target[i] === cls) { xs.push(viz.features[fx][i]); ys.push(viz.features[fy][i]); }
+        }
+        traces.push({ x: xs, y: ys, mode: 'markers', type: 'scatter', name: cls,
+          marker: { color: classColor(cls), size: 7, opacity: 0.85, line: { color: 'rgba(255,255,255,0.4)', width: 0.5 } },
+          hovertemplate: fx + ': %{x}<br>' + fy + ': %{y}<br>' + cls + '<extra></extra>' });
       });
+    } else {
+      traces.push({ x: viz.features[fx], y: viz.features[fy], mode: 'markers', type: 'scatter',
+        marker: { color: viz.target, colorscale: 'Viridis', size: 7, opacity: 0.85,
+          colorbar: { title: { text: viz.target_col }, outlinewidth: 0 },
+          line: { color: 'rgba(255,255,255,0.4)', width: 0.5 } },
+        hovertemplate: fx + ': %{x}<br>' + fy + ': %{y}<br>' + viz.target_col + ': %{marker.color}<extra></extra>' });
+    }
+    draw('scatter-plot', traces, baseLayout({
+      xaxis: { title: { text: fx }, gridcolor: GRID, zerolinecolor: GRID },
+      yaxis: { title: { text: fy }, gridcolor: GRID, zerolinecolor: GRID },
+      height: 420 }));
+  }
 
-      fetch(window.location.href, { method: 'POST', body: new FormData(form) })
-        .then(function (r) { return r.text(); })
-        .then(function (html) {
-          var doc = new DOMParser().parseFromString(html, 'text/html');
-          ['scatter-img','hist-img','corr-img'].forEach(function (id) {
-            var newEl = doc.getElementById(id);
-            var curEl = document.getElementById(id);
-            if (newEl && curEl) { curEl.src = newEl.src; curEl.style.opacity = '1'; }
+  function drawHist() {
+    if (!viz) return;
+    var f = document.getElementById('hist_feature').value;
+    var traces = [];
+    if (viz.problem_type === 'classification') {
+      viz.classes.forEach(function(cls) {
+        var xs = [];
+        for (var i = 0; i < viz.target.length; i++) {
+          if (viz.target[i] === cls) xs.push(viz.features[f][i]);
+        }
+        traces.push({ x: xs, type: 'histogram', name: cls, opacity: 0.6, nbinsx: 20,
+          marker: { color: classColor(cls) } });
+      });
+    } else {
+      traces.push({ x: viz.features[f], type: 'histogram', nbinsx: 25,
+        marker: { color: '#4a7fe5', line: { color: 'rgba(255,255,255,0.25)', width: 0.5 } } });
+    }
+    draw('hist-plot', traces, baseLayout({
+      barmode: 'overlay',
+      xaxis: { title: { text: f }, gridcolor: GRID, zerolinecolor: GRID },
+      yaxis: { title: { text: 'Count' }, gridcolor: GRID, zerolinecolor: GRID },
+      height: 420 }));
+  }
+
+  function drawCorr() {
+    if (!viz) return;
+    draw('corr-plot', [{ x: viz.corr.cols, y: viz.corr.cols, z: viz.corr.z,
+      type: 'heatmap', colorscale: 'RdBu', reversescale: true, zmin: -1, zmax: 1, zmid: 0,
+      texttemplate: '%{z:.2f}', textfont: { size: 11 }, colorbar: { outlinewidth: 0 },
+      hovertemplate: '%{x} vs %{y}: %{z:.3f}<extra></extra>' }],
+      baseLayout({ height: 420, margin: { l: 110, r: 20, t: 20, b: 90 }, yaxis: { autorange: 'reversed', gridcolor: GRID } }));
+  }
+
+  function drawTraining() {
+    var el = document.getElementById('training-data');
+    if (!el) return;
+    var data = JSON.parse(el.textContent);
+    var curve = data.curve;
+
+    if (curve && document.getElementById('curve-plot')) {
+      var traces = [
+        { x: curve.params, y: curve.train, mode: 'lines+markers', name: 'Train',
+          line: { color: '#4a7fe5', width: 2 }, marker: { size: 7 } },
+        { x: curve.params, y: curve.test, mode: 'lines+markers', name: 'Test',
+          line: { color: '#f5a623', width: 2, dash: 'dash' }, marker: { size: 7, symbol: 'square' } },
+        { x: [curve.best_param], y: [curve.test[curve.best_idx]], mode: 'markers', name: 'Best: ' + curve.best_param,
+          marker: { color: '#3dba6e', size: 14, symbol: 'star', line: { color: '#fff', width: 1 } } }
+      ];
+      var layout = baseLayout({ height: 400,
+        xaxis: { title: { text: curve.param_label }, type: 'category', gridcolor: GRID },
+        yaxis: { title: { text: curve.score_label }, gridcolor: GRID } });
+      if (curve.score_label === 'Accuracy') layout.yaxis.range = [-0.02, 1.05];
+      draw('curve-plot', traces, layout);
+    }
+
+    var b = data.boundary;
+    var bEl = document.getElementById('boundary-plot');
+    if (b && bEl) {
+      var traces = [];
+      if (b.problem_type === 'classification') {
+        var k = b.class_names.length;
+        var eps = 0.0001;
+        var scale = [];
+        for (var i = 0; i < k; i++) {
+          scale.push([i / k, PALETTE[i % PALETTE.length]]);
+          scale.push([(i + 1) / k - eps, PALETTE[i % PALETTE.length]]);
+        }
+        var regionCd = b.z.map(function(row) { return row.map(function(v) { return [b.class_names[v] || '?']; }); });
+        traces.push({ x: b.x, y: b.y, z: b.z, type: 'heatmap',
+          colorscale: scale, zmin: -0.5, zmax: k - 0.5,
+          opacity: 0.3, showscale: false, customdata: regionCd,
+          hovertemplate: b.feature_x + ': %{x:.3f}<br>' + b.feature_y + ': %{y:.3f}<br>model would predict: <b>%{customdata[0]}</b><extra></extra>' });
+
+        var cls_name = function(idx) { return b.class_names[idx] !== undefined ? b.class_names[idx] : '?(' + idx + ')'; };
+        var hoverPoint = function(kind) {
+          return b.feature_x + ': %{x}<br>' + b.feature_y + ': %{y}<br>true: <b>%{customdata[0]}</b><br>predicted: <b>%{customdata[1]}</b><extra>' + kind + '</extra>';
+        };
+
+        b.class_names.forEach(function(cls, ci) {
+          var trX=[], trY=[], trCd=[], teX=[], teY=[], teCd=[];
+          b.points.train_label.forEach(function(l, i) {
+            if (l === ci) { trX.push(b.points.train_x[i]); trY.push(b.points.train_y[i]); trCd.push([cls, cls_name(b.points.train_pred[i])]); }
           });
-          if (btn) { btn.disabled = false; btn.textContent = 'Update Plots'; }
-        })
-        .catch(function () { form.submit(); });
+          b.points.test_label.forEach(function(l, i) {
+            if (l === ci) { teX.push(b.points.test_x[i]); teY.push(b.points.test_y[i]); teCd.push([cls, cls_name(b.points.test_pred[i])]); }
+          });
+          traces.push({ x: trX, y: trY, mode: 'markers', name: cls + ' (train)', legendgroup: cls, customdata: trCd,
+            marker: { color: PALETTE[ci % PALETTE.length], size: 7, opacity: 0.9, line: { color: 'rgba(0,0,0,0.4)', width: 0.5 } },
+            hovertemplate: hoverPoint('train') });
+          traces.push({ x: teX, y: teY, mode: 'markers', name: cls + ' (test)', legendgroup: cls, customdata: teCd,
+            marker: { color: PALETTE[ci % PALETTE.length], size: 9, symbol: 'diamond', line: { color: '#ffffff', width: 1.2 } },
+            hovertemplate: hoverPoint('test') });
+        });
+
+        var wx=[], wy=[], wcd=[];
+        b.points.test_wrong.forEach(function(w, i) {
+          if (w) { wx.push(b.points.test_x[i]); wy.push(b.points.test_y[i]);
+            wcd.push([cls_name(b.points.test_label[i]), cls_name(b.points.test_pred[i])]); }
+        });
+        if (wx.length) {
+          traces.push({ x: wx, y: wy, mode: 'markers', name: 'misclassified', customdata: wcd,
+            marker: { color: '#ff4d6d', size: 13, symbol: 'x-thin', line: { color: '#ff4d6d', width: 2.5 } },
+            hovertemplate: b.feature_x + ': %{x}<br>' + b.feature_y + ': %{y}<br>true: <b>%{customdata[0]}</b><br>predicted: <b>%{customdata[1]}</b> ← wrong side<extra>misclassified</extra>' });
+        }
+      } else {
+        traces.push({ x: b.x, y: b.y, z: b.z, type: 'contour', colorscale: 'Viridis', opacity: 0.85,
+          colorbar: { title: { text: 'prediction' }, outlinewidth: 0 }, contours: { coloring: 'heatmap' },
+          hovertemplate: 'predicted: %{z:.3f}<extra></extra>' });
+        var cdFor = function(labels, preds) { return labels.map(function(a, i) { return [a, preds[i], Math.round((preds[i]-a)*1000)/1000]; }); };
+        var regHover = function(kind) {
+          return b.feature_x + ': %{x}<br>' + b.feature_y + ': %{y}<br>actual: <b>%{customdata[0]}</b><br>predicted: <b>%{customdata[1]}</b><br>error: %{customdata[2]}<extra>' + kind + '</extra>';
+        };
+        traces.push({ x: b.points.train_x, y: b.points.train_y, mode: 'markers', name: 'train',
+          customdata: cdFor(b.points.train_label, b.points.train_pred),
+          marker: { color: b.points.train_label, colorscale: 'Viridis', showscale: false, size: 7, line: { color: 'rgba(255,255,255,0.7)', width: 0.8 } },
+          hovertemplate: regHover('train') });
+        traces.push({ x: b.points.test_x, y: b.points.test_y, mode: 'markers', name: 'test',
+          customdata: cdFor(b.points.test_label, b.points.test_pred),
+          marker: { color: b.points.test_label, colorscale: 'Viridis', showscale: false, size: 9, symbol: 'diamond', line: { color: '#ffffff', width: 1.2 } },
+          hovertemplate: regHover('test') });
+      }
+
+      var scoreLabel = b.problem_type === 'classification' ? '2-feature accuracy: ' + b.score_2d : '2-feature R²: ' + b.score_2d;
+      draw('boundary-plot', traces, baseLayout({ height: 480,
+        xaxis: { title: { text: b.feature_x }, gridcolor: GRID, zerolinecolor: GRID },
+        yaxis: { title: { text: b.feature_y }, gridcolor: GRID, zerolinecolor: GRID },
+        annotations: [{ text: scoreLabel, showarrow: false, xref: 'paper', yref: 'paper',
+          x: 0.99, y: 0.99, xanchor: 'right', font: { size: 12, color: FONT_C },
+          bgcolor: 'rgba(0,0,0,0.45)', borderpad: 5 }] }));
+    }
+  }
+
+  function bindVizControls() {
+    if (!viz) return;
+    var sx = document.getElementById('scatter_x');
+    var sy = document.getElementById('scatter_y');
+    var hf = document.getElementById('hist_feature');
+    if (sx) sx.addEventListener('change', function() {
+      var h = document.getElementById('hidden_scatter_x'); if(h) h.value = this.value;
+      drawScatter();
+    });
+    if (sy) sy.addEventListener('change', function() {
+      var h = document.getElementById('hidden_scatter_y'); if(h) h.value = this.value;
+      drawScatter();
+    });
+    if (hf) hf.addEventListener('change', function() {
+      var h = document.getElementById('hidden_hist_feature'); if(h) h.value = this.value;
+      drawHist();
     });
   }
 
   function bindModelControls() {
     var modelSelect = document.getElementById('model_key');
     if (!modelSelect) return;
-
     function updateHyperParams() {
-      var selectedModel = modelSelect.value;
-      document.querySelectorAll('.hyper-param').forEach(function (el) { el.style.display = 'none'; });
-      if (selectedModel === 'KNN')
-        document.querySelectorAll('.hp-knn').forEach(function (el) { el.style.display = 'flex'; });
-      if (selectedModel === 'DecisionTree')
-        document.querySelectorAll('.hp-tree').forEach(function (el) { el.style.display = 'flex'; });
-      if (selectedModel === 'LogisticRegression')
-        document.querySelectorAll('.hp-logistic').forEach(function (el) { el.style.display = 'flex'; });
-      if (selectedModel === 'Ridge')
-        document.querySelectorAll('.hp-ridge').forEach(function (el) { el.style.display = 'flex'; });
+      var sel = modelSelect.value;
+      document.querySelectorAll('.hyper-param').forEach(function(el) { el.style.display = 'none'; });
+      if (sel === 'KNN') document.querySelectorAll('.hp-knn').forEach(function(el) { el.style.display = 'flex'; });
+      if (sel === 'DecisionTree') document.querySelectorAll('.hp-tree').forEach(function(el) { el.style.display = 'flex'; });
+      if (sel === 'LogisticRegression') document.querySelectorAll('.hp-logistic').forEach(function(el) { el.style.display = 'flex'; });
+      if (sel === 'Ridge') document.querySelectorAll('.hp-ridge').forEach(function(el) { el.style.display = 'flex'; });
     }
-
     modelSelect.addEventListener('change', updateHyperParams);
     updateHyperParams();
   }
 
   bindStable();
   bindInner();
-  bindViz();
+  bindVizControls();
   bindModelControls();
+
+  if (document.readyState === 'complete') {
+    drawScatter(); drawHist(); drawCorr(); drawTraining();
+  } else {
+    window.addEventListener('load', function() {
+      drawScatter(); drawHist(); drawCorr(); drawTraining();
+    });
+  }
 })();
 </script>
 {% endblock script %}
