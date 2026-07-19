@@ -5,6 +5,11 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'project3/style.css' %}?v=4" />
+<style>
+    .hist-verdict { font-weight: 600; }
+    .hist-correct { color: hsl(142 71% 45%); }
+    .hist-wrong   { color: hsl(var(--destructive)); }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -75,9 +80,8 @@
                 <div class="row" style="gap: var(--space-3); flex-wrap: wrap;" id="label-buttons">
                     {% for label in label_names %}
                     <button
-                        class="btn btn-outline btn-lg"
+                        class="btn btn-outline btn-lg label-btn"
                         data-label="{{ forloop.counter0 }}"
-                        onclick="submitLabel({{ forloop.counter0 }})"
                         {% if not current_article %}disabled{% endif %}
                     >{{ label }}</button>
                     {% endfor %}
@@ -129,7 +133,7 @@
                     {% for item in labeled_history %}
                     <div style="padding: var(--space-2) 0; border-bottom: 1px solid hsl(var(--border)); font-size: var(--text-sm);">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span style="color: {% if item.correct %}hsl(142 71% 45%){% else %}hsl(var(--destructive)){% endif %}; font-weight:600;">
+                            <span class="hist-verdict {% if item.correct %}hist-correct{% else %}hist-wrong{% endif %}">
                                 {% if item.correct %}✓{% else %}✗{% endif %} {{ item.user_label_name }}
                             </span>
                             {% if not item.correct %}
@@ -150,11 +154,176 @@
     </div>
 </div>
 
+<!-- ── Your Expert Profile ─────────────────────────────────────────────── -->
+<section class="card" id="profile-section" style="margin-top: var(--space-6);">
+    <div class="card-header">
+        <p class="card-title">Your Expert Profile</p>
+        <p class="card-description">
+            As you label articles, the system learns where <em>you</em> are reliable —
+            exactly like it learns the simulated experts' competence in Task 4.
+            Once your profile is estimated, we plug you into the deferral pipeline
+            and measure the team accuracy with you as the expert.
+        </p>
+    </div>
+    <div class="card-content">
+
+        <!-- Locked state -->
+        <div id="profile-locked">
+            <div style="display: flex; align-items: center; gap: var(--space-4); flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 220px;">
+                    <div style="background: hsl(var(--secondary)); border-radius: 6px; height: 14px; overflow: hidden;">
+                        <div id="profile-progress-bar" style="width: 0; background: hsl(var(--primary)); height: 100%; border-radius: 6px; transition: width 0.4s;"></div>
+                    </div>
+                </div>
+                <p class="muted" id="profile-progress-text" style="font-size: var(--text-sm); margin: 0;"></p>
+            </div>
+        </div>
+
+        <!-- Unlocked state -->
+        <div id="profile-unlocked" style="display: none;">
+
+            <p id="profile-summary-line" style="font-size: var(--text-md); margin-bottom: var(--space-4); line-height: 1.6;"></p>
+
+            <div class="grid-3" style="gap: var(--space-4); margin-bottom: var(--space-5);">
+                <div class="card" style="padding: var(--space-4); text-align: center;">
+                    <p class="muted" style="font-size: var(--text-sm); margin-bottom: var(--space-1);">Your Overall Accuracy</p>
+                    <p id="profile-overall" style="font-size: 2rem; font-weight: 700; color: hsl(var(--foreground));">—</p>
+                </div>
+                <div class="card" style="padding: var(--space-4); text-align: center;">
+                    <p class="muted" style="font-size: var(--text-sm); margin-bottom: var(--space-1);">Your Specialty</p>
+                    <p id="profile-specialty" style="font-size: 1.3rem; font-weight: 700; color: hsl(var(--primary));">—</p>
+                    <p id="profile-specialty-acc" class="muted" style="font-size: var(--text-xs); margin-top: 2px;"></p>
+                </div>
+                <div class="card" style="padding: var(--space-4); text-align: center;">
+                    <p class="muted" style="font-size: var(--text-sm); margin-bottom: var(--space-1);">You Are Basically</p>
+                    <p id="profile-similar" style="font-size: 1.3rem; font-weight: 700; color: hsl(var(--foreground));">—</p>
+                </div>
+            </div>
+
+            <div id="profile-chart" style="width: 100%; height: 380px; margin-bottom: var(--space-5);"></div>
+            <p class="muted" id="profile-chart-note" style="font-size: var(--text-xs); margin-top: calc(-1 * var(--space-4)); margin-bottom: var(--space-5);"></p>
+
+            <p class="label" style="margin-bottom: var(--space-3);">Team accuracy on the held-out evaluation set</p>
+            <div id="team-compare-bars" style="display: flex; flex-direction: column; gap: var(--space-3); margin-bottom: var(--space-3);"></div>
+            <p class="muted" id="you-deferral-note" style="font-size: var(--text-xs);"></p>
+
+        </div>
+    </div>
+</section>
+
 {% endblock %}
 
 {% block script %}
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
 <script>
 const LABEL_NAMES = JSON.parse('{{ label_names_json|escapejs }}');
+const INITIAL_PROFILE = JSON.parse('{{ profile_json|escapejs }}');
+
+// ── Your Expert Profile rendering ──────────────────────────────────────────
+function renderProfile(p) {
+    const locked = document.getElementById('profile-locked');
+    const unlocked = document.getElementById('profile-unlocked');
+    if (!p) return;
+
+    if (!p.unlocked) {
+        locked.style.display = 'block';
+        unlocked.style.display = 'none';
+        const pct = Math.round(100 * p.n_labeled / p.min_labels);
+        document.getElementById('profile-progress-bar').style.width = pct + '%';
+        document.getElementById('profile-progress-text').textContent =
+            'Label ' + p.labels_needed + ' more article' + (p.labels_needed === 1 ? '' : 's') +
+            ' to unlock your expert profile (' + p.n_labeled + '/' + p.min_labels + ')';
+        return;
+    }
+
+    locked.style.display = 'none';
+    unlocked.style.display = 'block';
+
+    // headline sentence, the "you're 92% on Sports, you're basically the
+    // Sports Expert" moment
+    document.getElementById('profile-summary-line').innerHTML =
+        'Based on your ' + p.n_labeled + ' labels, you are strongest on <strong>' +
+        p.specialty + '</strong> (' + p.specialty_acc + '% estimated accuracy) — ' +
+        'your competence profile is closest to the <strong>' + p.similar_to + '</strong>. ' +
+        'Plugged into the deferral pipeline, the AI + you team reaches <strong>' +
+        p.you_team_acc + '%</strong> on the evaluation set.';
+
+    document.getElementById('profile-overall').textContent =
+        p.overall_acc !== null ? p.overall_acc + '%' : '—';
+    document.getElementById('profile-specialty').textContent = p.specialty;
+    document.getElementById('profile-specialty-acc').textContent =
+        p.specialty_acc + '% estimated accuracy';
+    document.getElementById('profile-similar').textContent = 'The ' + p.similar_to;
+
+    // per class comparison chart: you vs the two simulated experts
+    const youVals = p.per_class.map(c => c.smoothed_acc);
+    const counts = p.per_class.map(c => c.n);
+    const traces = [
+        { x: p.label_names, y: youVals, type: 'bar', name: 'You',
+          marker: { color: '#4a7fe5' },
+          customdata: counts,
+          hovertemplate: '%{x}: %{y}%<br>based on %{customdata} label(s)<extra>You</extra>' },
+        { x: p.label_names, y: p.sports_per_class, type: 'bar', name: 'Sports Expert',
+          marker: { color: '#f5a623' },
+          hovertemplate: '%{x}: %{y}%<extra>Sports Expert</extra>' },
+        { x: p.label_names, y: p.tech_per_class, type: 'bar', name: 'Sci/Tech Expert',
+          marker: { color: '#3dba6e' },
+          hovertemplate: '%{x}: %{y}%<extra>Sci/Tech Expert</extra>' },
+    ];
+    Plotly.react('profile-chart', traces, {
+        barmode: 'group',
+        title: { text: 'Per-Class Accuracy — You vs the Simulated Experts', font: { size: 14 } },
+        yaxis: { range: [0, 100], title: { text: 'Accuracy (%)' }, gridcolor: 'rgba(255,255,255,0.08)' },
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        plot_bgcolor: 'rgba(0,0,0,0)',
+        font: { color: '#e0e0e0', size: 12 },
+        margin: { l: 55, r: 15, t: 45, b: 40 },
+        legend: { orientation: 'h', y: -0.15, bgcolor: 'rgba(0,0,0,0)' },
+    }, { responsive: true, displaylogo: false });
+
+    const seen = p.per_class.filter(c => c.n > 0).length;
+    document.getElementById('profile-chart-note').textContent =
+        'Your bars use Laplace-smoothed estimates (same smoothing as the Task 4 active learning loop), ' +
+        'so classes with few labels are pulled toward 50%. You have labeled articles from ' +
+        seen + ' of 4 categories so far — hover a bar to see the sample count.';
+
+    // team comparison as simple horizontal bars, ai only vs simulated team vs you
+    const rows = [
+        { name: 'AI alone', val: p.ai_only_acc, color: 'hsl(var(--muted-foreground))' },
+        { name: 'AI + simulated experts', val: p.simulated_team_acc, color: '#f5a623' },
+        { name: 'AI + YOU', val: p.you_team_acc, color: '#4a7fe5' },
+    ];
+    const maxVal = Math.max(...rows.map(r => r.val));
+    const holder = document.getElementById('team-compare-bars');
+    holder.innerHTML = '';
+    rows.forEach(r => {
+        const best = r.val === maxVal;
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex; align-items:center; gap:12px;';
+        row.innerHTML =
+            '<span style="width:190px; text-align:right; font-size:var(--text-sm); flex-shrink:0;' +
+            (best ? ' font-weight:700;' : '') + '">' + r.name + (best ? ' ★' : '') + '</span>' +
+            '<div style="flex:1; background:hsl(var(--secondary)); border-radius:4px; height:18px; overflow:hidden;">' +
+            '<div style="height:100%; border-radius:4px; transition:width 0.5s; background:' + r.color +
+            '; width:' + r.val + '%;"></div></div>' +
+            '<span style="min-width:64px; font-size:var(--text-sm);' + (best ? ' font-weight:700;' : '') + '">' +
+            r.val + '%</span>';
+        holder.appendChild(row);
+    });
+
+    document.getElementById('you-deferral-note').textContent =
+        'With your profile, the Bayes-optimal rule defers ' + p.you_deferral_rate +
+        '% of articles to you. Your team accuracy is simulated on the held-out evaluation set ' +
+        'using your estimated per-class accuracy, with the same alpha = 1 deferral rule used in Tasks 3 and 4.';
+}
+
+renderProfile(INITIAL_PROFILE);
+
+// label buttons: bound here instead of inline onclick so the template
+// stays free of django tags inside html attributes (keeps linters happy)
+document.querySelectorAll('#label-buttons .label-btn').forEach(btn => {
+    btn.addEventListener('click', () => submitLabel(parseInt(btn.dataset.label)));
+});
 
 async function submitLabel(labelIdx) {
     const articleIdx = parseInt(document.getElementById('article-idx').value);
@@ -186,6 +355,9 @@ async function submitLabel(labelIdx) {
     if (data.team_acc !== null) {
         document.getElementById('team-acc').textContent = data.team_acc + '%';
     }
+
+    // Update your expert profile live
+    if (data.profile) renderProfile(data.profile);
 
     // Prepend to history
     if (data.n_labeled) {
@@ -223,10 +395,10 @@ function prependHistory(item) {
     const list = document.getElementById('history-list');
     const div = document.createElement('div');
     div.style.cssText = 'padding: 8px 0; border-bottom: 1px solid hsl(var(--border)); font-size: var(--text-sm);';
-    const color = item.correct ? 'hsl(142 71% 45%)' : 'hsl(var(--destructive))';
+    const cls = item.correct ? 'hist-correct' : 'hist-wrong';
     div.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center;">
-            <span style="color:${color}; font-weight:600;">
+            <span class="hist-verdict ${cls}">
                 ${item.correct ? '✓' : '✗'} ${item.user_label_name}
             </span>
             ${!item.correct ? `<span class="muted" style="font-size:var(--text-xs);">True: ${item.true_label_name}</span>` : ''}

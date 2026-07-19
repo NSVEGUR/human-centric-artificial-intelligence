@@ -75,6 +75,139 @@ from .active_learning import (
     _least_confidence, _margin, _entropy, _evaluate_deferral,
     N_POOL,
 )
+from .deferral import ai_only_acc, optimal_team_acc
+from .experts import sports_per_class, tech_per_class
+
+# how many labels before we show the user their expert profile. fewer than
+# this and the per class estimates are basically noise
+MIN_LABELS_FOR_PROFILE = 12
+
+# measured per class accuracy of the simulated experts as fractions
+_sports_frac = np.array([sports_per_class[LABEL_NAMES[k]] / 100.0 for k in range(4)])
+_tech_frac = np.array([tech_per_class[LABEL_NAMES[k]] / 100.0 for k in range(4)])
+
+
+def _compute_user_profile(labeled):
+    """Estimate the user's per-class accuracy from the labels they gave.
+
+    Same Laplace smoothing as the active learning loop so the numbers are
+    directly comparable to what the AL strategies learn about the simulated
+    experts.
+    """
+    correct_by_class = np.zeros(4)
+    total_by_class = np.zeros(4)
+    for item in labeled:
+        t = item["true_label"]
+        correct_by_class[t] += int(item["user_label"] == t)
+        total_by_class[t] += 1
+
+    prior_correct = np.ones(4) * 5.0
+    prior_total = np.ones(4) * 10.0
+    smoothed = (correct_by_class + prior_correct) / (total_by_class + prior_total)
+
+    per_class = []
+    for k in range(4):
+        n = int(total_by_class[k])
+        raw = round(100 * correct_by_class[k] / n, 1) if n > 0 else None
+        per_class.append({
+            "label": LABEL_NAMES[k],
+            "n": n,
+            "raw_acc": raw,
+            "smoothed_acc": round(float(smoothed[k]) * 100, 1),
+        })
+
+    n_total = int(total_by_class.sum())
+    overall = round(100 * float(correct_by_class.sum()) / n_total, 1) if n_total else None
+
+    # specialty = class with the best smoothed accuracy that the user has
+    # actually seen at least twice (otherwise its just the prior talking)
+    seen = [k for k in range(4) if total_by_class[k] >= 2]
+    if seen:
+        specialty_idx = max(seen, key=lambda k: smoothed[k])
+    else:
+        specialty_idx = int(np.argmax(smoothed))
+
+    # which simulated expert is the user most similar to (L1 distance
+    # between the smoothed profile and each experts measured profile)
+    d_sports = float(np.abs(smoothed - _sports_frac).sum())
+    d_tech = float(np.abs(smoothed - _tech_frac).sum())
+    similar_to = "Sports Expert" if d_sports <= d_tech else "Sci/Tech Expert"
+
+    return {
+        "per_class": per_class,
+        "smoothed": smoothed,          # np array, internal use
+        "overall_acc": overall,
+        "specialty": LABEL_NAMES[specialty_idx],
+        "specialty_acc": round(float(smoothed[specialty_idx]) * 100, 1),
+        "similar_to": similar_to,
+    }
+
+
+def _evaluate_you_as_expert(smoothed_profile, seed=123):
+    """Team accuracy with the *user* as the expert.
+
+    We simulate the user on the held-out eval set with the exact same
+    mechanism as the simulated experts (correct with probability p for
+    their class, otherwise the classifier's second most likely class),
+    then apply the same alpha=1 deferral rule as everywhere else. Fixed
+    seed so the number doesnt jump around between page refreshes.
+    """
+    rng = np.random.default_rng(seed)
+    user_preds = np.empty(len(eval_labels), dtype=int)
+    for i, y in enumerate(eval_labels):
+        y = int(y)
+        if rng.random() < smoothed_profile[y]:
+            user_preds[i] = y
+        else:
+            order = np.argsort(eval_probas[i])[::-1]
+            user_preds[i] = int(next(c for c in order if c != y))
+
+    p_user_correct = eval_probas @ smoothed_profile
+    clf_uncertainty = 1.0 - eval_probas.max(axis=1)
+    defer_mask = clf_uncertainty > (1.0 - p_user_correct)
+
+    clf_preds = np.argmax(eval_probas, axis=1)
+    team_preds = np.where(defer_mask, user_preds, clf_preds)
+
+    from sklearn.metrics import accuracy_score
+    team_acc = accuracy_score(eval_labels, team_preds) * 100
+    deferral_rate = float(defer_mask.mean()) * 100
+    return round(team_acc, 2), round(deferral_rate, 1)
+
+
+def _build_profile_payload(labeled):
+    """Everything the 'Your Expert Profile' section needs, or a locked
+    placeholder if the user hasnt labeled enough articles yet."""
+    n = len(labeled)
+    if n < MIN_LABELS_FOR_PROFILE:
+        return {
+            "unlocked": False,
+            "n_labeled": n,
+            "labels_needed": MIN_LABELS_FOR_PROFILE - n,
+            "min_labels": MIN_LABELS_FOR_PROFILE,
+        }
+
+    profile = _compute_user_profile(labeled)
+    you_team_acc, you_deferral_rate = _evaluate_you_as_expert(profile["smoothed"])
+
+    return {
+        "unlocked": True,
+        "n_labeled": n,
+        "min_labels": MIN_LABELS_FOR_PROFILE,
+        "per_class": profile["per_class"],
+        "overall_acc": profile["overall_acc"],
+        "specialty": profile["specialty"],
+        "specialty_acc": profile["specialty_acc"],
+        "similar_to": profile["similar_to"],
+        "you_team_acc": you_team_acc,
+        "you_deferral_rate": you_deferral_rate,
+        "ai_only_acc": round(ai_only_acc, 2),
+        "simulated_team_acc": round(optimal_team_acc, 2),
+        # experts measured profiles for the comparison chart
+        "sports_per_class": [round(float(v) * 100, 1) for v in _sports_frac],
+        "tech_per_class": [round(float(v) * 100, 1) for v in _tech_frac],
+        "label_names": LABEL_NAMES,
+    }
 
 
 def _get_next_query(strategy, queried_set, pool_probas):
@@ -155,6 +288,7 @@ def human_label(request):
         "strategy": strategy,
         "team_acc": team_acc,
         "labeled_history": list(reversed(labeled[-5:])),
+        "profile_json": json.dumps(_build_profile_payload(labeled)),
     }
 
     return HttpResponse(template.render(context, request))
@@ -221,6 +355,7 @@ def human_label_submit(request):
         "n_labeled": len(labeled),
         "team_acc": team_acc,
         "next_article": next_article,
+        "profile": _build_profile_payload(labeled),
     })
 
 
