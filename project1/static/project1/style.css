@@ -107,15 +107,16 @@
     margin-bottom: var(--space-4);
 }
 
-/* ---- plotly container ---- */
+/* plotly container  */
 .plot-box {
     border: 1px solid hsl(var(--border));
     border-radius: var(--radius);
     background: #1a1d2e;
     padding: var(--space-2);
     transition: border-color var(--transition);
-    overflow: visible;
+    overflow: hidden;
     min-height: 440px;
+    position: relative;
 }
 .plot-box:hover {
     border-color: hsl(var(--border-strong));
@@ -332,5 +333,4 @@
 .tuning-hints p {
     margin-top: var(--space-1);
 }
-
 

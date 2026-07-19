@@ -43,6 +43,9 @@ def _col_as_list(series):
 
 
 def build_viz_payload(df, feature_cols, target_col, problem_type):
+    """Pack everything the frontend needs to draw scatter / histogram /
+    correlation heatmap itself. Sending the raw columns instead of images
+    means every control updates instantly in the browser."""
 
     features = {}
     for c in feature_cols:
@@ -294,7 +297,7 @@ def index(request):
             # so we just always do it (the old image caching stuff is gone)
             viz_payload = build_viz_payload(df, feature_cols, target_col, problem_type)
 
-            # Compute dataset health info
+            # Compute dataset health info 
             class_distribution = {}
             target_stats = {}
             imbalance_flag = False
@@ -302,9 +305,12 @@ def index(request):
                 counts = df[target_col].value_counts()
                 total = len(df)
                 for cls, cnt in counts.items():
-                    pct = round(100 * cnt / total, 1)
+                    # pct as a string on purpose: if django localisation is on
+                    # (german locale etc) a float 33.3 renders as "33,3" in the
+                    # template which is invalid css and breaks the width bars
+                    pct = str(round(100 * cnt / total, 1))
                     class_distribution[str(cls)] = {'count': int(cnt), 'pct': pct}
-                imbalance_flag = any(v['pct'] < 10 for v in class_distribution.values())
+                imbalance_flag = any(float(v['pct']) < 10 for v in class_distribution.values())
             else:
                 target_stats = {
                     'min':    round(float(df[target_col].min()), 3),
