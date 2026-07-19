@@ -279,10 +279,17 @@
         </div>
     </div>
     <div class="card-content">
-        <p class="muted" style="margin-bottom: var(--space-4);">
+        <p class="muted" style="margin-bottom: var(--space-3);">
             You can act as the human expert. The system selects news articles to show you using
             the active learning query strategy. Your labels are used to estimate expert competence
             and build a personalised deferral policy in real time.
+        </p>
+        <p class="muted" style="margin-bottom: var(--space-4);">
+            Label twelve articles and the system estimates <strong>your personal competence
+            profile</strong> — your accuracy per category, your specialty, and which simulated
+            expert you most resemble — then plugs <strong>you</strong> into the deferral pipeline
+            and shows the team accuracy of AI + you against the AI alone and the AI + simulated
+            expert baselines.
         </p>
         <a href="{% url 'project3:human_label' %}" class="btn btn-primary">
             Open Interactive Expert Interface →

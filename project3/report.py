@@ -468,6 +468,25 @@ def generate_report_pdf() -> bytes:
             "Django sessions.",
             S['body'],
         ),
+        Spacer(1, 0.2 * cm),
+        Paragraph("You as the Expert: Live Competence Profiling", S['bold_label']),
+        Paragraph(
+            "After twelve labels, the interface estimates the user's own per-class accuracy "
+            "profile using the same Laplace smoothing as the Task 4 active learning loop, so "
+            "the human's numbers are directly comparable to what the system learns about the "
+            "simulated experts. The interface then identifies the user's specialty category, "
+            "reports which simulated expert their competence profile most closely resembles "
+            "(smallest L1 distance between smoothed per-class profiles), and — most "
+            "importantly — plugs the user into the full deferral pipeline: the user is "
+            "simulated on the held-out evaluation set with their estimated profile, the same "
+            "alpha = 1 deferral rule from Tasks 3 and 4 is applied, and the resulting team "
+            "accuracy is displayed alongside the AI-alone baseline and the AI + simulated "
+            "expert team. The evaluator of this project can therefore personally become part "
+            "of the human-AI team and observe how their individual strengths change the "
+            "deferral policy and the achievable team accuracy. The profile chart and the "
+            "team comparison update live after every submitted label.",
+            S['body'],
+        ),
     ]
 
     # ── Footer note ───────────────────────────────────────────────────────────
