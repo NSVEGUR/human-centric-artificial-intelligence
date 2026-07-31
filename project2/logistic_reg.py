@@ -15,7 +15,6 @@ def _get_data():
         _data_cache = (X_train, X_test, y_train, y_test)
     return _data_cache
 
-# ── dark theme (shared with decision_tree.py) ─────────────────────────────────
 PLOT_BG = "#1a1d2e"
 PAPER_BG = "rgba(0,0,0,0)"
 TEXT  = "#c9d1e0"

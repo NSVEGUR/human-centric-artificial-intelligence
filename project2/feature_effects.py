@@ -17,7 +17,6 @@ FEATURE_DISPLAY_NAMES = {
     'body_mass_g': 'Body Mass (g)',
 }
 
-# (species colours defined below with dark theme)
 
 
 def compute_pdp(model, feature_name, model_type, n_grid=50, use_train=True):
@@ -300,7 +299,6 @@ TEXT     = "#c9d1e0"
 GRID     = "#252840"
 AXIS     = "#353860"
 
-# override species colours to match the rest of project 2
 SPECIES_COLORS = {
     "Adelie":    "#4a7fe5",
     "Chinstrap": "#f5a623",
@@ -555,7 +553,6 @@ def build_all_features_importance_plot(model, model_type):
         ),
     ))
 
-    # annotations placed ABOVE the error bar tip so they are never hidden
     annotations = []
     for lbl, val, std in zip(x_labels, y_vals, y_stds):
         tip = val + std

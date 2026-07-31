@@ -5,7 +5,7 @@ from plotly.subplots import make_subplots
 
 from .data import load_and_preprocess
 
-# load once at module level and cache - same pattern as decision_tree.py / logistic_reg.py
+# load once at module level and cache 
 _raw = load_and_preprocess()
 train_X, test_X, train_y, test_y, mad_vals, num_cols = _raw
 
