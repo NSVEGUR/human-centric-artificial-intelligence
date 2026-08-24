@@ -198,9 +198,20 @@ def compute_ale(model, feature_name, model_type, n_intervals=40, use_train=True)
 
 def compute_lr_local_effect_exact(model, samples, feature_idx, left_val, right_val):
     """
-    Compute local effect for logistic regression using finite differences at boundaries.
-    LR is now trained on raw (unscaled) features, so no scaler transform needed.
-    effect = mean over samples of [f(x_right) - f(x_left)]
+    Compute local effect for logistic regression using the EXACT analytical partial
+    derivative (chain rule), not finite differences. sklearn's multinomial LR predicts
+    via softmax: P_k(x) = exp(z_k) / sum_j exp(z_j), with z_k = w_k . x + b_k.
+
+    Differentiating the softmax w.r.t. one input feature x_s gives a closed form:
+        dP_k/dx_s = P_k * (w_{k,s} - sum_j P_j * w_{j,s})
+
+    This is possible because the LR decision function is differentiable everywhere
+    (unlike a decision tree, which is piecewise-constant and needs the finite-difference
+    / discretization approximation used in compute_tree_local_effect).
+
+    The bin's local effect is this gradient, evaluated at the bin midpoint for each
+    sample, times the bin width (right_val - left_val) - the first-order/exact
+    counterpart of the tree's f(right) - f(left) finite difference.
     """
     n_samples = len(samples)
     n_classes = len(model.classes_)
@@ -209,18 +220,24 @@ def compute_lr_local_effect_exact(model, samples, feature_idx, left_val, right_v
         return np.zeros(n_classes)
 
     feature_col = samples.columns[feature_idx]
+    width = right_val - left_val
+    mid_val = (left_val + right_val) / 2.0
+
+    # coef_ has shape (n_classes, n_features) for multinomial (softmax) LR, with
+    # rows aligned to model.classes_.
+    w_s = model.coef_[:, feature_idx]  # per-class coefficient for this feature
+
     effects = np.zeros(n_classes)
 
     for i in range(n_samples):
         row = samples.iloc[[i]].copy()
+        row[feature_col] = mid_val
 
-        row[feature_col] = left_val
-        proba_left = model.predict_proba(row)[0]
+        p = model.predict_proba(row)[0]              # P_k, shape (n_classes,)
+        weighted_mean_w = float(np.dot(p, w_s))       # sum_j P_j * w_{j,s}
+        grad = p * (w_s - weighted_mean_w)            # dP_k/dx_s, analytical
 
-        row[feature_col] = right_val
-        proba_right = model.predict_proba(row)[0]
-
-        effects += (proba_right - proba_left)
+        effects += grad * width
 
     effects /= n_samples
     return effects

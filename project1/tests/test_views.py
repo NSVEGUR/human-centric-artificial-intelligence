@@ -52,11 +52,18 @@ class TestProject1Upload(TestCase):
         self.assertEqual(response.context['problem_type'], 'regression')
 
     def test_generates_plots_on_upload(self):
+        # Plots are drawn client-side by Plotly from a single JSON payload
+        # (see project1/views.py: build_viz_payload / 'viz_json') rather than
+        # server-rendered image blobs, so we assert the payload that feeds
+        # the scatter/histogram/correlation charts is present and complete.
         f = SimpleUploadedFile('clf.csv', _clf_csv(), content_type='text/csv')
         response = self.client.post(URL, {'csv_file': f})
-        self.assertTrue(response.context.get('scatter_plot'))
-        self.assertTrue(response.context.get('hist_plot'))
-        self.assertTrue(response.context.get('corr_plot'))
+        viz = response.context.get('viz_json')
+        self.assertTrue(viz)
+        self.assertTrue(viz.get('features'))
+        self.assertTrue(viz.get('target'))
+        self.assertTrue(viz.get('corr'))
+        self.assertTrue(viz['corr'].get('z'))
 
 
 class _BaseWithCSV(TestCase):
@@ -109,7 +116,14 @@ class TestProject1TrainClassification(_BaseWithCSV):
         training = response.context.get('training')
         self.assertIsNotNone(training)
         self.assertIn('Accuracy', training['metrics'])
-        self.assertIn('training_plot', training)
+        # The hyperparameter sweep is drawn client-side by Plotly from the
+        # 'curve' payload (see project1/models.py: run_training) rather than
+        # a server-rendered plot image, so we check that payload instead of
+        # a stale 'training_plot' image key.
+        self.assertIn('curve', training)
+        self.assertIn('params', training['curve'])
+        self.assertIn('train', training['curve'])
+        self.assertIn('test', training['curve'])
         self.assertIn('best_test', training)
         self.assertIn('results_table', training)
 

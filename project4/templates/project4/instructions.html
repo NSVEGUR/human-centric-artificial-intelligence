@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Instructions · Project 4{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'project4/style.css' %}?v=1" />
+{% endblock %}
+
+{% block content %}
+<div class="study-shell">
+    <header class="page-header text-center">
+        <span class="badge badge-outline badge-uppercase">Part {{ condition_number }} of 2</span>
+        <h1>{{ design_label }}</h1>
+    </header>
+
+    <div class="card card-content" style="margin-bottom: var(--space-6);">
+        {% if design == 'pairwise' %}
+        <p style="margin-bottom: var(--space-4);">
+            You will see two movies side by side, {{ pairwise_n }} times in a row.
+            Each time, simply click the movie you would rather watch right now.
+            There are no right or wrong answers — just go with your gut.
+        </p>
+        <p class="muted text-sm">
+            One quick practice round comes first so you can see how it works.
+        </p>
+        {% else %}
+        <p style="margin-bottom: var(--space-4);">
+            You will see a set of ten movies, {{ ranking_n }} times in a row. Build your
+            ranking by clicking the movies <strong>in order, starting with the one you'd
+            most want to watch</strong> and ending with the one you'd least want to watch.
+            Made a mistake? Click a placed movie to send it back and re-pick it.
+        </p>
+        <p class="muted text-sm">
+            One quick practice round comes first so you can see how it works.
+        </p>
+        {% endif %}
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary btn-lg btn-block">Start Practice Round →</button>
+    </form>
+</div>
+{% endblock %}

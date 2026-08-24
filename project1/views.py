@@ -235,26 +235,45 @@ def index(request):
         try:
             # Parse CSV data
             df = pd.read_csv(io.StringIO(csv_text))
-            
+
+            if len(df) == 0:
+                raise ValueError('The uploaded CSV has no data rows.')
+
             # Remove ID columns if present
             id_cols = []
             for c in df.columns:
                 if c.strip().lower() in ('id', 'index', 'unnamed: 0'):
                     id_cols.append(c)
-            
+
             if id_cols:
                 df = df.drop(columns=id_cols, errors='ignore')
+
+            if len(df.columns) < 2:
+                raise ValueError(
+                    'The CSV needs at least two columns: one or more feature '
+                    'columns plus a target column in the last position.'
+                )
 
             # Identify target and feature columns
             target_col = df.columns[-1]  # Last column is target
             numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
-            
+
             # Feature columns are numeric columns except target
             if target_col in numeric_cols:
                 feature_cols = [c for c in numeric_cols if c != target_col]
             else:
                 feature_cols = numeric_cols
-            
+
+            if not feature_cols:
+                raise ValueError(
+                    f"No usable numeric feature columns were found (target "
+                    f"column detected as '{target_col}'). This app currently "
+                    f"trains on numeric features only — every column other than "
+                    f"the target is non-numeric (text/categorical), so there is "
+                    f"nothing to train on. Remove the non-numeric columns or "
+                    f"encode them as numbers before uploading."
+                )
+
             # Detect if classification or regression
             detected_problem_type = detect_problem_type(df[target_col])
             posted_problem_type = request.POST.get('problem_type', detected_problem_type)

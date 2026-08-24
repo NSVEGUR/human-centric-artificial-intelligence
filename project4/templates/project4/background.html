@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Background · Project 4{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'project4/style.css' %}?v=1" />
+{% endblock %}
+
+{% block content %}
+<div class="study-shell">
+    <header class="page-header text-center">
+        <h1>A little about you</h1>
+        <p class="page-subtitle">
+            Three quick questions, asked once. We use these only to describe the group of
+            people who took part — never to identify you.
+        </p>
+    </header>
+
+    {% if error %}
+    <div class="alert alert-destructive" style="margin-bottom: var(--space-4);">{{ error }}</div>
+    {% endif %}
+
+    <form method="post" class="card card-content stack">
+        {% csrf_token %}
+
+        <div>
+            <label class="label" for="age_bracket">Age</label>
+            <select class="select" id="age_bracket" name="age_bracket" required>
+                <option value="" disabled selected>Choose one</option>
+                <option value="18-24">18-24</option>
+                <option value="25-34">25-34</option>
+                <option value="35-44">35-44</option>
+                <option value="45-54">45-54</option>
+                <option value="55+">55+</option>
+                <option value="na">Prefer not to say</option>
+            </select>
+        </div>
+
+        <div>
+            <label class="label" for="movie_frequency">How often do you watch movies?</label>
+            <select class="select" id="movie_frequency" name="movie_frequency" required>
+                <option value="" disabled selected>Choose one</option>
+                <option value="daily">Daily</option>
+                <option value="weekly">A few times a week</option>
+                <option value="monthly">A few times a month</option>
+                <option value="rarely">Rarely</option>
+            </select>
+        </div>
+
+        <div>
+            <label class="label" for="recsys_familiarity">
+                How familiar are you with movie recommendation features (e.g. Netflix, IMDb)?
+            </label>
+            <select class="select" id="recsys_familiarity" name="recsys_familiarity" required>
+                <option value="" disabled selected>Choose one</option>
+                <option value="none">Never used one</option>
+                <option value="some">Used one occasionally</option>
+                <option value="regular">Use one regularly</option>
+            </select>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg btn-block" style="margin-top: var(--space-4);">Continue →</button>
+    </form>
+</div>
+{% endblock %}

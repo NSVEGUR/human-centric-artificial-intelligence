@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Consent · Project 4{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'project4/style.css' %}?v=1" />
+{% endblock %}
+
+{% block content %}
+<div class="study-shell">
+    <header class="page-header">
+        <a href="{% url 'project4:landing' %}" class="back-link">← Back to Project 4</a>
+        <h1>Before you begin</h1>
+        <p class="page-subtitle">Movie preference elicitation study — informed consent</p>
+    </header>
+
+    <div class="card card-content" style="margin-bottom: var(--space-6);">
+        <h3 style="margin-bottom: var(--space-3);">What this study is about</h3>
+        <p class="muted" style="margin-bottom: var(--space-4);">
+            You will help us compare two ways of telling a movie recommender what you like:
+            picking your favorite of two movies, and ranking a list of ten movies from most to
+            least preferred. You will try both. The session takes about 10 minutes.
+        </p>
+
+        <h3 style="margin-bottom: var(--space-3);">What we collect</h3>
+        <p class="muted" style="margin-bottom: var(--space-4);">
+            Your movie choices/rankings, your answers to a short questionnaire, and timing
+            information. We do not collect your name, email, or any directly identifying
+            information. Data is used only for research on preference-elicitation methods.
+        </p>
+
+        <h3 style="margin-bottom: var(--space-3);">Voluntary participation</h3>
+        <p class="muted" style="margin-bottom: var(--space-4);">
+            Taking part is entirely voluntary. You may close this window at any time without
+            penalty; partial responses are not analyzed.
+        </p>
+
+        <h3 style="margin-bottom: var(--space-3);">Best on a laptop or desktop</h3>
+        <p class="muted" style="margin-bottom: var(--space-4);">
+            One of the two tasks involves building a ranked list by clicking items in order,
+            which works on any device, but is easiest with a mouse or trackpad.
+        </p>
+
+        <h3 style="margin-bottom: var(--space-3);">Questions or concerns</h3>
+        <p class="muted">
+            This study is run as part of the Human-Centric Artificial Intelligence course at
+            TUHH. For questions about the study, or to request that your session's data be
+            deleted, contact the study team using the completion code shown at the end.
+        </p>
+    </div>
+
+    {% if error %}
+    <div class="alert alert-destructive" style="margin-bottom: var(--space-4);">{{ error }}</div>
+    {% endif %}
+
+    <form method="post" class="card card-content stack">
+        {% csrf_token %}
+        <div>
+            <label class="label" for="prolific_id">Participant ID (optional)</label>
+            <input class="input" type="text" id="prolific_id" name="prolific_id"
+                   placeholder="Leave blank unless instructed to enter one" />
+        </div>
+        <label class="row" style="align-items: flex-start; cursor: pointer;">
+            <input type="checkbox" name="agree" style="margin-top: 3px;" />
+            <span class="text-sm">
+                I have read the information above, I am 18 or older, and I agree to
+                voluntarily take part in this study.
+            </span>
+        </label>
+        <button type="submit" class="btn btn-primary btn-lg btn-block">I Agree — Begin</button>
+    </form>
+</div>
+{% endblock %}

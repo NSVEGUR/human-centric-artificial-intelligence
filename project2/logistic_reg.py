@@ -53,13 +53,29 @@ def _train_all_lr():
     _all_lr_models = models
 
 def get_best_lr(lam):
+    """
+    Post-hoc model selection among the pretrained LR models (Task 3), mirroring
+    get_best_tree in decision_tree.py: pick the model minimizing
+        score = (1 - test_acc) + lam * (omega / max_omega)
+    i.e. Ω(f) is the L1 norm of the coefficient vector, normalized to [0, 1]
+    so it sits on the same scale as the error term. lam is a post-hoc selection
+    knob over the 11 pretrained C values, never a live-refit parameter.
+
+    Note: on this dataset several low-C models already reach 100% test accuracy
+    with near-minimal ||w||_1 (Palmer Penguins is close to linearly separable and
+    the test set is small, so achievable test accuracies form only a handful of
+    distinct values). One such model Pareto-dominates the others across the
+    whole [0, 1] range of lam, so the selection can legitimately stay constant
+    as lam increases - that is the correct argmin, not a bug.
+    """
     _train_all_lr()
-    # Sort ascending by omega (simplest first). lam=0 → most complex, lam=1 → simplest.
-    # Direct mapping avoids the tie-breaking collapse that occurs when all models
-    # have identical test accuracy (Palmer Penguins is linearly separable).
-    sorted_models = sorted(_all_lr_models, key=lambda m: m["omega"])
-    idx = round((1 - lam) * (len(sorted_models) - 1))
-    return sorted_models[idx]
+    max_omega = max(m["omega"] for m in _all_lr_models)
+    best, best_score = None, float("inf")
+    for m in _all_lr_models:
+        score = (1 - m["test_acc"]) + lam * (m["omega"] / max_omega)
+        if score < best_score:
+            best_score, best = score, m
+    return best
 
 # ── shared layout ─────────────────────────────────────────────────────────────
 def _base_layout(height=320, margin=None):

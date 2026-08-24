@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Final Check · Project 4{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'project4/style.css' %}?v=1" />
+{% endblock %}
+
+{% block content %}
+<div class="study-shell" id="trial-root">
+    <header class="page-header text-center">
+        <span class="badge badge-outline badge-uppercase">One last check</span>
+        <h1>Which would you rather watch?</h1>
+        <p class="page-subtitle">
+            A few more pairs, all new movies — this tells us how well each method learned
+            your taste.
+        </p>
+    </header>
+
+    <div class="progress-track"><div class="progress-fill" style="width:0%"></div></div>
+    <div class="progress-label"><span class="progress-label-current"></span><span>Validation</span></div>
+
+    <div class="practice-banner" style="display:none;"></div>
+
+    <div class="movie-grid-2"></div>
+</div>
+
+{{ trial|json_script:"trial-data" }}
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'project4/study.js' %}"></script>
+{% endblock %}
+
+{% block script %}
+<script>
+    const initialTrial = JSON.parse(document.getElementById("trial-data").textContent);
+    const root = document.getElementById("trial-root");
+    new P4.PairwiseFlow(root, initialTrial, "{% url 'project4:submit_validation' %}", {
+        onDone: (redirectUrl) => { window.location.href = redirectUrl; },
+    });
+</script>
+{% endblock %}

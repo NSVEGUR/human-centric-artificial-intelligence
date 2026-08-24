@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Thank You · Project 4{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'project4/style.css' %}?v=1" />
+{% endblock %}
+
+{% block content %}
+<div class="study-shell">
+    <header class="page-header text-center">
+        <span class="badge badge-success badge-uppercase">Complete</span>
+        <h1>Thank you for taking part!</h1>
+    </header>
+
+    <div class="card card-content" style="margin-bottom: var(--space-6);">
+        <h3 style="margin-bottom: var(--space-3);">What this study was about</h3>
+        <p class="muted">
+            You compared two ways of telling a recommender system what movies you like:
+            picking your favorite of two at a time, and ranking sets of ten. Behind the
+            scenes, each of your answers was used to fit a small mathematical model of your
+            taste (a linear utility over movie features), and the final pairs you saw &mdash;
+            on movies you hadn't seen before &mdash; were used to check how well each
+            model predicted your <em>real</em> preferences.
+        </p>
+    </div>
+
+    {% if final_response and final_response.pairwise_validation_accuracy is not None and final_response.ranking_validation_accuracy is not None %}
+    <div class="card card-content" style="margin-bottom: var(--space-6);">
+        <h3 style="margin-bottom: var(--space-4);">Which method learned your taste better?</h3>
+        <div class="accuracy-bar-row">
+            <span class="accuracy-bar-label">Pairwise comparisons</span>
+            <div class="accuracy-bar-track">
+                <div class="accuracy-bar-fill" style="width: {% widthratio final_response.pairwise_validation_accuracy 1 100 %}%;"></div>
+            </div>
+            <span class="accuracy-bar-value">{% widthratio final_response.pairwise_validation_accuracy 1 100 %}%</span>
+        </div>
+        <div class="accuracy-bar-row">
+            <span class="accuracy-bar-label">Ranking lists</span>
+            <div class="accuracy-bar-track">
+                <div class="accuracy-bar-fill" style="width: {% widthratio final_response.ranking_validation_accuracy 1 100 %}%;"></div>
+            </div>
+            <span class="accuracy-bar-value">{% widthratio final_response.ranking_validation_accuracy 1 100 %}%</span>
+        </div>
+        <p class="muted text-sm" style="margin-top: var(--space-2);">
+            Share of your held-out choices each fitted model predicted correctly. With only a
+            few validation pairs this is a noisy, just-for-fun estimate, not a rigorous
+            per-person result &mdash; the actual comparison is made across all participants
+            (see the PDF report, Task 3).
+        </p>
+    </div>
+    {% endif %}
+
+    <div class="completion-code">{{ completion_code }}</div>
+    <p class="muted text-center text-sm" style="margin-bottom: var(--space-8);">
+        Please keep this code if you were asked to enter it elsewhere for compensation.
+    </p>
+
+    <div class="text-center">
+        <a href="{% url 'project4:landing' %}" class="btn btn-outline">Back to Project 4</a>
+    </div>
+</div>
+{% endblock %}
