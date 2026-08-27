@@ -5,7 +5,7 @@ from sklearn.metrics import confusion_matrix
 
 from .data import load_and_preprocess
 
-# ── data cache ────────────────────────────────────────────────────────────────
+# data cache 
 _data_cache = None
 
 def _get_data():
@@ -14,10 +14,9 @@ def _get_data():
         X_train, X_test, y_train, y_test, _, _ = load_and_preprocess()
         _data_cache = (X_train, X_test, y_train, y_test)
     return _data_cache
-
-# ── dark theme - matches project 3 style ─────────────────────────────────────
+ 
 PLOT_BG    = "#1a1d2e"
-PAPER_BG   = "rgba(0,0,0,0)"   # transparent - page bg shows through
+PAPER_BG   = "rgba(0,0,0,0)"   
 TEXT       = "#c9d1e0"
 GRID       = "#252840"
 AXIS       = "#353860"
@@ -30,7 +29,7 @@ RED    = "#ff4d6d"   # selected star / overfitting
 SPECIES        = ["Adelie", "Chinstrap", "Gentoo"]
 SPECIES_COLORS = {"Adelie": BLUE, "Chinstrap": ORANGE, "Gentoo": GREEN}
 
-# ── model cache ───────────────────────────────────────────────────────────────
+#model cache 
 _all_trees = None
 
 def _train_all_trees():
@@ -60,7 +59,7 @@ def get_best_tree(lam):
             best_score, best = score, t
     return best
 
-# ── shared layout ─────────────────────────────────────────────────────────────
+# shared layout 
 def _base_layout(height=320, margin=None):
     m = margin or dict(l=50, r=20, t=30, b=50)
     return dict(
@@ -71,7 +70,7 @@ def _base_layout(height=320, margin=None):
         font=dict(color=TEXT, family="Inter, system-ui, sans-serif", size=12),
     )
 
-# ── decision tree diagram ─────────────────────────────────────────────────────
+# decision tree diagram 
 def build_tree_plotly(tree_info):
     """
     Renders the decision tree as a clean node-edge graph.
@@ -92,7 +91,7 @@ def build_tree_plotly(tree_info):
     classes    = model.classes_
     is_leaf    = ch_left == -1
 
-    # ── tree layout: recursive, depth-first ──────────────────────────────────
+    #tree layout: recursive, depth-first 
     pos_x = [0.0] * n_nodes
     pos_y = [0.0] * n_nodes
 
@@ -106,7 +105,7 @@ def build_tree_plotly(tree_info):
 
     _layout(0, 0, 0, 2 ** model.get_depth())
 
-    # ── edges ────────────────────────────────────────────────────────────────
+    # edges 
     ex, ey = [], []
     for nd in range(n_nodes):
         for ch in [ch_left[nd], ch_right[nd]]:
@@ -120,7 +119,7 @@ def build_tree_plotly(tree_info):
         hoverinfo="none",
     )
 
-    # ── node markers (two separate traces for legend) ─────────────────────────
+    # node markers (two separate traces for legend) 
     sx, sy, sh = [], [], []   # split nodes
     lx, ly, lh = [], [], []   # leaf nodes
 
@@ -150,8 +149,7 @@ def build_tree_plotly(tree_info):
         hovertemplate="%{customdata}<extra></extra>",
     )
 
-    # ── annotations: always-visible labels above each node ───────────────────
-    # Human-readable short names
+    # annotations
     SHORT = {
         "bill_length_mm":    "bill len",
         "bill_depth_mm":     "bill dep",
@@ -208,7 +206,7 @@ def build_tree_plotly(tree_info):
     return go.Figure(data=[trace_edges, trace_splits, trace_leaves], layout=layout).to_json()
 
 
-# ── accuracy vs complexity tradeoff ──────────────────────────────────────────
+# accuracy vs complexity tradeoff 
 def build_tradeoff_plot(selected_tree):
     _train_all_trees()
     x     = [t["n_leaves"]        for t in _all_trees]
@@ -245,7 +243,7 @@ def build_tradeoff_plot(selected_tree):
     return go.Figure(data=traces, layout=layout).to_json()
 
 
-# ── confusion matrix ──────────────────────────────────────────────────────────
+# confusion matrix 
 def build_confusion_plot(tree_info):
     _, X_test, _, y_test = _get_data()
     y_pred = tree_info["model"].predict(X_test)
@@ -269,7 +267,7 @@ def build_confusion_plot(tree_info):
     return go.Figure(data=[heatmap], layout=layout).to_json()
 
 
-# ── train vs test gap ─────────────────────────────────────────────────────────
+# train vs test gap 
 def build_gap_plot(tree_info):
     tr = round(tree_info["train_acc"] * 100, 2)
     te = round(tree_info["test_acc"]  * 100, 2)

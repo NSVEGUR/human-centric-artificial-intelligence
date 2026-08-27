@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Final Question · Project 4{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'project4/style.css' %}?v=1" />
+{% endblock %}
+
+{% block content %}
+<div class="study-shell">
+    <header class="page-header text-center">
+        <h1>One last question</h1>
+        <p class="page-subtitle">You've now tried both ways of expressing your preferences.</p>
+    </header>
+
+    {% if error %}
+    <div class="alert alert-destructive" style="margin-bottom: var(--space-4);">{{ error }}</div>
+    {% endif %}
+
+    <form method="post" class="card card-content stack">
+        {% csrf_token %}
+        <div>
+            <label class="label">Which approach did you personally prefer overall?</label>
+            <div class="stack-sm" style="margin-top: var(--space-2);">
+                <label class="card card-selectable" style="padding: var(--space-3) var(--space-4); flex-direction: row; align-items:center; gap: var(--space-3); cursor:pointer;">
+                    <input type="radio" name="preferred_design" value="pairwise" required />
+                    <span>Picking your favorite of two movies, repeatedly</span>
+                </label>
+                <label class="card card-selectable" style="padding: var(--space-3) var(--space-4); flex-direction: row; align-items:center; gap: var(--space-3); cursor:pointer;">
+                    <input type="radio" name="preferred_design" value="ranking" required />
+                    <span>Ranking a list of ten movies</span>
+                </label>
+            </div>
+        </div>
+        <div>
+            <label class="label" for="preferred_reason">Why? (optional)</label>
+            <textarea class="textarea" id="preferred_reason" name="preferred_reason" rows="3"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary btn-lg btn-block">Finish →</button>
+    </form>
+</div>
+{% endblock %}

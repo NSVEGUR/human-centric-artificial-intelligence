@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Questionnaire · Project 4{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'project4/style.css' %}?v=1" />
+{% endblock %}
+
+{% block content %}
+<div class="study-shell">
+    <header class="page-header text-center">
+        <span class="badge badge-outline badge-uppercase">{{ design_label }}</span>
+        <h1>A few quick questions</h1>
+        <p class="page-subtitle">About the task you just completed.</p>
+    </header>
+
+    {% if error %}
+    <div class="alert alert-destructive" style="margin-bottom: var(--space-4);">{{ error }}</div>
+    {% endif %}
+
+    <form method="post" class="card card-content">
+        {% csrf_token %}
+
+        <div class="likert-row">
+            <p class="likert-question">The task was easy to complete.</p>
+            <div class="likert-scale">
+                {% for i in "1234567" %}
+                <label class="likert-option">
+                    <input type="radio" name="ease_of_use" value="{{ i }}" required />
+                    <span class="likert-dot">{{ i }}</span>
+                    {% if i == "1" %}<span class="likert-caption">Strongly disagree</span>
+                    {% elif i == "7" %}<span class="likert-caption">Strongly agree</span>
+                    {% else %}<span class="likert-caption">&nbsp;</span>{% endif %}
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="likert-row">
+            <p class="likert-question">This task required a lot of mental effort.</p>
+            <div class="likert-scale">
+                {% for i in "1234567" %}
+                <label class="likert-option">
+                    <input type="radio" name="cognitive_load" value="{{ i }}" required />
+                    <span class="likert-dot">{{ i }}</span>
+                    {% if i == "1" %}<span class="likert-caption">Strongly disagree</span>
+                    {% elif i == "7" %}<span class="likert-caption">Strongly agree</span>
+                    {% else %}<span class="likert-caption">&nbsp;</span>{% endif %}
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="likert-row">
+            <p class="likert-question">I found this way of expressing my preferences enjoyable.</p>
+            <div class="likert-scale">
+                {% for i in "1234567" %}
+                <label class="likert-option">
+                    <input type="radio" name="enjoyment" value="{{ i }}" required />
+                    <span class="likert-dot">{{ i }}</span>
+                    {% if i == "1" %}<span class="likert-caption">Strongly disagree</span>
+                    {% elif i == "7" %}<span class="likert-caption">Strongly agree</span>
+                    {% else %}<span class="likert-caption">&nbsp;</span>{% endif %}
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="likert-row">
+            <p class="likert-question">I am confident this method captured my movie taste.</p>
+            <div class="likert-scale">
+                {% for i in "1234567" %}
+                <label class="likert-option">
+                    <input type="radio" name="trust" value="{{ i }}" required />
+                    <span class="likert-dot">{{ i }}</span>
+                    {% if i == "1" %}<span class="likert-caption">Strongly disagree</span>
+                    {% elif i == "7" %}<span class="likert-caption">Strongly agree</span>
+                    {% else %}<span class="likert-caption">&nbsp;</span>{% endif %}
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div style="margin-top: var(--space-4);">
+            <label class="label" for="free_text">Any comments about this way of expressing your preferences? (optional)</label>
+            <textarea class="textarea" id="free_text" name="free_text" rows="3"></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg btn-block" style="margin-top: var(--space-6);">Continue →</button>
+    </form>
+</div>
+{% endblock %}

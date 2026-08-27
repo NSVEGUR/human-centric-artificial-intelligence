@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Project 4 · Preference Elicitation{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'project4/style.css' %}?v=1" />
+{% endblock %}
+
+{% block content %}
+<header class="page-header">
+    <a href="{% url 'home:index' %}" class="back-link">← Back to Home</a>
+</header>
+
+<section class="hero-p4">
+    <span class="badge badge-outline badge-uppercase">Human-Centric AI · TUHH</span>
+    <h1>Project 4 — Preference Elicitation</h1>
+    <p class="page-subtitle">
+        A user study comparing two ways of eliciting a new user's movie preferences:
+        repeated pairwise comparisons vs. ranking lists of ten movies at a time,
+        built on the IMDB 5000 Movie Dataset.
+    </p>
+    <div class="landing-actions">
+        <a href="{% url 'project4:report' %}" class="btn btn-outline btn-lg">↓ Download PDF Report</a>
+        <a href="{% url 'project4:consent' %}" class="btn btn-primary btn-lg">Start the Study →</a>
+    </div>
+</section>
+
+<div class="grid-3" style="margin-bottom: var(--space-8);">
+    <div class="card card-content">
+        <p class="card-title" style="margin-bottom: var(--space-2);">Task 1 &amp; 2 — Model</p>
+        <p class="muted text-sm">
+            Movies are represented by ~30 standardized features (genre, rating, cast/director
+            popularity, quality, recency). Preferences follow a linear utility
+            U(x) = w<sup>T</sup>x under a Bradley-Terry choice model, extended to full
+            rankings via Plackett-Luce.
+        </p>
+    </div>
+    <div class="card card-content">
+        <p class="card-title" style="margin-bottom: var(--space-2);">Task 3 — Study design</p>
+        <p class="muted text-sm">
+            A within-subjects, counterbalanced study: every participant tries both interaction
+            styles, then a shared held-out block measures which method's fitted preferences
+            better predict their real choices. Full protocol, hypotheses, and analysis plan
+            are in the PDF report.
+        </p>
+    </div>
+    <div class="card card-content">
+        <p class="card-title" style="margin-bottom: var(--space-2);">Task 4 — This interface</p>
+        <p class="muted text-sm">
+            The "Start the Study" button opens the exact interface a real participant would
+            use — consent, both conditions, questionnaires, and a debrief with a completion
+            code — ready to run without further modification.
+        </p>
+    </div>
+</div>
+
+<div class="alert alert-info">
+    <p class="alert-title">For the instructor</p>
+    <p>
+        This page is the landing page referenced in the assignment: download the report
+        for the full write-up of Tasks 1–3, or click "Start the Study" to try the
+        participant-facing interface for Task 4 end to end.
+    </p>
+</div>
+{% endblock %}

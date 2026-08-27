@@ -199,7 +199,7 @@ def generate_report_pdf() -> bytes:
     acc_rows = []
     for label in LABEL_NAMES:
         acc_rows.append([label, f"{per_class_accs[label]}%"])
-    acc_rows.append(['<b>Overall</b>', f'<b>{round(test_acc * 100, 2)}%</b>'])
+    acc_rows.append(['Overall', f'{round(test_acc * 100, 2)}%'])
 
     story += [
         Spacer(1, 0.3 * cm),
@@ -208,6 +208,7 @@ def generate_report_pdf() -> bytes:
             ['Category', 'Test Accuracy'],
             [[Paragraph(r[0], S['body']), r[1]] for r in acc_rows],
             col_widths=[9 * cm, 6 * cm],
+            highlight_last=True,
         ),
         Spacer(1, 0.3 * cm),
         Paragraph(

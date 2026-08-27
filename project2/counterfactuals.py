@@ -5,7 +5,7 @@ from plotly.subplots import make_subplots
 
 from .data import load_and_preprocess
 
-# load once at module level and cache - same pattern as decision_tree.py / logistic_reg.py
+# load once at module level and cache 
 _raw = load_and_preprocess()
 train_X, test_X, train_y, test_y, mad_vals, num_cols = _raw
 
@@ -295,13 +295,13 @@ ORANGE   = "#f5a623"   # Chinstrap
 
 SPECIES_COLORS = {"Adelie": BLUE, "Chinstrap": ORANGE, "Gentoo": GREEN}
 
-def _dark_layout(height=500):
+def _dark_layout(height=500, margin=None):
     return dict(
         plot_bgcolor=PLOT_BG,
         paper_bgcolor=PAPER_BG,
         font=dict(color=TEXT, family="Inter, system-ui, sans-serif", size=12),
         height=height,
-        margin=dict(l=50, r=30, t=60, b=50),
+        margin=margin or dict(l=50, r=30, t=60, b=50),
     )
 
 
@@ -561,12 +561,12 @@ def build_counterfactual_table_viz(original, counterfactuals, target_class):
     ))
 
     fig.update_layout(
-        **_dark_layout(max(220, 70 * len(counterfactuals))),
+        **_dark_layout(max(220, 70 * len(counterfactuals)),
+                        margin=dict(l=260, r=100, t=30, b=60)),
         xaxis=dict(title="Feature", color=TEXT, tickfont=dict(color=TEXT, size=11),
                    linecolor="#3a4060"),
         yaxis=dict(title="", color=TEXT, tickfont=dict(color=TEXT, size=10),
                    linecolor="#3a4060"),
-        margin=dict(l=260, r=100, t=30, b=60),
     )
 
     return fig.to_json()
