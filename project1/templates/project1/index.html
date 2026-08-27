@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Project 1 · Automated ML{% endblock %}
+{% block title %}Project 1 Automated ML{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'project1/style.css' %}?v=5" />
@@ -16,11 +16,11 @@
 </div>
 
 <header class="page-header">
-  <a href="{% url 'home:index' %}" class="back-link">← Back to Home</a>
+  <a href="{% url 'home:index' %}" class="back-link">Back to Home</a>
   <div class="page-header-row">
     <div>
-      <h1>Project 1 — Automated Machine Learning</h1>
-      <p class="page-subtitle">Human-Centric AI · Upload your own CSV dataset</p>
+      <h1>Project 1 Automated Machine Learning</h1>
+      <p class="page-subtitle">Human-Centric AI, upload your own CSV dataset</p>
     </div>
     {% if has_data %}
     <form method="post">
@@ -45,7 +45,7 @@
 
 <div class="project-layout">
 
-<!-- ── Sidebar ──────────────────────────────────────────────────────────── -->
+<!-- Sidebar -->
 <nav class="project-sidebar" aria-label="Page steps">
   <span class="sidebar-label">Steps</span>
 
@@ -71,7 +71,7 @@
   </button>
 </nav>
 
-<!-- ── Main content ─────────────────────────────────────────────────────── -->
+<!-- Main content -->
 <div>
 
 {% if error %}
@@ -80,17 +80,17 @@
 </div>
 {% endif %}
 
-<!-- ── Panel 1: Upload ── -->
+<!-- Panel 1: Upload -->
 <div id="panel-upload" class="wizard-panel {% if not has_data %}active{% endif %}">
   <div class="alert alert-info" style="margin-bottom: var(--space-5);">
-    <p>Upload any CSV file — the last column is treated as the target. The tool automatically detects whether it is a classification or regression problem and guides you through data exploration and model training.</p>
+    <p>Upload any CSV file. The last column is treated as the target. The tool automatically detects whether it is a classification or regression problem and guides you through data exploration and model training.</p>
   </div>
   <section style="margin-bottom: var(--space-6);">
     <form method="post" enctype="multipart/form-data" id="upload-form">
       {% csrf_token %}
       <div class="card card-dashed upload-section">
         <p class="upload-label">Upload a CSV file</p>
-        <p class="upload-hint muted">First row = feature names · Last column = target variable · File is analysed automatically</p>
+        <p class="upload-hint muted">First row is feature names, last column is the target variable. File is analysed automatically.</p>
         <label class="btn btn-primary" style="cursor: pointer;">
           Choose File
           <input type="file" name="csv_file" id="csv-file-input" accept=".csv" style="display: none;" />
@@ -103,7 +103,7 @@
 
 {% if has_data %}
 
-<!-- ── Panel 2: Data Preview ── -->
+<!-- Panel 2: Data Preview -->
 <div id="panel-preview" class="wizard-panel {% if not training %}active{% endif %}">
 
   <div class="dataset-info">
@@ -115,20 +115,20 @@
   </div>
 
   <div class="alert alert-info guide-card" style="margin-bottom: var(--space-5);">
-    <p class="alert-title">Welcome — here is what this tool does and how to use it</p>
+    <p class="alert-title">Welcome, here is what this tool does and how to use it</p>
     <p>
       This page walks you through a complete machine learning workflow from start to finish.
       You start by uploading a CSV file, the tool figures out whether it is a
       classification or regression problem, and then you can explore your data visually,
       train several different models, and compare how well they perform. Everything you
-      see is interactive — there are no static images anywhere on this page.
+      see is interactive, there are no static images anywhere on this page.
     </p>
     <p>
       Once your data is loaded you will see three charts. The <strong>scatter plot</strong>
       lets you pick any two features and see how your data points spread out, coloured by
       their class or value. The <strong>histogram</strong> shows you the distribution of a
       single feature so you can spot skew, outliers, or overlap between classes. The
-      <strong>correlation matrix</strong> is the best place to start — it shows at a glance
+      <strong>correlation matrix</strong> is the best place to start. It shows at a glance
       which features are strongly related to each other and which are independent, which
       helps you pick the most informative pair to look at in the scatter plot.
     </p>
@@ -137,7 +137,7 @@
       exact values. Drag a rectangle on a chart to zoom into a busy area, and
       double-click anywhere to zoom back out.
       {% if problem_type == 'classification' %}
-      Each class appears separately in the chart legend — click a class name once to hide
+      Each class appears separately in the chart legend. Click a class name once to hide
       it, and double-click it to show only that class. This is really useful when classes
       overlap and you want to focus on just one or two of them.
       {% endif %}
@@ -166,7 +166,7 @@
   <section class="card" style="margin-bottom: var(--space-5);">
     <div class="card-header">
       <p class="card-title">Dataset Health</p>
-      <p class="card-description">A quick look at your data before training — who collected it and for what purpose matters.</p>
+      <p class="card-description">A quick look at your data before training. Who collected it and for what purpose matters.</p>
     </div>
     <div class="card-content">
 
@@ -197,13 +197,13 @@
 
       {% if imbalance_flag %}
       <div class="alert alert-warning" style="margin-bottom: var(--space-4);">
-        <p><strong>Class imbalance detected.</strong> One or more classes represent less than 10% of the data. Models trained on imbalanced data tend to underperform on minority classes — consider checking your metrics per class, not just overall accuracy.</p>
+        <p><strong>Class imbalance detected.</strong> One or more classes represent less than 10% of the data. Models trained on imbalanced data tend to underperform on minority classes, so consider checking your metrics per class, not just overall accuracy.</p>
       </div>
       {% endif %}
 
       <div class="alert" style="background: hsl(var(--accent)); border-left: 3px solid hsl(var(--primary)); padding: var(--space-3) var(--space-4);">
         <p style="font-size: var(--text-sm); color: hsl(var(--foreground));">
-          <strong>Think critically about your data.</strong> Data is always collected with a specific goal in mind — the patterns it contains reflect who collected it, when, and why. ML models learn from these patterns and will reproduce any biases present in the data.
+          <strong>Think critically about your data.</strong> Data is always collected with a specific goal in mind. The patterns it contains reflect who collected it, when, and why. ML models learn from these patterns and will reproduce any biases present in the data.
         </p>
       </div>
     </div>
@@ -302,7 +302,7 @@
         {% if total_pages > 1 %}
         <div class="pagination-bar">
           <button type="button" class="btn btn-sm btn-outline page-btn" data-page="{{ current_page|add:'-1' }}"
-                  {% if current_page == 1 %}disabled{% endif %}>← Prev</button>
+                  {% if current_page == 1 %}disabled{% endif %}>Prev</button>
           {% for p in page_range %}
             {% if p is None %}
               <span class="page-ellipsis muted">…</span>
@@ -313,7 +313,7 @@
             {% endif %}
           {% endfor %}
           <button type="button" class="btn btn-sm btn-outline page-btn" data-page="{{ current_page|add:'1' }}"
-                  {% if current_page == total_pages %}disabled{% endif %}>Next →</button>
+                  {% if current_page == total_pages %}disabled{% endif %}>Next</button>
         </div>
         {% endif %}
       </div>
@@ -321,11 +321,11 @@
   </section>
 
   <div class="wizard-next">
-    <button type="button" class="btn btn-outline" onclick="showPanel('panel-explore')">Explore Data →</button>
+    <button type="button" class="btn btn-outline" onclick="showPanel('panel-explore')">Explore Data</button>
   </div>
 </div>
 
-<!-- ── Panel 3: Explore Data ── -->
+<!-- Panel 3: Explore Data -->
 <div id="panel-explore" class="wizard-panel">
 
   <div class="plots-grid">
@@ -389,11 +389,11 @@
   </section>
 
   <div class="wizard-next">
-    <button type="button" class="btn btn-outline" onclick="showPanel('panel-train')">Train a Model →</button>
+    <button type="button" class="btn btn-outline" onclick="showPanel('panel-train')">Train a Model</button>
   </div>
 </div>
 
-<!-- ── Panel 4: Train a Model ── -->
+<!-- Panel 4: Train a Model -->
 <div id="panel-train" class="wizard-panel {% if training %}active{% endif %}">
   <section class="card plot-block">
     <div class="card-header">
@@ -596,8 +596,8 @@
       </div>
 
       <h4 class="results-table-heading">Hyperparameter Sweep</h4>
-      <p class="plot-desc muted">Train vs test score for every value of {{ training.param_label }}. Hover any point for the exact score — the highlighted point is the best test score.</p>
-      <div class="plot-box" id="curve-plot" style="margin-top: var(--space-3);"></div>
+      <p class="plot-desc muted">Train vs test score for every value of {{ training.param_label }}. Hover any point for the exact score. The highlighted point is the best test score.</p>
+      <div class="plot-box plot-box-tall" id="curve-plot" style="margin-top: var(--space-3);"></div>
 
       {% if training_json %}
       <h4 class="results-table-heading">Decision Boundary Explorer</h4>
@@ -605,12 +605,12 @@
         Shows how a <strong>{{ training.model_label }}</strong> (trained on only
         <strong>{{ boundary_x }}</strong> and <strong>{{ boundary_y }}</strong>) divides the feature space.
         Circles = training points, diamonds = test points,
-        {% if problem_type == 'classification' %}red ✕ = misclassified test points.
+        {% if problem_type == 'classification' %}red X marks are misclassified test points.
         Hover any point to see its true class and what the model predicted. Hover an empty area to see what the model would predict there.{% else %}the surface shows the predicted value.
         Hover any point to see actual vs predicted and the error.{% endif %}
         Pick different features in the Boundary X/Y dropdowns above and retrain to compare.
       </p>
-      <div class="plot-box" id="boundary-plot" style="margin-top: var(--space-3);"></div>
+      <div class="plot-box plot-box-tall" id="boundary-plot" style="margin-top: var(--space-3);"></div>
       {% endif %}
 
       <h4 class="results-table-heading">Full Results</h4>
@@ -656,7 +656,7 @@
 (function () {
   'use strict';
 
-  // ── Wizard panel switching ─────────────────────────────────────────────
+  // Wizard panel switching
   function showPanel(panelId) {
     document.querySelectorAll('.wizard-panel').forEach(function(p) {
       p.classList.remove('active');
@@ -670,7 +670,7 @@
     if (link) link.classList.add('active');
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
-    // wrong width — resize them now that the panel is actually visible
+    // wrong width fix: resize now that the panel is actually visible
     if (panel && window.Plotly) {
       requestAnimationFrame(function() {
         panel.querySelectorAll('.js-plotly-plot').forEach(function(p) {
@@ -690,7 +690,7 @@
     });
   });
 
-  // ── Always hide overlay on page show (handles bfcache restore) ─────────
+  // Always hide overlay on page show (handles bfcache restore)
   window.addEventListener('pageshow', function () {
     var ov = document.getElementById('upload-overlay');
     if (ov) ov.style.display = 'none';
@@ -703,7 +703,7 @@
     });
   });
 
-  // ── Auto-submit on file select ─────────────────────────────────────────
+  // Auto-submit on file select
   var fileInput = document.getElementById('csv-file-input');
   if (fileInput) {
     fileInput.addEventListener('change', function () {
@@ -715,7 +715,7 @@
     });
   }
 
-  // ── Table AJAX ────────────────────────────────────────────────────────
+  // Table AJAX
   function submitTable() {
     var form  = document.getElementById('table-form');
     var inner = document.getElementById('table-inner');
@@ -803,7 +803,7 @@
     });
   }
 
-  // ── Plotly charts ─────────────────────────────────────────────────────
+  // Plotly charts
   const PALETTE = ['#4a7fe5','#f5a623','#3dba6e','#ff4d6d','#9b6ef3','#39c2c9','#e57ab8','#a3b18a','#f4845f','#7f8fa6'];
   const PLOT_BG = '#1a1d2e';
   const GRID    = 'rgba(255,255,255,0.08)';
@@ -814,6 +814,8 @@
 
   function baseLayout(extra) {
     var layout = {
+      autosize: false,
+      height: 420,
       plot_bgcolor: PLOT_BG,
       paper_bgcolor: 'rgba(0,0,0,0)',
       font: { color: FONT_C, size: 12 },
@@ -825,7 +827,10 @@
     return Object.assign(layout, extra || {});
   }
 
-  const PLOTLY_CFG = { responsive: true, displaylogo: false,
+  // responsive:false stops plotly re-measuring the container on autoscale,
+  // which was making the tile grow every click. we handle width manually
+  // with Plotly.Plots.resize when a panel becomes visible instead.
+  const PLOTLY_CFG = { responsive: false, displaylogo: false,
                        modeBarButtonsToRemove: ['lasso2d','select2d'],
                        displayModeBar: 'hover',
                        toImageButtonOptions: { scale: 2 } };
@@ -871,8 +876,7 @@
     }
     draw('scatter-plot', traces, baseLayout({
       xaxis: { title: { text: fx }, gridcolor: GRID, zerolinecolor: GRID },
-      yaxis: { title: { text: fy }, gridcolor: GRID, zerolinecolor: GRID },
-      height: 420 }));
+      yaxis: { title: { text: fy }, gridcolor: GRID, zerolinecolor: GRID } }));
   }
 
   function drawHist() {
@@ -895,8 +899,7 @@
     draw('hist-plot', traces, baseLayout({
       barmode: 'overlay',
       xaxis: { title: { text: f }, gridcolor: GRID, zerolinecolor: GRID },
-      yaxis: { title: { text: 'Count' }, gridcolor: GRID, zerolinecolor: GRID },
-      height: 420 }));
+      yaxis: { title: { text: 'Count' }, gridcolor: GRID, zerolinecolor: GRID } }));
   }
 
   function drawCorr() {
@@ -905,7 +908,7 @@
       type: 'heatmap', colorscale: 'RdBu', reversescale: true, zmin: -1, zmax: 1, zmid: 0,
       texttemplate: '%{z:.2f}', textfont: { size: 11 }, colorbar: { outlinewidth: 0 },
       hovertemplate: '%{x} vs %{y}: %{z:.3f}<extra></extra>' }],
-      baseLayout({ height: 420, margin: { l: 110, r: 20, t: 20, b: 90 }, yaxis: { autorange: 'reversed', gridcolor: GRID } }));
+      baseLayout({ margin: { l: 110, r: 20, t: 20, b: 90 }, yaxis: { autorange: 'reversed', gridcolor: GRID } }));
   }
 
   function drawTraining() {
@@ -923,7 +926,8 @@
         { x: [curve.best_param], y: [curve.test[curve.best_idx]], mode: 'markers', name: 'Best: ' + curve.best_param,
           marker: { color: '#3dba6e', size: 14, symbol: 'star', line: { color: '#fff', width: 1 } } }
       ];
-      var layout = baseLayout({ height: 400,
+      var layout = baseLayout({
+        height: 480,
         xaxis: { title: { text: curve.param_label }, type: 'category', gridcolor: GRID },
         yaxis: { title: { text: curve.score_label }, gridcolor: GRID } });
       if (curve.score_label === 'Accuracy') layout.yaxis.range = [-0.02, 1.05];
@@ -977,7 +981,7 @@
         if (wx.length) {
           traces.push({ x: wx, y: wy, mode: 'markers', name: 'misclassified', customdata: wcd,
             marker: { color: '#ff4d6d', size: 13, symbol: 'x-thin', line: { color: '#ff4d6d', width: 2.5 } },
-            hovertemplate: b.feature_x + ': %{x}<br>' + b.feature_y + ': %{y}<br>true: <b>%{customdata[0]}</b><br>predicted: <b>%{customdata[1]}</b> ← wrong side<extra>misclassified</extra>' });
+            hovertemplate: b.feature_x + ': %{x}<br>' + b.feature_y + ': %{y}<br>true: <b>%{customdata[0]}</b><br>predicted: <b>%{customdata[1]}</b> wrong side<extra>misclassified</extra>' });
         }
       } else {
         traces.push({ x: b.x, y: b.y, z: b.z, type: 'contour', colorscale: 'Viridis', opacity: 0.85,
@@ -998,7 +1002,8 @@
       }
 
       var scoreLabel = b.problem_type === 'classification' ? '2-feature accuracy: ' + b.score_2d : '2-feature R²: ' + b.score_2d;
-      draw('boundary-plot', traces, baseLayout({ height: 480,
+      draw('boundary-plot', traces, baseLayout({
+        height: 480,
         xaxis: { title: { text: b.feature_x }, gridcolor: GRID, zerolinecolor: GRID },
         yaxis: { title: { text: b.feature_y }, gridcolor: GRID, zerolinecolor: GRID },
         annotations: [{ text: scoreLabel, showarrow: false, xref: 'paper', yref: 'paper',

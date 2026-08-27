@@ -1,4 +1,4 @@
-/* Project 1 — page-specific layout only.
+/* Project 1  - page-specific layout only.
    All colors/components live in /static/style.css */
 
 /* ---- upload section ---- */
@@ -85,7 +85,7 @@
     height: 16px;
 }
 
-/* classification filter — checkbox + label inline */
+/* classification filter  - checkbox + label inline */
 .controls-row .control-item:has(input[type="checkbox"]) {
     flex-direction: row;
     align-items: center;
@@ -107,15 +107,15 @@
     margin-bottom: var(--space-4);
 }
 
-/* plotly container  */
+/* plotly container. the plot sets its own height in JS (baseLayout),
+   so the box just needs a border and enough room. no fixed height here
+   or it fights the plot's height and the tile jumps on autoscale. */
 .plot-box {
     border: 1px solid hsl(var(--border));
     border-radius: var(--radius);
     background: #1a1d2e;
     padding: var(--space-2);
     transition: border-color var(--transition);
-    overflow: hidden;
-    min-height: 440px;
     position: relative;
 }
 .plot-box:hover {
@@ -333,4 +333,3 @@
 .tuning-hints p {
     margin-top: var(--space-1);
 }
-

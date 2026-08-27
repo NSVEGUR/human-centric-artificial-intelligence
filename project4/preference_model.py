@@ -1,5 +1,5 @@
 """
-Task 2 — the Bradley-Terry model and its extension to full rankings
+Task 2  - the Bradley-Terry model and its extension to full rankings
 (Plackett-Luce), plus MAP fitting of a participant's preference vector w
 from a handful of interactions.
 

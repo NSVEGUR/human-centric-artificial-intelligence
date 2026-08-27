@@ -62,7 +62,7 @@ class TestProject2UpdateModel(TestCase):
         r10 = self._post({'model_type': 'tree', 'lambda_val': 10.0})
         self.assertEqual(r0.status_code, 200)
         self.assertEqual(r10.status_code, 200)
-        # higher λ penalises complexity → fewer or equal leaves
+        # higher λ penalises complexity -> fewer or equal leaves
         self.assertLessEqual(r10.json()['complexity'], r0.json()['complexity'])
 
     def test_get_method_rejected(self):

@@ -1,9 +1,9 @@
-/* Project 4 — shared movie-card rendering + trial controllers.
+/* Project 4  - shared movie-card rendering + trial controllers.
  *
  * Posters are best-effort: fetched client-side from Wikipedia's public,
  * keyless, CORS-enabled REST API. If the lookup fails, times out, or the
  * browser has no network access at all, the card simply keeps its
- * generated gradient placeholder — the study remains fully usable offline.
+ * generated gradient placeholder  - the study remains fully usable offline.
  */
 
 const P4 = {};
@@ -32,7 +32,7 @@ function savePosterCache(cache) {
   try {
     sessionStorage.setItem(POSTER_CACHE_KEY, JSON.stringify(cache));
   } catch (e) {
-    /* storage unavailable (private mode, quota) — degrade silently */
+    /* storage unavailable (private mode, quota)  - degrade silently */
   }
 }
 const posterCache = loadPosterCache();
@@ -68,7 +68,7 @@ P4.getPosterUrl = async function (movieId, title, year) {
     savePosterCache(posterCache);
     return url;
   } catch (e) {
-    return null; // offline, blocked, or no match — fall back to placeholder
+    return null; // offline, blocked, or no match  - fall back to placeholder
   }
 };
 

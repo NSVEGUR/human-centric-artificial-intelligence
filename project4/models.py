@@ -37,7 +37,7 @@ class Participant(models.Model):
     completion_code = models.CharField(max_length=12, blank=True)
 
     # Brief background survey (Lecture 7, "6 steps": general + task-relevant
-    # info), collected once, right after consent — used only to describe the
+    # info), collected once, right after consent  - used only to describe the
     # cohort (Task 3, analysis plan) and never joined back to trial data.
     age_bracket = models.CharField(max_length=10, choices=AGE_CHOICES, blank=True)
     movie_frequency = models.CharField(max_length=10, choices=FREQUENCY_CHOICES, blank=True)

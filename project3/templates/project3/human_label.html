@@ -16,7 +16,7 @@
 
 <header class="page-header">
     <a href="{% url 'project3:index' %}" class="back-link">← Back to Project 3</a>
-    <h1>Task 5 — Interactive Human Expert</h1>
+    <h1>Task 5  - Interactive Human Expert</h1>
     <p class="page-subtitle">Label news articles to teach the system your expertise profile</p>
 </header>
 
@@ -29,7 +29,7 @@
     <div class="card" style="padding: var(--space-4); text-align: center;">
         <p class="muted" style="font-size: var(--text-sm); margin-bottom: var(--space-1);">Estimated Team Accuracy</p>
         <p id="team-acc" style="font-size: 2rem; font-weight: 700; color: hsl(142 71% 45%);">
-            {% if team_acc %}{{ team_acc }}%{% else %}—{% endif %}
+            {% if team_acc %}{{ team_acc }}%{% else %} -{% endif %}
         </p>
     </div>
     <div class="card" style="padding: var(--space-4); text-align: center;">
@@ -159,7 +159,7 @@
     <div class="card-header">
         <p class="card-title">Your Expert Profile</p>
         <p class="card-description">
-            As you label articles, the system learns where <em>you</em> are reliable —
+            As you label articles, the system learns where <em>you</em> are reliable  -
             exactly like it learns the simulated experts' competence in Task 4.
             Once your profile is estimated, we plug you into the deferral pipeline
             and measure the team accuracy with you as the expert.
@@ -187,16 +187,16 @@
             <div class="grid-3" style="gap: var(--space-4); margin-bottom: var(--space-5);">
                 <div class="card" style="padding: var(--space-4); text-align: center;">
                     <p class="muted" style="font-size: var(--text-sm); margin-bottom: var(--space-1);">Your Overall Accuracy</p>
-                    <p id="profile-overall" style="font-size: 2rem; font-weight: 700; color: hsl(var(--foreground));">—</p>
+                    <p id="profile-overall" style="font-size: 2rem; font-weight: 700; color: hsl(var(--foreground));"> -</p>
                 </div>
                 <div class="card" style="padding: var(--space-4); text-align: center;">
                     <p class="muted" style="font-size: var(--text-sm); margin-bottom: var(--space-1);">Your Specialty</p>
-                    <p id="profile-specialty" style="font-size: 1.3rem; font-weight: 700; color: hsl(var(--primary));">—</p>
+                    <p id="profile-specialty" style="font-size: 1.3rem; font-weight: 700; color: hsl(var(--primary));"> -</p>
                     <p id="profile-specialty-acc" class="muted" style="font-size: var(--text-xs); margin-top: 2px;"></p>
                 </div>
                 <div class="card" style="padding: var(--space-4); text-align: center;">
                     <p class="muted" style="font-size: var(--text-sm); margin-bottom: var(--space-1);">You Are Basically</p>
-                    <p id="profile-similar" style="font-size: 1.3rem; font-weight: 700; color: hsl(var(--foreground));">—</p>
+                    <p id="profile-similar" style="font-size: 1.3rem; font-weight: 700; color: hsl(var(--foreground));"> -</p>
                 </div>
             </div>
 
@@ -243,13 +243,13 @@ function renderProfile(p) {
     // Sports Expert" moment
     document.getElementById('profile-summary-line').innerHTML =
         'Based on your ' + p.n_labeled + ' labels, you are strongest on <strong>' +
-        p.specialty + '</strong> (' + p.specialty_acc + '% estimated accuracy) — ' +
+        p.specialty + '</strong> (' + p.specialty_acc + '% estimated accuracy)  - ' +
         'your competence profile is closest to the <strong>' + p.similar_to + '</strong>. ' +
         'Plugged into the deferral pipeline, the AI + you team reaches <strong>' +
         p.you_team_acc + '%</strong> on the evaluation set.';
 
     document.getElementById('profile-overall').textContent =
-        p.overall_acc !== null ? p.overall_acc + '%' : '—';
+        p.overall_acc !== null ? p.overall_acc + '%' : ' -';
     document.getElementById('profile-specialty').textContent = p.specialty;
     document.getElementById('profile-specialty-acc').textContent =
         p.specialty_acc + '% estimated accuracy';
@@ -272,7 +272,7 @@ function renderProfile(p) {
     ];
     Plotly.react('profile-chart', traces, {
         barmode: 'group',
-        title: { text: 'Per-Class Accuracy — You vs the Simulated Experts', font: { size: 14 } },
+        title: { text: 'Per-Class Accuracy  - You vs the Simulated Experts', font: { size: 14 } },
         yaxis: { range: [0, 100], title: { text: 'Accuracy (%)' }, gridcolor: 'rgba(255,255,255,0.08)' },
         paper_bgcolor: 'rgba(0,0,0,0)',
         plot_bgcolor: 'rgba(0,0,0,0)',
@@ -285,7 +285,7 @@ function renderProfile(p) {
     document.getElementById('profile-chart-note').textContent =
         'Your bars use Laplace-smoothed estimates (same smoothing as the Task 4 active learning loop), ' +
         'so classes with few labels are pulled toward 50%. You have labeled articles from ' +
-        seen + ' of 4 categories so far — hover a bar to see the sample count.';
+        seen + ' of 4 categories so far  - hover a bar to see the sample count.';
 
     // team comparison as simple horizontal bars, ai only vs simulated team vs you
     const rows = [

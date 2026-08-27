@@ -43,9 +43,7 @@ def _col_as_list(series):
 
 
 def build_viz_payload(df, feature_cols, target_col, problem_type):
-    """Pack everything the frontend needs to draw scatter / histogram /
-    correlation heatmap itself. Sending the raw columns instead of images
-    means every control updates instantly in the browser."""
+    # sends raw column data to the frontend so all charts update instantly
 
     features = {}
     for c in feature_cols:
@@ -75,17 +73,16 @@ def build_viz_payload(df, feature_cols, target_col, problem_type):
     }
 
 
-# Page size options for table pagination
 PAGE_SIZE_OPTS = [10, 25, 50]
 
 
 def build_table_context(df, post):
-    """Build context dictionary for table display with pagination and filtering"""
+    # handles all the table stuff: search, sort, pagination
     all_columns = list(df.columns)
     hidden_cols = post.getlist('hidden_cols')
     visible_cols = [c for c in all_columns if c not in hidden_cols]
 
-    # Handle search functionality
+    # search across all visible columns
     search_query = post.get('table_search', '').strip()
     if search_query:
         # Search across all visible columns
@@ -96,7 +93,7 @@ def build_table_context(df, post):
     else:
         df_view = df.copy()
 
-    # Handle sorting
+    # sorting
     sort_col = post.get('sort_col', '')
     sort_dir = post.get('sort_dir', 'asc')
     
@@ -110,7 +107,7 @@ def build_table_context(df, post):
     else:
         next_sort_dir = 'asc'
 
-    # Handle page size
+    # page size
     try:
         page_size = int(post.get('page_size', 10))
         if page_size not in PAGE_SIZE_OPTS:
@@ -118,7 +115,7 @@ def build_table_context(df, post):
     except:
         page_size = 10
 
-    # Calculate pagination
+    # pagination
     total_rows = len(df_view)
     total_pages = math.ceil(total_rows / page_size)
     if total_pages < 1:
@@ -135,7 +132,7 @@ def build_table_context(df, post):
     if current_page > total_pages:
         current_page = total_pages
 
-    # Get the rows for current page
+    # get the rows for this page
     start = (current_page - 1) * page_size
     end = start + page_size
     df_page = df_view.iloc[start:end][visible_cols]
@@ -164,19 +161,17 @@ def build_table_context(df, post):
 
 
 def _page_range(current, total, window=2):
-    """Generate page range for pagination with ellipsis"""
-    # If total pages is small, show all
+    # if total pages is small, show all
     if total <= 7:
         return list(range(1, total + 1))
     
-    # Otherwise, show first, last, and pages around current
+    # otherwise show first, last, and pages near current
     pages = set([1, total])
     
-    # Add pages around current page
     for p in range(max(1, current - window), min(total, current + window) + 1):
         pages.add(p)
     
-    # Build result list with None for ellipsis
+    # None gets rendered as ellipsis in the template
     result = []
     for p in sorted(pages):
         if result and p - result[-1] > 1:
@@ -187,13 +182,13 @@ def _page_range(current, total, window=2):
 
 
 def index(request):
-    """Main view for the automated ML interface"""
+    # main page, handles upload, training, everything
     context = {
-        'title': 'Project 1 — Automated Machine Learning',
+        'title': 'Project 1 Automated Machine Learning',
         'description': 'An interface for a simple supervised learning setting.',
     }
 
-    # Handle clear action - remove all session data
+    # clear wipes the session and redirects
     if request.method == 'POST' and request.POST.get('action') == 'clear':
         # only the csv lives in the session now, plots are drawn client side
         session_keys = ['csv_data', 'csv_filename']
@@ -268,7 +263,7 @@ def index(request):
                 raise ValueError(
                     f"No usable numeric feature columns were found (target "
                     f"column detected as '{target_col}'). This app currently "
-                    f"trains on numeric features only — every column other than "
+                    f"trains on numeric features only. Every column other than "
                     f"the target is non-numeric (text/categorical), so there is "
                     f"nothing to train on. Remove the non-numeric columns or "
                     f"encode them as numbers before uploading."
@@ -301,7 +296,6 @@ def index(request):
             
             hist_feature = request.POST.get('hist_feature', feature_cols[0])
 
-            # Validate selections
             if scatter_x not in feature_cols:
                 scatter_x = feature_cols[0]
             if scatter_y not in feature_cols:

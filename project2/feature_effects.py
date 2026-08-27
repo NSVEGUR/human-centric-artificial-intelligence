@@ -389,7 +389,7 @@ def build_pdp_plot(pdp_data, show_ice=False, n_ice_samples=50):
 
     layout = _dark_layout(400)
     layout.update(
-        title=dict(text=f"PDP — {feature_display}", font=dict(color=TEXT, size=14)),
+        title=dict(text=f"PDP  - {feature_display}", font=dict(color=TEXT, size=14)),
         xaxis=_axis_style(title=feature_display),
         yaxis=_axis_style(title="Predicted Probability", range=[-0.07, 1.07]),
         legend=dict(orientation="h", x=0.5, xanchor="center", y=1.08,
@@ -427,7 +427,7 @@ def build_ale_plot(ale_data):
 
     layout = _dark_layout(400)
     layout.update(
-        title=dict(text=f"ALE — {feature_display}", font=dict(color=TEXT, size=14)),
+        title=dict(text=f"ALE  - {feature_display}", font=dict(color=TEXT, size=14)),
         xaxis=_axis_style(title=feature_display),
         yaxis=_axis_style(title="ALE effect (centred)"),
         legend=dict(orientation="h", x=0.5, xanchor="center", y=1.08,

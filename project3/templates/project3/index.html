@@ -16,7 +16,7 @@
 
 <header class="page-header">
     <a href="{% url 'home:index' %}" class="back-link">← Back to Home</a>
-    <h1>Project 3 — Active Learning for Learning-to-Defer</h1>
+    <h1>Project 3  - Active Learning for Learning-to-Defer</h1>
     <p class="page-subtitle">Human-Centric Artificial Intelligence · AG News Dataset</p>
 </header>
 
@@ -67,7 +67,7 @@
 <section id="sec-task1" class="card" style="margin-bottom: var(--space-6);">
     <div class="card-header" style="flex-direction:row; align-items:center; gap: var(--space-3);">
         <span class="badge badge-uppercase">Task 1</span>
-        <p class="card-title">Baseline Classifier — TF-IDF + Logistic Regression</p>
+        <p class="card-title">Baseline Classifier  - TF-IDF + Logistic Regression</p>
     </div>
     <div class="card-content">
         <p class="muted" style="margin-bottom: var(--space-4);">
@@ -155,7 +155,7 @@
             <p style="font-size: var(--text-md);">
                 Working together, the human-AI team achieves
                 <strong style="color: hsl(var(--primary)); font-size: var(--text-lg);">{{ deferral_stats.optimal.team_acc }}%</strong>
-                accuracy — better than the AI alone
+                accuracy  - better than the AI alone
                 (<strong>{{ deferral_stats.baselines.ai_only }}%</strong>).
                 The system deferred <strong>{{ deferral_stats.optimal.deferral_rate }}%</strong>
                 of decisions to the most appropriate human expert.
@@ -197,7 +197,7 @@
             <p>For each test instance, the system computes P(expert correct | x) = Σ<sub>k</sub> P(y=k|x) × accuracy<sub>expert,k</sub>.
             The <strong>best expert</strong> is selected per-class. Deferral happens when the classifier's uncertainty (1 − max P(y|x))
             exceeds the expert's expected error (1 − P(expert correct | x)).
-            The parameter α scales this threshold: α=0 always defers, α→∞ never defers, α=1 is Bayes-optimal.</p>
+            The parameter α scales this threshold: α=0 always defers, α->∞ never defers, α=1 is Bayes-optimal.</p>
         </div>
     </div>
 </section>
@@ -208,7 +208,7 @@
         <span class="badge badge-uppercase">Task 4</span>
         <div>
             <p class="card-title">Active Learning for Expert Competence Discovery</p>
-            <p class="muted" style="font-size: var(--text-sm); margin-top: 2px;">Learning who to ask — and when</p>
+            <p class="muted" style="font-size: var(--text-sm); margin-top: 2px;">Learning who to ask  - and when</p>
         </div>
     </div>
     <div class="card-content">
@@ -230,7 +230,7 @@
                     <span style="width:12px; height:12px; border-radius:50%; background:#f59e0b; flex-shrink:0;"></span>
                     <strong style="font-size: var(--text-sm);">Random</strong>
                 </div>
-                <p class="muted" style="font-size: var(--text-xs);">Naive baseline. Queries uniformly at random — provides balanced class coverage.</p>
+                <p class="muted" style="font-size: var(--text-xs);">Naive baseline. Queries uniformly at random  - provides balanced class coverage.</p>
             </div>
             <div class="card" style="padding: var(--space-3);">
                 <div style="display:flex; align-items:center; gap: var(--space-2); margin-bottom: var(--space-1);">
@@ -275,7 +275,7 @@
         <span class="badge badge-secondary">Optional</span>
         <div>
             <p class="card-title">Active Learning with Human Expert</p>
-            <p class="muted" style="font-size: var(--text-sm); margin-top: 2px;">Try it yourself — you are the expert</p>
+            <p class="muted" style="font-size: var(--text-sm); margin-top: 2px;">Try it yourself  - you are the expert</p>
         </div>
     </div>
     <div class="card-content">
@@ -286,13 +286,13 @@
         </p>
         <p class="muted" style="margin-bottom: var(--space-4);">
             Label twelve articles and the system estimates <strong>your personal competence
-            profile</strong> — your accuracy per category, your specialty, and which simulated
-            expert you most resemble — then plugs <strong>you</strong> into the deferral pipeline
+            profile</strong>  - your accuracy per category, your specialty, and which simulated
+            expert you most resemble  - then plugs <strong>you</strong> into the deferral pipeline
             and shows the team accuracy of AI + you against the AI alone and the AI + simulated
             expert baselines.
         </p>
         <a href="{% url 'project3:human_label' %}" class="btn btn-primary">
-            Open Interactive Expert Interface →
+            Open Interactive Expert Interface ->
         </a>
     </div>
 </section>

@@ -42,7 +42,7 @@ best_expert_preds = np.where(use_sports, sports_preds_arr, tech_preds_arr)
 # P(best expert correct | x) = Σ_k P(y=k|x) × best_expert_per_class[k]
 # Classifier uncertainty = 1 − max_k P(y=k|x)
 # Defer if classifier_uncertainty > α × expert_error
-#   α=0 → always defer   α→∞ → never defer   α=1 → Bayes-optimal
+#   α=0 -> always defer   α->∞ -> never defer   α=1 -> Bayes-optimal
 
 p_expert_correct = clf_probas @ best_expert_per_class  # (N,)
 clf_uncertainty  = 1.0 - clf_probas.max(axis=1)        # (N,)

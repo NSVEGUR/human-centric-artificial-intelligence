@@ -176,7 +176,7 @@ def generate_report_pdf() -> bytes:
     # ── Section 1: Task 1 ─────────────────────────────────────────────────────
     story += [
         _divider(),
-        Paragraph("Section 1 — Baseline Classifier (Task 1)", S['section']),
+        Paragraph("Section 1  - Baseline Classifier (Task 1)", S['section']),
         Paragraph(
             "We train a text classification model on the AG News dataset "
             "(120,000 training articles, 7,600 test articles, 4 categories: "
@@ -214,7 +214,7 @@ def generate_report_pdf() -> bytes:
         Paragraph(
             f"The classifier achieves <b>{round(test_acc * 100, 2)}%</b> overall test accuracy. "
             "This strong baseline means the human-AI team must demonstrate clear benefit "
-            "to justify deferral — the L2D system needs to exceed this figure.",
+            "to justify deferral  - the L2D system needs to exceed this figure.",
             S['body'],
         ),
     ]
@@ -222,7 +222,7 @@ def generate_report_pdf() -> bytes:
     # ── Section 2: Task 2 ─────────────────────────────────────────────────────
     story += [
         _divider(),
-        Paragraph("Section 2 — Simulated Experts (Task 2)", S['section']),
+        Paragraph("Section 2  - Simulated Experts (Task 2)", S['section']),
         Paragraph(
             "We design two simulated experts, each specialising in a specific news category. "
             "The key design constraint is that at least one expert must outperform the "
@@ -237,7 +237,7 @@ def generate_report_pdf() -> bytes:
             "expert matching a fixed list of terms cannot reliably exceed this. Instead, "
             "each expert is simulated with an explicit per-class accuracy profile "
             "(PER_CLASS_ACCURACY dict). When the expert is wrong they predict the "
-            "second-most-likely class according to the classifier — a realistic error pattern.",
+            "second-most-likely class according to the classifier  - a realistic error pattern.",
             S['body'],
         ),
         Spacer(1, 0.3 * cm),
@@ -284,7 +284,7 @@ def generate_report_pdf() -> bytes:
     # ── Section 3: Task 3 ─────────────────────────────────────────────────────
     story += [
         _divider(),
-        Paragraph("Section 3 — Learning-to-Defer (Task 3)", S['section']),
+        Paragraph("Section 3  - Learning-to-Defer (Task 3)", S['section']),
         Paragraph(
             "We implement the Bayes-optimal learning-to-defer rule: defer to the expert "
             "whenever the classifier's uncertainty exceeds the expert's expected error. "
@@ -306,7 +306,7 @@ def generate_report_pdf() -> bytes:
         Paragraph(
             "At α=1 this is the Bayes-optimal threshold. Sweeping α ∈ [0, 4] "
             "generates the full accuracy-vs-coverage curve: α=0 always defers "
-            "(expert-only), α→∞ never defers (AI-only).",
+            "(expert-only), α->∞ never defers (AI-only).",
             S['body'],
         ),
         Spacer(1, 0.3 * cm),
@@ -314,7 +314,7 @@ def generate_report_pdf() -> bytes:
     ]
 
     deferral_rows = [
-        ['AI Only (classifier)',        f"{round(ai_only_acc, 2)}%",   '100%',   '—'],
+        ['AI Only (classifier)',        f"{round(ai_only_acc, 2)}%",   '100%',   ' -'],
         ['Sports Expert only',          f"{round(sports_only_acc, 2)}%", '0%',   '100%'],
         ['Sci/Tech Expert only',        f"{round(tech_only_acc, 2)}%",   '0%',   '100%'],
         ['Best Expert only (oracle)',   f"{round(best_expert_only_acc, 2)}%", '0%', '100%'],
@@ -347,7 +347,7 @@ def generate_report_pdf() -> bytes:
     # ── Section 4: Task 4 ─────────────────────────────────────────────────────
     story += [
         _divider(),
-        Paragraph("Section 4 — Active Learning for Expert Competence (Task 4)", S['section']),
+        Paragraph("Section 4  - Active Learning for Expert Competence (Task 4)", S['section']),
         Paragraph(
             "In the active learning setting, no expert labels are available at the start. "
             "The system must query the expert on selected instances to learn their "
@@ -413,7 +413,7 @@ def generate_report_pdf() -> bytes:
         Paragraph(
             "<b>Random sampling is recommended</b> for this task. "
             "Uncertainty-based strategies (Least Confidence, Margin, Entropy) query "
-            "instances near the classifier's decision boundary — but these instances "
+            "instances near the classifier's decision boundary  - but these instances "
             "tend to cluster at class boundaries, oversampling certain categories "
             "and undersampling others. This produces <i>biased</i> per-class "
             "competence estimates: classes with few boundary instances are sampled "
@@ -440,7 +440,7 @@ def generate_report_pdf() -> bytes:
     # ── Section 5: Task 5 (Optional) ──────────────────────────────────────────
     story += [
         _divider(),
-        Paragraph("Section 5 — Interactive Human Expert Interface (Task 5, Optional)", S['section']),
+        Paragraph("Section 5  - Interactive Human Expert Interface (Task 5, Optional)", S['section']),
         Paragraph(
             "As an optional extension, the project includes an interactive interface at "
             "<b>/project3/human-label/</b> where a user can act as the human expert. "
@@ -477,8 +477,8 @@ def generate_report_pdf() -> bytes:
             "the human's numbers are directly comparable to what the system learns about the "
             "simulated experts. The interface then identifies the user's specialty category, "
             "reports which simulated expert their competence profile most closely resembles "
-            "(smallest L1 distance between smoothed per-class profiles), and — most "
-            "importantly — plugs the user into the full deferral pipeline: the user is "
+            "(smallest L1 distance between smoothed per-class profiles), and  - most "
+            "importantly  - plugs the user into the full deferral pipeline: the user is "
             "simulated on the held-out evaluation set with their estimated profile, the same "
             "alpha = 1 deferral rule from Tasks 3 and 4 is applied, and the resulting team "
             "accuracy is displayed alongside the AI-alone baseline and the AI + simulated "

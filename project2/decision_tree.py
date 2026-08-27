@@ -128,7 +128,7 @@ def build_tree_plotly(tree_info):
         count    = int(vals[nd][0].sum())
         if is_leaf[nd]:
             lx.append(pos_x[nd]); ly.append(pos_y[nd])
-            lh.append(f"<b>Leaf → {majority}</b><br>Samples: {count}")
+            lh.append(f"<b>Leaf -> {majority}</b><br>Samples: {count}")
         else:
             fname = feat_names[feat[nd]] if feat[nd] < len(feat_names) else "?"
             sx.append(pos_x[nd]); sy.append(pos_y[nd])

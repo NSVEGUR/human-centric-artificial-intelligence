@@ -1,5 +1,5 @@
 """
-Task 1 — feature representation for the movie utility model U(x) = w^T x.
+Task 1  - feature representation for the movie utility model U(x) = w^T x.
 
 Design rationale (see the PDF report for the full write-up):
 

@@ -124,7 +124,7 @@ def generate_report_pdf() -> bytes:
     ]
 
     # ══════════════════════════════════════════════════════════════════
-    # Task 1 — Feature representation
+    # Task 1  - Feature representation
     # ══════════════════════════════════════════════════════════════════
     genres = genre_vocabulary(p4data.CATALOG_DF)
     story += [
@@ -168,7 +168,7 @@ def generate_report_pdf() -> bytes:
     ]
 
     # ══════════════════════════════════════════════════════════════════
-    # Task 2 — Bradley-Terry -> Plackett-Luce
+    # Task 2  - Bradley-Terry -> Plackett-Luce
     # ══════════════════════════════════════════════════════════════════
     story += [
         _divider(),
@@ -235,7 +235,7 @@ def generate_report_pdf() -> bytes:
     ]
 
     # ══════════════════════════════════════════════════════════════════
-    # Task 3 — User study design
+    # Task 3  - User study design
     # ══════════════════════════════════════════════════════════════════
     story += [
         _divider(),

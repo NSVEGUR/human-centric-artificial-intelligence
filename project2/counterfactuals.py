@@ -402,7 +402,7 @@ def build_counterfactual_visualization(x_original, counterfactuals, original_spe
     if cat_changes and not num_changes:
         # show a text note if only categoricals changed
         fig.add_annotation(
-            text="<br>".join([f"{c['feature']}: {c['original']} → {c['counterfactual']}"
+            text="<br>".join([f"{c['feature']}: {c['original']} -> {c['counterfactual']}"
                               for c in cat_changes]),
             xref="x2", yref="paper", x=0.5, y=0.5,
             showarrow=False, font=dict(color=TEXT, size=11),
@@ -497,7 +497,7 @@ def build_counterfactual_table_viz(original, counterfactuals, target_class):
     if not all_changed:
         fig = go.Figure()
         fig.add_annotation(
-            text="Only categorical features changed — see labels above",
+            text="Only categorical features changed  - see labels above",
             xref="paper", yref="paper", x=0.5, y=0.5,
             showarrow=False, font=dict(size=13, color=TEXT)
         )
@@ -535,7 +535,7 @@ def build_counterfactual_table_viz(original, counterfactuals, target_class):
     z_norm  = z_arr / col_max
 
     text_labels = [
-        [f"{v:+.1f}" if v != 0 else "—" for v in row]
+        [f"{v:+.1f}" if v != 0 else " -" for v in row]
         for row in z_vals
     ]
 

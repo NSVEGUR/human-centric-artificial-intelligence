@@ -120,14 +120,14 @@ PROBLEM_EXPLANATIONS = {
 MODEL_EXPLANATIONS = {
     'classification': {
         'KNN': {
-            'description': 'KNN works by checking the closest data points and assigning the class based on what most of the neighbours belong to. The value of K decides how many neighbours are considered. If K is too small, the model may become sensitive to noise, while a larger K makes the prediction more stable but less detailed.',
+            'description': 'KNN looks at the K closest training examples and assigns whatever class most of them belong to. Small K values tend to overfit because a single noisy point can change the prediction, while larger K values smooth things out but can miss finer patterns.',
             'interpretability': 'Medium',
             'interpretability_note': 'Explains decisions by pointing to similar examples in the training data.',
         },
         'DecisionTree': {
             'description': 'A decision tree splits the data step by step based on feature values until it reaches a decision. It is easy to understand because it follows a rule-based structure. The depth of the tree controls how complex it becomes, and limiting it helps avoid overfitting.',
             'interpretability': 'High',
-            'interpretability_note': 'Shows its full reasoning as a series of yes/no questions — easy to follow and audit.',
+            'interpretability_note': 'Shows its full reasoning as a series of yes/no questions, easy to follow and audit.',
         },
         'LogisticRegression': {
             'description': 'Logistic regression predicts probabilities for different classes and assigns the most likely one. It is a simple and effective model, especially for linearly separable data. The regularisation parameter helps control overfitting by limiting how complex the model can become.',
@@ -138,9 +138,9 @@ MODEL_EXPLANATIONS = {
 
     'regression': {
         'KNN': {
-            'description': 'KNN regression predicts a value by averaging the values of nearby data points. It assumes that similar inputs will have similar outputs. The choice of K affects how smooth or sensitive the predictions are.',
+            'description': 'KNN regression just averages the target values of the nearest neighbours to make a prediction. Works reasonably well when the data has clear local structure, but struggles if the relationship is more global or linear.',
             'interpretability': 'Medium',
-            'interpretability_note': 'Predictions come from averaging similar past examples — intuitive but not directly formulaic.',
+            'interpretability_note': 'Predictions come from averaging similar past examples, which is intuitive but not directly formulaic.',
         },
         'DecisionTree': {
             'description': 'A decision tree for regression divides the data into regions and predicts values based on the average within each region. It can capture non-linear patterns but may overfit if the tree becomes too deep.',
@@ -150,12 +150,12 @@ MODEL_EXPLANATIONS = {
         'LinearRegression': {
             'description': 'Linear regression models a straight-line relationship between features and the target variable. It is simple and works well when the relationship between variables is roughly linear.',
             'interpretability': 'High',
-            'interpretability_note': 'Each feature coefficient directly shows its influence — a larger coefficient means a stronger effect.',
+            'interpretability_note': 'Each feature coefficient directly shows its influence. A larger coefficient means a stronger effect.',
         },
         'Ridge': {
-            'description': 'Ridge regression is similar to linear regression but includes a penalty term to prevent overfitting. It is useful when there are many correlated features and helps make the model more stable.',
+            'description': 'Ridge adds a penalty to linear regression that shrinks the coefficients, which helps when features are correlated with each other. Generally more stable than plain linear regression on real datasets.',
             'interpretability': 'High',
-            'interpretability_note': 'Like linear regression, coefficients show feature importance — regularisation keeps them small and reliable.',
+            'interpretability_note': 'Like linear regression, coefficients show feature importance. Regularisation keeps them small and more reliable.',
         },
     },
 }

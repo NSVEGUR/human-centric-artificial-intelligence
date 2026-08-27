@@ -16,7 +16,7 @@ _, _, test_texts, test_labels = load_ag_news()
 # their specialty class.
 #
 # When the expert is wrong, they predict the second-most-likely class according
-# to the classifier — a realistic error pattern.
+# to the classifier  - a realistic error pattern.
 
 class SportsExpert:
     """
@@ -29,10 +29,10 @@ class SportsExpert:
     strong_class = 1  # Sports
 
     PER_CLASS_ACCURACY = {
-        0: 0.55,   # World   — unreliable
-        1: 0.97,   # Sports  — specialist
-        2: 0.55,   # Business — unreliable
-        3: 0.55,   # Sci/Tech — unreliable
+        0: 0.55,   # World    - unreliable
+        1: 0.97,   # Sports   - specialist
+        2: 0.55,   # Business  - unreliable
+        3: 0.55,   # Sci/Tech  - unreliable
     }
 
     def predict_single(self, true_label, clf_proba):
@@ -63,10 +63,10 @@ class TechExpert:
     strong_class = 3  # Sci/Tech
 
     PER_CLASS_ACCURACY = {
-        0: 0.55,   # World   — unreliable
-        1: 0.55,   # Sports  — unreliable
-        2: 0.55,   # Business — unreliable
-        3: 0.95,   # Sci/Tech — specialist
+        0: 0.55,   # World    - unreliable
+        1: 0.55,   # Sports   - unreliable
+        2: 0.55,   # Business  - unreliable
+        3: 0.95,   # Sci/Tech  - specialist
     }
 
     def predict_single(self, true_label, clf_proba):

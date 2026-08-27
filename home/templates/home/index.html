@@ -45,7 +45,7 @@
             <a href="{% url project.url_name %}" class="card card-link project-card">
                 <span class="project-index">{{ forloop.counter|stringformat:"02d" }}</span>
                 <span class="project-title">{{ project.name }}</span>
-                <span class="project-arrow muted">Open →</span>
+                <span class="project-arrow muted">Open</span>
             </a>
             {% endfor %}
         </div>
