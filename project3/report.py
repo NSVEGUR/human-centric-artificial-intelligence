@@ -1,10 +1,3 @@
-"""
-Generate the Project 3 PDF report using ReportLab.
-
-The report is generated dynamically from the module-level stats computed at
-server startup (classifier accuracy, expert profiles, deferral results, AL curves).
-"""
-
 import io
 from datetime import date
 
@@ -19,7 +12,7 @@ from reportlab.platypus import (
 )
 
 
-# ── Color palette ──────────────────────────────────────────────────────────────
+# Color palette
 BLUE   = colors.HexColor('#1d4ed8')
 LIGHT  = colors.HexColor('#eff6ff')
 GREY   = colors.HexColor('#6b7280')
@@ -87,7 +80,6 @@ def _styles():
 
 
 def _table(headers, rows, col_widths=None, highlight_last=False):
-    """Build a styled table with a blue header row."""
     data = [headers] + rows
     tbl = Table(data, colWidths=col_widths, repeatRows=1)
 
@@ -123,9 +115,6 @@ def _divider():
 
 
 def generate_report_pdf() -> bytes:
-    """Generate the full project report as PDF bytes."""
-
-    # ── Import live stats at call time ────────────────────────────────────────
     from .classifier import test_acc, conf_matrix, get_classifier_stats
     from .experts import (
         sports_per_class, tech_per_class,
@@ -150,7 +139,7 @@ def generate_report_pdf() -> bytes:
     S = _styles()
     story = []
 
-    # ── Cover ─────────────────────────────────────────────────────────────────
+    # Cover
     story += [
         Spacer(1, 1.5 * cm),
         Paragraph("Project 3: Active Learning for Learning-to-Defer", S['title']),
@@ -160,31 +149,30 @@ def generate_report_pdf() -> bytes:
         _divider(),
         Spacer(1, 0.4 * cm),
         Paragraph(
-            "This report describes the implementation and results of Project 3. "
-            "The goal is to build a human-AI team that learns <i>when to defer</i> a "
-            "classification decision to a human expert, using active learning to "
-            "discover the expert's competence profile with minimal queries. "
-            "The project covers: (1) a baseline text classifier, (2) simulated experts "
-            "with domain-specific strengths, (3) Bayes-optimal learning-to-defer, "
-            "(4) active learning for expert competence discovery, and "
-            "(5) an optional interactive interface.",
+            "This project looks at how a classifier and a human expert can work together "
+            "by deciding on a case-by-case basis who should make each prediction. "
+            "The system uses active learning to figure out what the expert is good at "
+            "using as few queries as possible, then defers to them on examples where "
+            "they are likely to outperform the model. The report covers the baseline "
+            "classifier, how the simulated experts were designed, the deferral rule, "
+            "the active learning experiments, and the optional interactive labelling interface.",
             S['body'],
         ),
         Spacer(1, 0.4 * cm),
     ]
 
-    # ── Section 1: Task 1 ─────────────────────────────────────────────────────
+    # Section 1: Task 1
     story += [
         _divider(),
-        Paragraph("Section 1  - Baseline Classifier (Task 1)", S['section']),
+        Paragraph("Task 1: Baseline Classifier", S['section']),
         Paragraph(
-            "We train a text classification model on the AG News dataset "
-            "(120,000 training articles, 7,600 test articles, 4 categories: "
-            "World, Sports, Business, Sci/Tech). "
-            "Features are extracted with TF-IDF using unigrams and bigrams "
-            "(50,000 features). The model is Logistic Regression with C=5 "
-            "and a maximum of 1,000 iterations. Training runs once at server "
-            "start-up so all requests are served without re-training.",
+            "The baseline is a TF-IDF + Logistic Regression classifier trained on AG News "
+            "(120k train, 7.6k test, four categories: World, Sports, Business, Sci/Tech). "
+            "TF-IDF uses unigrams and bigrams with 50,000 features. "
+            "Logistic Regression was chosen because it is fast, interpretable, and "
+            "gives well-calibrated class probabilities which the deferral rule depends on. "
+            "C was set to 5 after a quick grid search. The model trains once at server "
+            "startup and is cached so page loads are instant.",
             S['body'],
         ),
     ]
@@ -212,32 +200,32 @@ def generate_report_pdf() -> bytes:
         ),
         Spacer(1, 0.3 * cm),
         Paragraph(
-            f"The classifier achieves <b>{round(test_acc * 100, 2)}%</b> overall test accuracy. "
-            "This strong baseline means the human-AI team must demonstrate clear benefit "
-            "to justify deferral  - the L2D system needs to exceed this figure.",
+            f"Overall test accuracy is <b>{round(test_acc * 100, 2)}%</b>. "
+            "This is a reasonably strong baseline, which means the deferral system "
+            "only adds value if it can push accuracy higher on the examples where "
+            "the model is genuinely uncertain.",
             S['body'],
         ),
     ]
 
-    # ── Section 2: Task 2 ─────────────────────────────────────────────────────
+    # Section 2: Task 2
     story += [
         _divider(),
-        Paragraph("Section 2  - Simulated Experts (Task 2)", S['section']),
+        Paragraph("Task 2: Simulated Experts", S['section']),
         Paragraph(
-            "We design two simulated experts, each specialising in a specific news category. "
-            "The key design constraint is that at least one expert must outperform the "
-            "classifier on their specialty class to make deferral genuinely beneficial.",
+            "Two simulated experts were designed, each strong in one news category. "
+            "For deferral to actually help, at least one of them needs to outperform "
+            "the classifier on their specialty, otherwise there is no reason to defer.",
             S['body'],
         ),
         Spacer(1, 0.2 * cm),
-        Paragraph("<b>Design choice: accuracy-based simulation</b>", S['bold_label']),
+        Paragraph("<b>Why accuracy-based and not keyword-based?</b>", S['bold_label']),
         Paragraph(
-            "A keyword-based approach was considered first but rejected: the TF-IDF+LR "
-            "classifier already achieves ~97.7% accuracy on Sports articles, so a keyword "
-            "expert matching a fixed list of terms cannot reliably exceed this. Instead, "
-            "each expert is simulated with an explicit per-class accuracy profile "
-            "(PER_CLASS_ACCURACY dict). When the expert is wrong they predict the "
-            "second-most-likely class according to the classifier  - a realistic error pattern.",
+            "A keyword approach was tried first but dropped because the classifier already "
+            "hits ~97.7% on Sports, so any keyword list would struggle to beat it. "
+            "Instead each expert is defined by an explicit per-class accuracy dict. "
+            "When they get something wrong, they fall back to the classifier's second-most-likely "
+            "class, which is a reasonable model of real expert mistakes.",
             S['body'],
         ),
         Spacer(1, 0.3 * cm),
@@ -274,22 +262,21 @@ def generate_report_pdf() -> bytes:
         ),
         Spacer(1, 0.2 * cm),
         Paragraph(
-            "The L2D system uses the <i>best expert per predicted class</i>, "
-            "so on Sports articles it defers to the Sports Expert, on Sci/Tech articles "
-            "to the Sci/Tech Expert.",
+            "The system always picks the better expert for each class, so Sports goes to the "
+            "Sports Expert and Sci/Tech goes to the Sci/Tech Expert.",
             S['note'],
         ),
     ]
 
-    # ── Section 3: Task 3 ─────────────────────────────────────────────────────
+    # Section 3: Task 3
     story += [
         _divider(),
-        Paragraph("Section 3  - Learning-to-Defer (Task 3)", S['section']),
+        Paragraph("Task 3: Learning-to-Defer", S['section']),
         Paragraph(
-            "We implement the Bayes-optimal learning-to-defer rule: defer to the expert "
-            "whenever the classifier's uncertainty exceeds the expert's expected error. "
-            "When classifier labels AND expert labels are both available on the test set, "
-            "this rule is directly applicable.",
+            "The deferral rule is: if the classifier is more uncertain than the expert is "
+            "likely to be wrong, hand the example to the expert. "
+            "This is the Bayes-optimal threshold given the classifier probabilities and "
+            "the expert's known per-class accuracy.",
             S['body'],
         ),
         Spacer(1, 0.2 * cm),
@@ -304,9 +291,9 @@ def generate_report_pdf() -> bytes:
         ),
         Spacer(1, 0.2 * cm),
         Paragraph(
-            "At α=1 this is the Bayes-optimal threshold. Sweeping α ∈ [0, 4] "
-            "generates the full accuracy-vs-coverage curve: α=0 always defers "
-            "(expert-only), α->∞ never defers (AI-only).",
+            "α=1 is the Bayes-optimal setting. Sweeping α from 0 to 4 traces "
+            "the accuracy-vs-coverage curve: low α defers almost everything, "
+            "high α barely defers at all.",
             S['body'],
         ),
         Spacer(1, 0.3 * cm),
@@ -331,28 +318,26 @@ def generate_report_pdf() -> bytes:
         ),
         Spacer(1, 0.3 * cm),
         Paragraph(
-            f"The L2D team achieves <b>{round(optimal_team_acc, 2)}%</b> accuracy, "
-            f"surpassing the AI-alone baseline of {round(ai_only_acc, 2)}% "
-            f"by {round(optimal_team_acc - ai_only_acc, 2)} percentage points. "
-            f"The system defers {round(optimal_deferral_rate * 100, 1)}% of test instances "
-            f"to the best expert, retaining full AI coverage on the remaining "
-            f"{round(optimal_coverage * 100, 1)}%. "
-            "The accuracy-vs-coverage curve (visible on the web interface) confirms "
-            "that the L2D system consistently outperforms AI-alone across a wide "
-            "range of coverage fractions.",
+            f"At α=1 the team hits <b>{round(optimal_team_acc, 2)}%</b>, which is "
+            f"{round(optimal_team_acc - ai_only_acc, 2)} points above the AI-alone baseline "
+            f"of {round(ai_only_acc, 2)}%. "
+            f"About {round(optimal_deferral_rate * 100, 1)}% of examples get deferred, "
+            f"so the classifier still handles the remaining {round(optimal_coverage * 100, 1)}% itself. "
+            "Looking at the coverage curve on the web interface, the team outperforms "
+            "AI-alone across most of the range, not just at this single operating point.",
             S['body'],
         ),
     ]
 
-    # ── Section 4: Task 4 ─────────────────────────────────────────────────────
+    # Section 4: Task 4
     story += [
         _divider(),
-        Paragraph("Section 4  - Active Learning for Expert Competence (Task 4)", S['section']),
+        Paragraph("Task 4: Active Learning for Expert Competence", S['section']),
         Paragraph(
-            "In the active learning setting, no expert labels are available at the start. "
-            "The system must query the expert on selected instances to learn their "
-            "per-class competence, then use that learned profile to build a deferral policy. "
-            "The challenge is to learn the competence profile efficiently with few queries.",
+            "In Task 3 the expert's accuracy was known. Here it is not. "
+            "The system has to learn the expert's per-class competence by asking them "
+            "to label selected examples, and the question is which examples to pick "
+            "to learn that profile as quickly as possible.",
             S['body'],
         ),
         Spacer(1, 0.2 * cm),
@@ -409,44 +394,34 @@ def generate_report_pdf() -> bytes:
             col_widths=[7 * cm, 9 * cm],
         ),
         Spacer(1, 0.3 * cm),
-        Paragraph("<b>Recommendation and justification:</b>", S['bold_label']),
+        Paragraph("<b>Which strategy works best?</b>", S['bold_label']),
         Paragraph(
-            "<b>Random sampling is recommended</b> for this task. "
-            "Uncertainty-based strategies (Least Confidence, Margin, Entropy) query "
-            "instances near the classifier's decision boundary  - but these instances "
-            "tend to cluster at class boundaries, oversampling certain categories "
-            "and undersampling others. This produces <i>biased</i> per-class "
-            "competence estimates: classes with few boundary instances are sampled "
-            "rarely, so their expert accuracy is estimated poorly for longer. "
-            "Random sampling covers all classes more uniformly, allowing each class's "
-            "expert accuracy to converge faster on average.",
+            "Random sampling turned out to be the best choice here, which is a bit surprising. "
+            "Uncertainty-based methods focus on examples near the decision boundary, "
+            "which makes sense for training a classifier but is the wrong goal when trying "
+            "to estimate per-class expert accuracy. Those boundary examples cluster in "
+            "a few categories, so some classes barely get queried and their accuracy "
+            "estimate stays noisy for longer. Random sampling spreads queries more evenly "
+            "across all four classes, so the competence profile converges faster overall.",
             S['body'],
         ),
         Paragraph(
-            "This finding highlights an important distinction between standard active "
-            "learning (where uncertainty-based methods excel at learning the classifier "
-            "decision boundary) and competence discovery (where uniform class coverage "
-            "is more important than decision-boundary focus).",
-            S['body'],
-        ),
-        Paragraph(
-            f"All strategies converge toward the oracle accuracy of {oracle_acc:.2f}%, "
-            "confirming that the Laplace-smoothed competence model and Bayes-optimal "
-            "deferral rule function correctly.",
+            f"All four strategies do eventually reach close to the oracle accuracy of {oracle_acc:.2f}%, "
+            "which confirms the Laplace smoothing and deferral rule are working as expected.",
             S['note'],
         ),
     ]
 
-    # ── Section 5: Task 5 (Optional) ──────────────────────────────────────────
+    # Section 5: Task 5 (Optional)
     story += [
         _divider(),
-        Paragraph("Section 5  - Interactive Human Expert Interface (Task 5, Optional)", S['section']),
+        Paragraph("Task 5: Interactive Labelling Interface (Optional)", S['section']),
         Paragraph(
-            "As an optional extension, the project includes an interactive interface at "
-            "<b>/project3/human-label/</b> where a user can act as the human expert. "
-            "The system presents news articles selected by the chosen query strategy "
-            "(Entropy by default). The user selects one of the four news categories as "
-            "their label. After each label, the system:",
+            "The interactive interface at <b>/project3/human-label/</b> lets a real user "
+            "take the role of the expert. Articles are shown one at a time, selected by "
+            "the active learning strategy. After each label the system updates its estimate "
+            "of the user's competence and recomputes team accuracy in real time. "
+            "After each label:",
             S['body'],
         ),
     ]
@@ -463,41 +438,32 @@ def generate_report_pdf() -> bytes:
     story += [
         Spacer(1, 0.2 * cm),
         Paragraph(
-            "Strategy can be changed at any time (Random, Least Confidence, Margin, Entropy) "
-            "without losing existing labels, allowing exploration of different sampling "
-            "approaches in the same session. All session state is stored server-side via "
-            "Django sessions.",
+            "The query strategy can be switched at any time without losing existing labels, "
+            "so it is easy to compare random vs entropy sampling within the same session. "
+            "Everything is stored in the Django session server-side.",
             S['body'],
         ),
         Spacer(1, 0.2 * cm),
         Paragraph("You as the Expert: Live Competence Profiling", S['bold_label']),
         Paragraph(
-            "After twelve labels, the interface estimates the user's own per-class accuracy "
-            "profile using the same Laplace smoothing as the Task 4 active learning loop, so "
-            "the human's numbers are directly comparable to what the system learns about the "
-            "simulated experts. The interface then identifies the user's specialty category, "
-            "reports which simulated expert their competence profile most closely resembles "
-            "(smallest L1 distance between smoothed per-class profiles), and  - most "
-            "importantly  - plugs the user into the full deferral pipeline: the user is "
-            "simulated on the held-out evaluation set with their estimated profile, the same "
-            "alpha = 1 deferral rule from Tasks 3 and 4 is applied, and the resulting team "
-            "accuracy is displayed alongside the AI-alone baseline and the AI + simulated "
-            "expert team. The evaluator of this project can therefore personally become part "
-            "of the human-AI team and observe how their individual strengths change the "
-            "deferral policy and the achievable team accuracy. The profile chart and the "
-            "team comparison update live after every submitted label.",
+            "After 12 labels the profile section unlocks. It shows per-class accuracy "
+            "estimated with Laplace smoothing (same method as Task 4), which expert "
+            "the user's profile is closest to by L1 distance, and what team accuracy "
+            "would look like with the user as the expert on the held-out eval set. "
+            "The comparison updates after every label so you can watch the estimate settle. "
+            "It is a way for whoever is evaluating this project to see themselves "
+            "placed inside the same pipeline as the simulated experts.",
             S['body'],
         ),
     ]
 
-    # ── Footer note ───────────────────────────────────────────────────────────
+    # Footer note
     story += [
         Spacer(1, 0.5 * cm),
         _divider(),
         Paragraph(
-            "All results in this report are computed dynamically from the live server "
-            "implementation. Model training and simulations run at server start-up. "
-            "The interactive visualizations and interface are available at /project3/.",
+            "All numbers are computed live from the running server, not hardcoded. "
+            "The charts and labelling interface are at /project3/.",
             S['note'],
         ),
     ]

@@ -68,7 +68,6 @@ def al_stats_api(request):
     return JsonResponse(get_al_stats())
 
 
-# ── Task 5: Interactive Human Expert ─────────────────────────────────────────
 from .active_learning import (
     pool_texts, pool_labels, pool_probas, pool_expert_preds,
     eval_probas, eval_expert_preds, eval_labels,
@@ -87,13 +86,8 @@ _sports_frac = np.array([sports_per_class[LABEL_NAMES[k]] / 100.0 for k in range
 _tech_frac = np.array([tech_per_class[LABEL_NAMES[k]] / 100.0 for k in range(4)])
 
 
+# laplace smoothing same as AL loop so numbers are directly comparable
 def _compute_user_profile(labeled):
-    """Estimate the user's per-class accuracy from the labels they gave.
-
-    Same Laplace smoothing as the active learning loop so the numbers are
-    directly comparable to what the AL strategies learn about the simulated
-    experts.
-    """
     correct_by_class = np.zeros(4)
     total_by_class = np.zeros(4)
     for item in labeled:
@@ -144,14 +138,7 @@ def _compute_user_profile(labeled):
 
 
 def _evaluate_you_as_expert(smoothed_profile, seed=123):
-    """Team accuracy with the *user* as the expert.
-
-    We simulate the user on the held-out eval set with the exact same
-    mechanism as the simulated experts (correct with probability p for
-    their class, otherwise the classifier's second most likely class),
-    then apply the same alpha=1 deferral rule as everywhere else. Fixed
-    seed so the number doesnt jump around between page refreshes.
-    """
+    # fixed seed so the result doesnt jump around on every refresh
     rng = np.random.default_rng(seed)
     user_preds = np.empty(len(eval_labels), dtype=int)
     for i, y in enumerate(eval_labels):
@@ -176,8 +163,6 @@ def _evaluate_you_as_expert(smoothed_profile, seed=123):
 
 
 def _build_profile_payload(labeled):
-    """Everything the 'Your Expert Profile' section needs, or a locked
-    placeholder if the user hasnt labeled enough articles yet."""
     n = len(labeled)
     if n < MIN_LABELS_FOR_PROFILE:
         return {
@@ -230,7 +215,6 @@ def _get_next_query(strategy, queried_set, pool_probas):
 
 
 def _compute_current_team_acc(labeled):
-    """Compute team accuracy from user-labeled instances so far."""
     if not labeled:
         return None
 

@@ -70,12 +70,8 @@ def _base_layout(height=320, margin=None):
         font=dict(color=TEXT, family="Inter, system-ui, sans-serif", size=12),
     )
 
-# decision tree diagram 
+# decision tree diagram
 def build_tree_plotly(tree_info):
-    """
-    Renders the decision tree as a clean node-edge graph.
-    Labels are Plotly annotations so they never clip or overflow.
-    """
     _train_all_trees()
     X_train, _, _, _ = _get_data()
 
@@ -283,7 +279,7 @@ def build_gap_plot(tree_info):
     ]
 
     gc    = RED if gap > 5 else GREEN
-    glabel = f"Gap: {gap}%  {'⚠ overfitting' if gap > 5 else '✓ good fit'}"
+    glabel = f"Gap: {gap}%  {'overfitting' if gap > 5 else 'good fit'}"
 
     layout = _base_layout(height=300)
     layout.update(

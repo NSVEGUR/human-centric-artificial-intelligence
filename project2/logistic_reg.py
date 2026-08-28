@@ -5,7 +5,7 @@ from sklearn.metrics import confusion_matrix
 
 from .data import load_and_preprocess
 
-# ── data cache ────────────────────────────────────────────────────────────────
+# data cache
 _data_cache = None
 
 def _get_data():
@@ -29,7 +29,7 @@ RED    = "#ff4d6d"
 SPECIES        = ["Adelie", "Chinstrap", "Gentoo"]
 SPECIES_COLORS = {"Adelie": BLUE, "Chinstrap": ORANGE, "Gentoo": GREEN}
 
-# ── model cache ───────────────────────────────────────────────────────────────
+# model cache
 _all_lr_models = None
 
 def _train_all_lr():
@@ -52,22 +52,10 @@ def _train_all_lr():
         })
     _all_lr_models = models
 
+# same selection rule as get_best_tree: minimize (1 - test_acc) + lam * (omega / max_omega)
+# note: on penguins a low-C model often pareto-dominates so the selected model
+# may not change as lam increases - that is correct, not a bug
 def get_best_lr(lam):
-    """
-    Post-hoc model selection among the pretrained LR models (Task 3), mirroring
-    get_best_tree in decision_tree.py: pick the model minimizing
-        score = (1 - test_acc) + lam * (omega / max_omega)
-    i.e. Ω(f) is the L1 norm of the coefficient vector, normalized to [0, 1]
-    so it sits on the same scale as the error term. lam is a post-hoc selection
-    knob over the 11 pretrained C values, never a live-refit parameter.
-
-    Note: on this dataset several low-C models already reach 100% test accuracy
-    with near-minimal ||w||_1 (Palmer Penguins is close to linearly separable and
-    the test set is small, so achievable test accuracies form only a handful of
-    distinct values). One such model Pareto-dominates the others across the
-    whole [0, 1] range of lam, so the selection can legitimately stay constant
-    as lam increases - that is the correct argmin, not a bug.
-    """
     _train_all_lr()
     max_omega = max(m["omega"] for m in _all_lr_models)
     best, best_score = None, float("inf")
@@ -77,7 +65,7 @@ def get_best_lr(lam):
             best_score, best = score, m
     return best
 
-# ── shared layout ─────────────────────────────────────────────────────────────
+# shared layout
 def _base_layout(height=320, margin=None):
     m = margin or dict(l=50, r=20, t=30, b=50)
     return dict(
@@ -88,12 +76,8 @@ def _base_layout(height=320, margin=None):
         font=dict(color=TEXT, family="Inter, system-ui, sans-serif", size=12),
     )
 
-# ── coefficient bar chart ─────────────────────────────────────────────────────
+# coefficient bar chart
 def build_lr_plotly(lr_info, sort_by="magnitude", selected_class=None, selected_feature=None):
-    """
-    Bar chart showing coefficient weights per feature per species.
-    Tall positive bar = pushes towards that species prediction.
-    """
     _train_all_lr()
     X_train, _, _, _ = _get_data()
 
@@ -146,7 +130,7 @@ def build_lr_plotly(lr_info, sort_by="magnitude", selected_class=None, selected_
     return fig.to_json()
 
 
-# ── tradeoff plot ─────────────────────────────────────────────────────────────
+# tradeoff plot
 def build_tradeoff_plot(selected_lr):
     _train_all_lr()
     x      = [m["omega"]           for m in _all_lr_models]
@@ -183,7 +167,7 @@ def build_tradeoff_plot(selected_lr):
     return go.Figure(data=traces, layout=layout).to_json()
 
 
-# ── confusion matrix ──────────────────────────────────────────────────────────
+# confusion matrix
 def build_confusion_plot(lr_info):
     _, X_test, _, y_test = _get_data()
     y_pred = lr_info["model"].predict(X_test)
@@ -207,7 +191,7 @@ def build_confusion_plot(lr_info):
     return go.Figure(data=[heatmap], layout=layout).to_json()
 
 
-# ── train vs test gap ─────────────────────────────────────────────────────────
+# train vs test gap
 def build_gap_plot(lr_info):
     tr  = round(lr_info["train_acc"] * 100, 2)
     te  = round(lr_info["test_acc"]  * 100, 2)
@@ -223,7 +207,7 @@ def build_gap_plot(lr_info):
     ]
 
     gc     = RED if gap > 5 else GREEN
-    glabel = f"Gap: {gap}%  {'⚠ overfitting' if gap > 5 else '✓ good fit'}"
+    glabel = f"Gap: {gap}%  {'(overfitting)' if gap > 5 else '(looks ok)'}"
 
     layout = _base_layout(height=300)
     layout.update(

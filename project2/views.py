@@ -106,9 +106,6 @@ def update_model(request):
 
 @csrf_exempt
 def get_samples(request):
-    """
-    Return list of test samples for the counterfactual dropdown.
-    """
     if request.method != "GET":
         return JsonResponse({"error": "only GET allowed"}, status=405)
 
@@ -118,16 +115,7 @@ def get_samples(request):
 
 @csrf_exempt
 def counterfactuals(request):
-    """
-    Generate counterfactual explanations for a selected sample.
-
-    Expects POST with:
-    - sample_idx: index of the test sample
-    - target_class: desired prediction class
-    - model_type: 'tree' or 'lr'
-    - lambda_val: regularization parameter
-    - k: number of counterfactuals to return (optional, default 5)
-    """
+    # generates counterfactuals for a selected test sample
     if request.method != "POST":
         return JsonResponse({"error": "only POST allowed"}, status=405)
 
@@ -178,15 +166,6 @@ def counterfactuals(request):
 
 @csrf_exempt
 def feature_effects(request):
-    """
-    Compute PDP and ALE for a selected feature.
-
-    Expects POST with:
-    - feature: name of the numerical feature
-    - model_type: 'tree' or 'lr'
-    - lambda_val: regularization parameter
-    - show_ice: whether to include ICE curves (optional)
-    """
     if request.method != "POST":
         return JsonResponse({"error": "only POST allowed"}, status=405)
 
@@ -250,9 +229,6 @@ def feature_effects(request):
 
 @csrf_exempt
 def get_numerical_features(request):
-    """
-    Return list of numerical features for the feature effects dropdown.
-    """
     if request.method != "GET":
         return JsonResponse({"error": "only GET allowed"}, status=405)
 
