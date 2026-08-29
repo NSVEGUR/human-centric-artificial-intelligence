@@ -30,14 +30,11 @@ import numpy as np
 from scipy.optimize import minimize
 from scipy.special import expit as sigmoid
 
-# Prior precision (L2 strength) on w. Chosen as a weakly-informative default
-# for standardized features (see report for discussion); a real deployment
-# would tune this via cross-validation across pilot participants.
+
 DEFAULT_L2 = 2.0
 
 
 def _bt_nll_and_grad(w, X, pairs):
-    """pairs: list of (winner_idx, loser_idx). Returns (nll, grad)."""
     if not pairs:
         return 0.0, np.zeros_like(w)
     winners = np.array([p[0] for p in pairs])
@@ -53,7 +50,7 @@ def _bt_nll_and_grad(w, X, pairs):
 
 
 def _pl_nll_and_grad(w, X, rankings):
-    """rankings: list of ordered index lists [i1, ..., in] (best to worst)."""
+
     if not rankings:
         return 0.0, np.zeros_like(w)
     nll = 0.0
@@ -76,7 +73,7 @@ def _pl_nll_and_grad(w, X, rankings):
 
 
 def fit_w(X, dim, pairs=None, rankings=None, l2=DEFAULT_L2, x0=None):
-    """MAP-fit w from pairwise and/or ranking comparisons over item matrix X."""
+
     pairs = pairs or []
     rankings = rankings or []
     if x0 is None:

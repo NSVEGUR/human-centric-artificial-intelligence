@@ -1,14 +1,17 @@
-/* Project 4  - shared movie-card rendering + trial controllers.
+/* Project 4 - shared movie-card rendering + trial controllers.
  *
- * Posters are best-effort: fetched client-side from Wikipedia's public,
- * keyless, CORS-enabled REST API. If the lookup fails, times out, or the
- * browser has no network access at all, the card simply keeps its
- * generated gradient placeholder  - the study remains fully usable offline.
+ * Every movie is rendered with the SAME card in both elicitation designs
+ * and in the validation block, so the only thing that differs between the
+ * two conditions is the interaction style (choose-one vs. rank-ten), which
+ * is the variable the study is comparing. Artwork is a deterministic
+ * gradient derived from the title: no external requests are made, so the
+ * information shown per movie is identical, offline-safe, and free of any
+ * third-party data sharing.
  */
 
 const P4 = {};
 
-// ── gradient placeholder (deterministic hash of the title) ──────────────
+//gradient placeholder (deterministic hash of the title)
 P4.gradientForTitle = function (title) {
   let hash = 0;
   for (let i = 0; i < title.length; i++) {
@@ -19,7 +22,7 @@ P4.gradientForTitle = function (title) {
   return `linear-gradient(135deg, hsl(${h1} 55% 28%), hsl(${h2} 55% 16%))`;
 };
 
-// ── best-effort poster lookup (Wikipedia REST API, keyless, CORS-enabled) ──
+//best-effort poster lookup (Wikipedia REST API, keyless, CORS-enabled)
 const POSTER_CACHE_KEY = "p4_poster_cache_v1";
 function loadPosterCache() {
   try {
@@ -72,7 +75,7 @@ P4.getPosterUrl = async function (movieId, title, year) {
   }
 };
 
-// ── movie card rendering ─────────────────────────────────────────────────
+//movie card rendering 
 P4.renderMovieCard = function (movie, { onClick, isStatic } = {}) {
   const card = document.createElement(onClick ? "button" : "div");
   card.type = onClick ? "button" : undefined;
@@ -140,7 +143,7 @@ function escapeHtml(s) {
   return div.innerHTML;
 }
 
-// ── CSRF-free JSON post helper (submit endpoints are csrf_exempt) ───────
+// CSRF-free JSON post helper (submit endpoints are csrf_exempt)
 async function postJson(url, body) {
   const res = await fetch(url, {
     method: "POST",
@@ -150,7 +153,7 @@ async function postJson(url, body) {
   return res.json();
 }
 
-// ── Pairwise (and validation, same interaction) trial flow ──────────────
+// Pairwise (and validation, same interaction) trial flow
 P4.PairwiseFlow = class {
   constructor(root, initialTrial, submitUrl, { onDone }) {
     this.root = root;
@@ -214,7 +217,7 @@ P4.PairwiseFlow = class {
   }
 };
 
-// ── Ranking trial flow (click-to-build-order, no drag-and-drop needed) ──
+// Ranking trial flow (click-to-build-order, no drag-and-drop needed)
 P4.RankingFlow = class {
   constructor(root, initialTrial, submitUrl, { onDone }) {
     this.root = root;

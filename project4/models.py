@@ -4,12 +4,6 @@ from django.db import models
 
 
 class Participant(models.Model):
-    """One respondent of the preference-elicitation study.
-
-    A real deployment of this interface (see report, Task 3) would persist
-    exactly these rows; this model is what lets the study actually be run
-    without further modification, not just previewed.
-    """
 
     ORDER_CHOICES = [
         ("pairwise_first", "Pairwise comparisons first"),
@@ -36,9 +30,6 @@ class Participant(models.Model):
     completed_at = models.DateTimeField(null=True, blank=True)
     completion_code = models.CharField(max_length=12, blank=True)
 
-    # Brief background survey (Lecture 7, "6 steps": general + task-relevant
-    # info), collected once, right after consent  - used only to describe the
-    # cohort (Task 3, analysis plan) and never joined back to trial data.
     age_bracket = models.CharField(max_length=10, choices=AGE_CHOICES, blank=True)
     movie_frequency = models.CharField(max_length=10, choices=FREQUENCY_CHOICES, blank=True)
     recsys_familiarity = models.CharField(max_length=10, choices=FAMILIARITY_CHOICES, blank=True)
@@ -59,7 +50,7 @@ class Trial(models.Model):
     design = models.CharField(max_length=10, choices=DESIGN_CHOICES)
     phase = models.CharField(max_length=15, choices=PHASE_CHOICES)
     trial_index = models.IntegerField()
-    movie_ids = models.JSONField()          # items shown, in presentation order
+    movie_ids = models.JSONField()          
     response = models.JSONField()           # pairwise: chosen movie id; ranking: ordered movie-id list
     response_time_ms = models.IntegerField(null=True, blank=True)
     is_correct = models.BooleanField(
@@ -82,10 +73,10 @@ class QuestionnaireResponse(models.Model):
 
     participant = models.ForeignKey(Participant, on_delete=models.CASCADE, related_name="questionnaires")
     design = models.CharField(max_length=10, choices=DESIGN_CHOICES)
-    ease_of_use = models.IntegerField()      # 1-7 Likert
-    cognitive_load = models.IntegerField()   # 1-7 Likert
-    enjoyment = models.IntegerField()        # 1-7 Likert
-    trust = models.IntegerField()            # 1-7 Likert, "system understands my taste"
+    ease_of_use = models.IntegerField()      
+    cognitive_load = models.IntegerField()   
+    enjoyment = models.IntegerField()        
+    trust = models.IntegerField()            
     free_text = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

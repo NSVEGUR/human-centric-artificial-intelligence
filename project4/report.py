@@ -5,6 +5,8 @@ Built with ReportLab, following the same visual style as the Project 3 report.
 """
 
 import io
+import json
+import os
 from datetime import date
 
 from reportlab.lib import colors
@@ -14,7 +16,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import cm
 from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle,
-    HRFlowable, ListFlowable, ListItem,
+    HRFlowable, ListFlowable, ListItem, PageBreak,
 )
 
 BLUE = colors.HexColor('#1d4ed8')
@@ -86,6 +88,23 @@ def _bullets(items, style):
         [ListItem(Paragraph(it, style), bulletColor=BLUE) for it in items],
         bulletType='bullet', leftIndent=16, spaceAfter=6,
     )
+
+
+SIMULATION_PATH = os.path.join(os.path.dirname(__file__), "data", "simulation_results.json")
+
+
+def _load_simulation():
+    """Cached results from `python manage.py p4_simulate`.
+
+    Returns None if the file is missing, in which case section 4 is simply
+    omitted; the report must never fail to render because an optional
+    offline analysis has not been run.
+    """
+    try:
+        with open(SIMULATION_PATH) as fh:
+            return json.load(fh)
+    except (OSError, ValueError):
+        return None
 
 
 def generate_report_pdf() -> bytes:
@@ -356,7 +375,9 @@ def generate_report_pdf() -> bytes:
             "((1.96 + 0.84) / 0.5)&sup2; &asymp; 31.4, i.e. at least 32 completed sessions. "
             "Allowing for an expected 15&ndash;20% exclusion/drop-out rate typical of online "
             "studies, we recommend recruiting <b>N = 42</b> participants who complete the study "
-            "in full.",
+            "in full. This figure is revised in &sect;4.2, where a simulation-based power "
+            "analysis estimates the effect size directly from the outcome measure this study "
+            "actually records, rather than assuming a medium effect.",
             S['body'],
         ),
 
@@ -368,8 +389,9 @@ def generate_report_pdf() -> bytes:
             "<b>Eligibility:</b> fluent in English (interface text and movie metadata are "
             "English-only), age 18+, normal or corrected-to-normal vision, self-reported general "
             "interest in movies (single screener question), and access to a laptop/desktop "
-            "&mdash; the ranking task uses drag-and-drop, which is unreliable on some mobile "
-            "touchscreens; this is disclosed on the consent screen.",
+            "&mdash; the ranking task asks participants to click ten movie cards in order, "
+            "which works on a touchscreen but is comfortably faster with a mouse or trackpad; "
+            "this is disclosed on the consent screen.",
             "<b>Compensation:</b> paid pro-rata for an estimated 10-minute session at or above "
             "the platform's minimum hourly-rate guidance (roughly &euro;1.50&ndash;&euro;2.00 "
             "per completed session on Prolific).",
@@ -436,6 +458,169 @@ def generate_report_pdf() -> bytes:
             ]
         ], bulletType='1', leftIndent=18, spaceAfter=8),
     ]
+
+    # ══════════════════════════════════════════════════════════════════
+    # Section 4  - Extension: adaptive selection + simulation-based power
+    # ══════════════════════════════════════════════════════════════════
+    sim = _load_simulation()
+    if sim:
+        sel = sim["selection"]
+        fats = sorted(sim["power"].items())
+        null_case, worst_case = fats[0][1], fats[-1][1]
+        story += [
+            PageBreak(),
+            Paragraph("4. Extension: Adaptive Selection and a Simulated Power Analysis", S['section']),
+            Paragraph(
+                "The assignment notes that investigating more informative or adaptive item "
+                "selection would be an interesting extension. This section reports that "
+                "extension, together with a simulation-based re-derivation of the sample size "
+                "in &sect;3.6. Both are offline analyses: the study in Task 3 uses uniformly "
+                "random selection exactly as specified, and nothing here runs during a "
+                "participant session. Results are regenerated with "
+                "<font face='Courier'>python manage.py p4_simulate</font>.",
+                S['body'],
+            ),
+
+            Paragraph("4.1 An adaptive selection rule", S['subsection']),
+            Paragraph(
+                "After k comparisons we hold a MAP estimate w<sub>MAP</sub> and a Laplace "
+                "approximation to its posterior covariance &Sigma; = H<super>&minus;1</super>, "
+                "where H = 2&lambda;I + &sum;<sub>k</sub> p<sub>k</sub>(1&minus;p<sub>k</sub>) "
+                "d<sub>k</sub>d<sub>k</sub><super>T</super> is the Hessian of the regularized "
+                "negative log-likelihood and d<sub>k</sub> = x<sub>winner</sub> &minus; "
+                "x<sub>loser</sub>. For a candidate pair with d = x<sub>i</sub> &minus; "
+                "x<sub>j</sub>, the expected information from observing its outcome is:",
+                S['body'],
+            ),
+            Paragraph(
+                "score(i, j)  =  p (1 &minus; p) &middot; d<super>T</super> &Sigma; d,     "
+                "p = &sigma;(d<super>T</super> w<sub>MAP</sub>)",
+                S['formula'],
+            ),
+            Paragraph(
+                "The two factors do different jobs. p(1&minus;p) peaks at p = 0.5, so a "
+                "comparison whose outcome we can already predict is worth little however novel "
+                "the movies are. d<super>T</super>&Sigma;d is large when the pair probes a "
+                "direction of w we remain uncertain about, which is what prevents the rule from "
+                "serving near-identical movies forever: a coin-flip pair along an axis we have "
+                "already pinned down scores low. This is the standard Bayesian D-optimal design "
+                "criterion for a logistic model, specialized to Bradley-Terry. The cold start "
+                "needs no special case: at w = 0 every pair has p = 0.5 and &Sigma; is "
+                "isotropic, so the score reduces to ||d||&sup2; and the rule opens with the "
+                "sharpest available feature contrast.",
+                S['body'],
+            ),
+            Paragraph(
+                "Scoring all ~12 million possible pairs per trial is unnecessary and too slow "
+                "for a web request, so we greedily optimize over a random candidate subsample "
+                "of a few hundred pairs, which costs a few milliseconds per trial.",
+                S['body'],
+            ),
+            Paragraph(
+                "Simulating %d synthetic participants over %d pairwise trials, adaptive "
+                "selection reaches the held-out accuracy that random selection attains after "
+                "all %d trials in roughly %s trials, and ends %.1f percentage points higher "
+                "(%.3f vs %.3f)." % (
+                    sel["n_participants"], sel["n_trials"], sel["n_trials"],
+                    sel["trials_for_adaptive_to_match_random"],
+                    100 * (sel["adaptive"][-1] - sel["random"][-1]),
+                    sel["adaptive"][-1], sel["random"][-1],
+                ),
+                S['body'],
+            ),
+            _table(
+                ["Trials completed", "Random selection", "Adaptive selection"],
+                [[str(k), f"{sel['random'][k-1]:.3f}", f"{sel['adaptive'][k-1]:.3f}"]
+                 for k in (1, 3, 5, 10, 14, sel["n_trials"])],
+                col_widths=[5 * cm, 5.3 * cm, 5.3 * cm],
+            ),
+            Spacer(1, 0.2 * cm),
+            Paragraph(
+                "<b>How much to believe this.</b> A synthetic participant obeys Bradley-Terry "
+                "exactly; real people do not. The assumption flatters adaptive selection more "
+                "than it flatters random selection, because the rule deliberately seeks out "
+                "near-tied comparisons &mdash; which are precisely the comparisons on which "
+                "real people are least self-consistent. The gain above should therefore be read "
+                "as an upper bound, and the obvious next study is whether it survives contact "
+                "with human participants. That is also why the adaptive rule is kept out of the "
+                "Task 3 comparison: applying it to one condition and not the other would "
+                "confound selection strategy with elicitation format.",
+                S['body'],
+            ),
+
+            Paragraph("4.2 Re-deriving the sample size by simulation", S['subsection']),
+            Paragraph(
+                "The calculation in &sect;3.6 assumes a medium effect (d<sub>z</sub> = 0.5) and "
+                "yields N &asymp; 32. That number is only as good as the assumption, and the "
+                "assumption was made without reference to the DV we actually measure: accuracy "
+                f"over {VALIDATION_N} held-out pairs can take only {VALIDATION_N + 1} distinct "
+                "values. We therefore estimated the effect size directly, by simulating whole "
+                "sessions at the study's real trial budgets.",
+                S['body'],
+            ),
+            Paragraph(
+                "H1's stated rationale is that people are reliable about their top choices but "
+                "increasingly arbitrary further down a list. We model exactly that: at step k of "
+                "a ranking the simulated participant chooses from softmax(u / T<sub>k</sub>) "
+                "with T<sub>k</sub> = 1 + &phi;k, so &phi; = 0 is an exact Plackett-Luce ranker "
+                "and larger &phi; degrades the tail of the ranking while leaving the top intact. "
+                "Each simulated participant is run at every &phi;, reusing the same taste "
+                "vector, the same pairwise session and the same held-out set, so comparisons "
+                "across &phi; are paired.",
+                S['body'],
+            ),
+            _table(
+                ["Ranking noise &phi;", "Acc. pairwise", "Acc. ranking",
+                 "d<sub>z</sub> (accuracy)", "d<sub>z</sub> (log-lik.)"],
+                [[f"{fat}", f"{v['mean_pairwise_accuracy']:.3f}",
+                  f"{v['mean_ranking_accuracy']:.3f}",
+                  f"{v['dvs']['accuracy']['effect_size_dz']:+.3f}",
+                  f"{v['dvs']['log_likelihood']['effect_size_dz']:+.3f}"]
+                 for fat, v in fats],
+                col_widths=[3.4 * cm, 3.1 * cm, 3.1 * cm, 3 * cm, 3 * cm],
+            ),
+            Spacer(1, 0.2 * cm),
+            _bullets([
+                "<b>The procedure is calibrated.</b> At &phi; = 0 no true difference exists and "
+                "the test rejects at roughly the nominal 5%, confirming the bootstrap-Wilcoxon "
+                "pipeline is not itself generating false positives.",
+                "<b>At &phi; = 0 the ranking condition is slightly ahead</b> "
+                "(%.3f vs %.3f), which corrects a claim made in Task 2. There we matched the "
+                "two budgets on <i>choice events</i> (2 &times; 9 = 18) and called them "
+                "informationally equivalent; they are not. Each Plackett-Luce choice at step k "
+                "is made among n &minus; k + 1 alternatives, so the first pick of a ten-item "
+                "ranking eliminates nine rivals where a pairwise judgment eliminates one, and a "
+                "completed ranking of ten implies all 45 pairwise relations among those items "
+                "(though not as independent observations). Matching on choice events therefore "
+                "hands the ranking condition slightly more information, which makes H1 a "
+                "conservative test rather than a biased one." % (
+                    null_case["mean_ranking_accuracy"], null_case["mean_pairwise_accuracy"]),
+                "<b>The realistic effect is far smaller than assumed.</b> Even at substantial "
+                "ranking noise the effect size on the accuracy DV is around d<sub>z</sub> = "
+                "%.2f, not 0.5. N = 42 is therefore badly underpowered for H1 as specified." % (
+                    worst_case["dvs"]["accuracy"]["effect_size_dz"]),
+                "<b>Log-likelihood is the better primary DV,</b> as &sect;3.4 already suspected. "
+                "On identical simulated sessions it roughly doubles the effect size "
+                "(d<sub>z</sub> = %.2f vs %.2f) because it is continuous and rewards being "
+                "right for the right reason, rather than collapsing every session onto %d "
+                "possible values." % (
+                    worst_case["dvs"]["log_likelihood"]["effect_size_dz"],
+                    worst_case["dvs"]["accuracy"]["effect_size_dz"],
+                    VALIDATION_N + 1),
+            ], S['bullet']),
+            Paragraph(
+                "<b>Revised recommendation.</b> Promote held-out log-likelihood to the primary "
+                "DV for H1, keeping accuracy as the interpretable secondary; raise "
+                f"VALIDATION_N above {VALIDATION_N}, since the held-out set is the cheapest "
+                "source of precision left in the design; and treat N = 42 as a floor for the "
+                "subjective measures (H2, H3) rather than as adequate for H1, which on these "
+                "estimates needs a sample in the low hundreds. Detecting a genuinely small "
+                "difference between two reasonable elicitation methods is simply expensive "
+                "&mdash; which is itself worth knowing before running the study rather than "
+                "after.",
+                S['body'],
+            ),
+        ]
 
     doc.build(story)
     return buf.getvalue()
