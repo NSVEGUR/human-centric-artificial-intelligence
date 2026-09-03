@@ -10,38 +10,54 @@ TUHH course project: Django app bundling four sub projects/tasks related to Huma
 | Sai Adarsh Varma Chittari | 670175            |
 | Roshan Srinivasan         | 672856            |
 
-## Setup (new machine)
+## Setup
 
-Requires Python 3.12+ and [`uv`](https://docs.astral.sh/uv/getting-started/installation/).
-This project is developed and tested with **Python 3.12.10** and **uv 0.9.15**, so if something breaks
-on a newer/older sub version, pin to these first.
+Requires Python 3.12+. Pick whichever method you have available.
+
+### Option A — uv
+
+Install [`uv`](https://docs.astral.sh/uv/getting-started/installation/) if you don't have it:
 
 ```bash
-# 1. Install uv, if not already installed
-curl -LsSf https://astral.sh/uv/install.sh | sh   # macOS / Linux
-# powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"   # Windows
+curl -LsSf https://astral.sh/uv/install.sh | sh        # macOS / Linux
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"   # Windows
+```
 
-# 2. Clone and enter the project root (the folder containing manage.py)
-git clone <url> <folder_name>
-cd <folder_name>
+Then:
 
-# 3. Create the venv + install dependencies, then run
+```bash
 uv sync
 uv run python manage.py migrate
 uv run python manage.py runserver
 ```
 
-`uv sync` creates a local `.venv/` and installs everything into it. And no separate
-`python -m venv` step needed. To activate it directly instead of prefixing commands
-with `uv run`: `source .venv/bin/activate` (macOS/Linux) or `.venv\Scripts\activate`
-(Windows).
+To activate the venv directly instead of prefixing with `uv run`:
+- macOS/Linux: `source .venv/bin/activate`
+- Windows: `.venv\Scripts\activate`
+
+### Option B — pip
+
+```bash
+python -m venv .venv
+
+# activate
+source .venv/bin/activate     # macOS / Linux
+.venv\Scripts\activate        # Windows
+
+pip install -e .
+python manage.py migrate
+python manage.py runserver
+```
 
 Open http://127.0.0.1:8000/
+
+---
 
 ## Tests
 
 ```bash
-uv run python manage.py test
+uv run python manage.py test   # uv
+python manage.py test          # pip
 ```
 
 ## Project reports
