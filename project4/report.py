@@ -120,12 +120,12 @@ def generate_report_pdf() -> bytes:
     )
     story = []
 
-    # ── Cover ────────────────────────────────────────────────────────────
+    # -- Cover ------------------------------------------------------------
     story += [
         Spacer(1, 1.2 * cm),
         Paragraph("Project 4: Preference Elicitation", S['title']),
-        Paragraph("Human-Centric Artificial Intelligence &middot; TUHH", S['subtitle']),
-        Paragraph(f"IMDB 5000 Movie Dataset &middot; Report generated: {date.today().isoformat()}", S['subtitle']),
+        Paragraph("Human-Centric Artificial Intelligence - TUHH", S['subtitle']),
+        Paragraph(f"IMDB 5000 Movie Dataset - Report generated: {date.today().isoformat()}", S['subtitle']),
         Spacer(1, 0.5 * cm),
         _divider(),
         Spacer(1, 0.3 * cm),
@@ -142,9 +142,9 @@ def generate_report_pdf() -> bytes:
         Spacer(1, 0.3 * cm),
     ]
 
-    # ══════════════════════════════════════════════════════════════════
+    # ------------------------------------------------------------------
     # Task 1  - Feature representation
-    # ══════════════════════════════════════════════════════════════════
+    # ------------------------------------------------------------------
     genres = genre_vocabulary(p4data.CATALOG_DF)
     story += [
         _divider(),
@@ -166,7 +166,7 @@ def generate_report_pdf() -> bytes:
             "and would add noise dimensions no elicitation session could ever pin down." % (
                 len(genres), ", ".join(genres[:8]) + ", ..."),
             "<b>Content rating (one-hot, 5 dims):</b> collapsed from ~19 raw MPAA/TV values into "
-            "five coarse buckets (family / PG / PG-13 / mature / unrated) &mdash; a reliable proxy "
+            "five coarse buckets (family / PG / PG-13 / mature / unrated) - a reliable proxy "
             "for tone that survives the dataset's inconsistent rating vocabulary.",
             "<b>Continuous attributes (z-scored, %d dims):</b> IMDB score (quality), duration "
             "(pacing), release year (recency), budget, gross revenue, and vote/like counts "
@@ -186,9 +186,9 @@ def generate_report_pdf() -> bytes:
         ),
     ]
 
-    # ══════════════════════════════════════════════════════════════════
+    # ------------------------------------------------------------------
     # Task 2  - Bradley-Terry -> Plackett-Luce
-    # ══════════════════════════════════════════════════════════════════
+    # ------------------------------------------------------------------
     story += [
         _divider(),
         Paragraph("2. From Bradley-Terry to Rankings (Task 2)", S['section']),
@@ -202,7 +202,7 @@ def generate_report_pdf() -> bytes:
                    S['formula']),
         Paragraph(
             "Design 2 of the interface asks a participant to rank ten movies at once, "
-            "i<sub>1</sub> &gt; i<sub>2</sub> &gt; &hellip; &gt; i<sub>n</sub>, "
+            "i<sub>1</sub> &gt; i<sub>2</sub> &gt; ... &gt; i<sub>n</sub>, "
             "which is not a single pairwise comparison. We extend the model using "
             "<b>Luce's choice axiom</b>: a full ranking is generated as a sequence of "
             "\"pick the most preferred item among those not yet placed\" choices, each "
@@ -211,7 +211,7 @@ def generate_report_pdf() -> bytes:
             S['body'],
         ),
         Paragraph(
-            "P(i<sub>1</sub> &gt; i<sub>2</sub> &gt; &hellip; &gt; i<sub>n</sub> | w)  "
+            "P(i<sub>1</sub> &gt; i<sub>2</sub> &gt; ... &gt; i<sub>n</sub> | w)  "
             "=  &prod;<sub>k=1..n-1</sub>  "
             "exp(U(x<sub>i<sub>k</sub></sub>))  /  "
             "&sum;<sub>l=k..n</sub> exp(U(x<sub>i<sub>l</sub></sub>))",
@@ -219,7 +219,7 @@ def generate_report_pdf() -> bytes:
         ),
         Paragraph(
             "At step k, the numerator is the utility of the item actually placed next, and the "
-            "denominator sums over every item still unplaced &mdash; exactly a Bradley-Terry-style "
+            "denominator sums over every item still unplaced - exactly a Bradley-Terry-style "
             "softmax choice among the remaining candidates. Setting n = 2 collapses the product "
             "to its single k = 1 term, which is exactly the pairwise Bradley-Terry probability "
             "above; Plackett-Luce is therefore a strict generalization, not a different model. "
@@ -253,17 +253,17 @@ def generate_report_pdf() -> bytes:
         ),
     ]
 
-    # ══════════════════════════════════════════════════════════════════
+    # ------------------------------------------------------------------
     # Task 3  - User study design
-    # ══════════════════════════════════════════════════════════════════
+    # ------------------------------------------------------------------
     story += [
         _divider(),
         Paragraph("3. User Study Design (Task 3)", S['section']),
 
         Paragraph("3.1 Research questions and hypotheses", S['subsection']),
         Paragraph(
-            "Does the way preferences are elicited &mdash; pairwise comparisons vs. "
-            "rank-ordered lists &mdash; change how accurately the resulting utility model "
+            "Does the way preferences are elicited - pairwise comparisons vs. "
+            "rank-ordered lists - change how accurately the resulting utility model "
             "predicts a user's future choices, and how it is experienced?",
             S['body'],
         ),
@@ -336,7 +336,7 @@ def generate_report_pdf() -> bytes:
             "the participant's real choices each fitted model predicts correctly, plus the "
             "held-out log-likelihood as a more sensitive secondary measure.",
             "<b>Objective (H2):</b> completion time of the elicitation phase, per condition.",
-            "<b>Subjective (1&ndash;7 Likert, per condition):</b> ease of use, cognitive load, "
+            "<b>Subjective (1-7 Likert, per condition):</b> ease of use, cognitive load, "
             "enjoyment, and trust (\"I am confident this method captured my movie taste\"), plus "
             "an optional free-text comment.",
             "<b>Final forced choice:</b> \"Which of the two approaches did you personally prefer "
@@ -350,7 +350,7 @@ def generate_report_pdf() -> bytes:
             "non-normal, so a non-parametric paired test is preferred over a t-test. As a "
             "robustness check, a mixed-effects logistic regression is fit on trial-level "
             "correct/incorrect outcomes with design as a fixed effect, participant as a random "
-            "intercept, and condition order as a covariate &mdash; order should not interact "
+            "intercept, and condition order as a covariate - order should not interact "
             "significantly with the design effect if counterbalancing worked as intended.",
             "<b>H2:</b> paired t-test (or Wilcoxon if the normality assumption is violated) on "
             "the cognitive-load Likert item and on completion time, pairwise vs. ranking.",
@@ -362,7 +362,7 @@ def generate_report_pdf() -> bytes:
             "<b>Exclusions:</b> sessions where a practice/attention check was answered "
             "incorrectly (exported directly as the <font face='Courier'>is_correct</font> "
             "column of the practice-phase trial rows), or where median response time falls "
-            "below 300&nbsp;ms (indicating click-through rather than genuine judgments), are "
+            "below 300 ms (indicating click-through rather than genuine judgments), are "
             "flagged; all analyses are run both with and without flagged sessions as a "
             "sensitivity check.",
         ], S['bullet']),
@@ -373,7 +373,7 @@ def generate_report_pdf() -> bytes:
             "effect size (Cohen's d<sub>z</sub> = 0.5) requires n &asymp; "
             "((z<sub>&alpha;/2</sub> + z<sub>&beta;</sub>) / d<sub>z</sub>)&sup2; = "
             "((1.96 + 0.84) / 0.5)&sup2; &asymp; 31.4, i.e. at least 32 completed sessions. "
-            "Allowing for an expected 15&ndash;20% exclusion/drop-out rate typical of online "
+            "Allowing for an expected 15-20% exclusion/drop-out rate typical of online "
             "studies, we recommend recruiting <b>N = 42</b> participants who complete the study "
             "in full. This figure is revised in &sect;4.2, where a simulation-based power "
             "analysis estimates the effect size directly from the outcome measure this study "
@@ -389,11 +389,11 @@ def generate_report_pdf() -> bytes:
             "<b>Eligibility:</b> fluent in English (interface text and movie metadata are "
             "English-only), age 18+, normal or corrected-to-normal vision, self-reported general "
             "interest in movies (single screener question), and access to a laptop/desktop "
-            "&mdash; the ranking task asks participants to click ten movie cards in order, "
+            "- the ranking task asks participants to click ten movie cards in order, "
             "which works on a touchscreen but is comfortably faster with a mouse or trackpad; "
             "this is disclosed on the consent screen.",
             "<b>Compensation:</b> paid pro-rata for an estimated 10-minute session at or above "
-            "the platform's minimum hourly-rate guidance (roughly &euro;1.50&ndash;&euro;2.00 "
+            "the platform's minimum hourly-rate guidance (roughly &euro;1.50-&euro;2.00 "
             "per completed session on Prolific).",
             "<b>Anonymity and data protection:</b> no directly identifying information is "
             "collected. If deployed on Prolific, the participant's platform ID is stored only to "
@@ -410,13 +410,13 @@ def generate_report_pdf() -> bytes:
         ),
         ListFlowable([
             ListItem(Paragraph(t, S['bullet'])) for t in [
-                "Landing page &rarr; \"Start the Study\".",
+                "Landing page -> \"Start the Study\".",
                 "Consent screen: purpose, what is collected, voluntary participation and right "
                 "to withdraw at any time without penalty, estimated duration, researcher contact "
                 "details; participant must check \"I agree\" to proceed.",
                 "Silent, counterbalanced random assignment to condition order.",
                 "Brief background survey (age bracket, movie-watching frequency, familiarity "
-                "with recommender features) &mdash; asked once, used only to describe the "
+                "with recommender features) - asked once, used only to describe the "
                 "cohort in the write-up of results, never linked back to individual preference "
                 "judgments in the analysis.",
                 "Instructions for condition 1, followed by one practice trial.",
@@ -427,7 +427,7 @@ def generate_report_pdf() -> bytes:
                 "Elicitation trials for condition 2.",
                 "Questionnaire for condition 2.",
                 f"{VALIDATION_N} shared held-out validation trials (pairwise, on movies not "
-                "seen before) &mdash; collected once and used afterward to silently score both "
+                "seen before) - collected once and used afterward to silently score both "
                 "conditions' fitted models.",
                 "Final forced-choice comparison question with an optional free-text reason.",
                 "Debrief screen: full disclosure of the study's purpose, a completion code for "
@@ -441,14 +441,14 @@ def generate_report_pdf() -> bytes:
             ListItem(Paragraph(t, S['bullet'])) for t in [
                 "Obtain research-ethics approval / consult the TUHH data protection officer "
                 "before recruiting real participants, even for pseudonymous data.",
-                "Pilot the interface internally (5&ndash;10 colleagues) to check timing, "
+                "Pilot the interface internally (5-10 colleagues) to check timing, "
                 "instruction clarity, and bugs; adjust wording (not trial counts or measures) "
                 "as needed.",
                 "Freeze the design after piloting; any further change should not enter the main "
                 "data collection, to preserve the confirmatory value of H1/H2.",
                 "Optionally pre-register the hypotheses and analysis plan (e.g. on OSF).",
                 "Deploy on Prolific with the eligibility screener and compensation from &sect;3.7 "
-                "&mdash; the landing/consent/study flow implemented here requires no further "
+                "- the landing/consent/study flow implemented here requires no further "
                 "engineering.",
                 "Monitor recruitment and data quality live via the Django admin, which lists "
                 "every participant, trial, and questionnaire response and offers a CSV export.",
@@ -459,9 +459,9 @@ def generate_report_pdf() -> bytes:
         ], bulletType='1', leftIndent=18, spaceAfter=8),
     ]
 
-    # ══════════════════════════════════════════════════════════════════
+    # ------------------------------------------------------------------
     # Section 4  - Extension: adaptive selection + simulation-based power
-    # ══════════════════════════════════════════════════════════════════
+    # ------------------------------------------------------------------
     sim = _load_simulation()
     if sim:
         sel = sim["selection"]
@@ -539,7 +539,7 @@ def generate_report_pdf() -> bytes:
                 "<b>How much to believe this.</b> A synthetic participant obeys Bradley-Terry "
                 "exactly; real people do not. The assumption flatters adaptive selection more "
                 "than it flatters random selection, because the rule deliberately seeks out "
-                "near-tied comparisons &mdash; which are precisely the comparisons on which "
+                "near-tied comparisons - which are precisely the comparisons on which "
                 "real people are least self-consistent. The gain above should therefore be read "
                 "as an upper bound, and the obvious next study is whether it survives contact "
                 "with human participants. That is also why the adaptive rule is kept out of the "
@@ -616,7 +616,7 @@ def generate_report_pdf() -> bytes:
                 "subjective measures (H2, H3) rather than as adequate for H1, which on these "
                 "estimates needs a sample in the low hundreds. Detecting a genuinely small "
                 "difference between two reasonable elicitation methods is simply expensive "
-                "&mdash; which is itself worth knowing before running the study rather than "
+                "- which is itself worth knowing before running the study rather than "
                 "after.",
                 S['body'],
             ),
