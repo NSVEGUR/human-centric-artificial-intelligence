@@ -14,13 +14,13 @@ TUHH course project: Django app bundling four sub projects/tasks related to Huma
 
 Requires Python 3.12+. Pick whichever method you have available.
 
-### Option A — uv
+### Option A - uv
 
-Install [`uv`](https://docs.astral.sh/uv/getting-started/installation/) if you don't have it:
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/) if you don't have it:
 
 ```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh        # macOS / Linux
-powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"   # Windows
+curl -LsSf https://astral.sh/uv/install.sh | sh
+# Windows: powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
 
 Then:
@@ -35,7 +35,7 @@ To activate the venv directly instead of prefixing with `uv run`:
 - macOS/Linux: `source .venv/bin/activate`
 - Windows: `.venv\Scripts\activate`
 
-### Option B — pip
+### Option B - pip
 
 ```bash
 python -m venv .venv
@@ -44,14 +44,12 @@ python -m venv .venv
 source .venv/bin/activate     # macOS / Linux
 .venv\Scripts\activate        # Windows
 
-pip install -e .
+pip install -r scripts/requirements.txt
 python manage.py migrate
 python manage.py runserver
 ```
 
 Open http://127.0.0.1:8000/
-
----
 
 ## Tests
 
